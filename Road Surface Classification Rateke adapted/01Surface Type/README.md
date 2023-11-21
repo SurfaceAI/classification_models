@@ -5,7 +5,7 @@ This folder is used to train the road surface type model and use it for classifi
 
 Before running the script the follwing steps should be executed: 
 
-1. Create a folder called 'train_data' in the directory you have saved the files in and populate it with your training and test images. The images should be saved in subfolders according to their label. The names of the subfolders (e.g. paved/sett) will be the classes tags later.
+1. Create a folder called 'train_data' in the directory you have saved the files in and populate it with your train images. The images should be saved in subfolders according to their label. The names of the subfolders (e.g. paved/sett) will be the classes tags later.
 
 2. Select how you want your trainig images to be preprocessed: For cropping only, choose 'dataset' for 'dataset= ', if you want them to be augmented, select 'dataset_augmented'.
 
@@ -27,7 +27,7 @@ Before running the script the follwing steps should be executed:
 
 Before you can use the test.py file for classification execute the following steps: 
 
-1. Create a folder called 'test_data' in the same way you have created 'train_data'. The subfolder names should be identical to the ones in 'train_data'.
+1. Create a folder called 'test_data' in the same way you have created 'train_data' and add your test images. The subfolder names should be identical to the ones in 'train_data'.
 
 2. Specify which model you want to use for prediction by setting 'model= '.
 
