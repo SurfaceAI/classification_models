@@ -17,6 +17,7 @@ execution_directory = os.path.dirname(os.path.abspath(__file__))
 
 train_path = os.path.join(execution_directory, 'train_data')
 save_path = execution_directory
+quality_path = os.path.join(os.path.dirname(execution_directory), '02Surface Quality') #our surface quality folder
 model = "roadsurface-model"
 dataset = "dataset"
 import dataset
@@ -29,10 +30,12 @@ img_size = 128
 num_channels = 3
 
 #Adding Seed so that random initialization is consistent
-from numpy.random import seed
-seed(1)
-from tensorflow.compat.v1 import set_random_seed
-set_random_seed(2)
+# from numpy.random import seed
+# random_seed = seed(16)
+# from tensorflow.compat.v1 import set_random_seed
+# set_random_seed(16)
+np.random.seed(0)
+tf.random.set_seed(0)
 
 #os.system('spd-say -t male3 "I will try to learn this, my master."')
 
@@ -42,7 +45,7 @@ num_classes = len(classes)
 classes
 
 # We shall load all the train and validation images and labels into memory using openCV and use that during train
-data = dataset.read_train_sets(train_path, img_size, classes, validation_size=validation_size)
+data = dataset.read_train_sets(train_path, img_size, classes, validation_size=validation_size, random_seed=0)
 
 
 print("Complete reading input data. Will Now print a snippet of it")
@@ -61,10 +64,10 @@ print("Number of files in Validation-set:\t{}".format(len(data.valid.labels)))
 save_folder = 'preprocessed_images'
 
 
-# Assuming data is an instance of DataSet
-for i in range(data.train.num_examples):
-    image = data.train.images[i].squeeze()  # Remove the batch dimension
-    dataset.save_image(image, save_folder, f"image_{i}")
+# # Assuming data is an instance of DataSet
+# for i in range(data.train.num_examples):
+#     image = data.train.images[i].squeeze()  # Remove the batch dimension
+#     dataset.save_image(image, save_folder, f"image_{i}")
     
 
     
@@ -240,20 +243,21 @@ def train(num_iteration):
             
             show_progress(epoch, feed_dict_tr, train_loss, feed_dict_val, val_loss)
             saver.save(session, f'{save_path}/{model}') 
+            saver.save(session, f'{quality_path}/{model}') #saving model also in out Surface Quality folder as we need it for the combined prediction later
+
 
 
     total_iterations += num_iteration
 
 train(num_iteration=10000)
 
-#saving our model files to the folder '02Surface Quality' so we can access it more easily
-target_folder = os.path.join(os.path.dirname(execution_directory), '02Surface Quality')
-model_files = [f'{model}.meta', f'{model}.index', f'{model}.data-00000-of-00001']
+#saving our model files to the folder '02Surface Quality' so we can access it more easily for the combined prediction
+# model_files = [f'{model}.meta', f'{model}.index', f'{model}.data-00000-of-00001']
 
-for file in model_files:
-    source_path = os.path.join(execution_directory, file)
-    target_path = os.path.join(target_folder, file)
-    shutil.copy2(source_path, target_path)
+# for file in model_files:
+#     source_path = os.path.join(execution_directory, file)
+#     target_path = os.path.join(target_folder, file)
+#     shutil.copy2(source_path, target_path)
 
 #os.system('spd-say -t male3 "I have finished my train. Lets do it!"')
 print('\a')

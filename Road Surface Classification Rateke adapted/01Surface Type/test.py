@@ -19,8 +19,9 @@ save_path = execution_directory
 save_path
 
 tf.compat.v1.reset_default_graph()
+tf.random.set_seed(0)
 
-model = 'roadsurface-model-pretrained'
+model = 'roadsurface-model'
 image_size=128
 num_channels=3
 images = []
@@ -34,6 +35,7 @@ saver.restore(sess, tf.train.latest_checkpoint(f'{save_path}/'))
 
 # Acessing the graph
 graph = tf.compat.v1.get_default_graph()
+tf.random.set_seed(0)
 
 # Getting tensors from the graph
 y_pred = graph.get_tensor_by_name("y_pred:0")
@@ -52,7 +54,7 @@ classes = os.listdir(test_path)
 num_classes = len(classes)
 img_size= 128
 
-test_data = read_test_sets(test_images_dir, img_size, classes)
+test_data = read_test_sets(test_images_dir, img_size, classes, random_seed=0)
 
 test_images = test_data.images
 test_images.shape

@@ -1,15 +1,13 @@
 
 This folder is used to train the road surface type model and use it for classification. 
 
-## Training the model:
+## 1. Training the model:
 
-Before running the script the follwing steps should be executed: 
+Before running the train.py script the follwing steps should be executed: 
 
-1. Create a folder called 'train_data' in the directory you have saved the files in and populate it with your train images. The images should be saved in subfolders according to their label. The names of the subfolders (e.g. paved/sett) will be the classes tags later.
+1. Select how you want your trainig images to be preprocessed: For cropping only, choose 'dataset=dataset', if you want them to be augmented, select 'dataset_augmented'.
 
-2. Select how you want your trainig images to be preprocessed: For cropping only, choose 'dataset' for 'dataset= ', if you want them to be augmented, select 'dataset_augmented'.
-
-3. Select how you want your model output to be named by specifying 'model= '
+2. Select how you want your model output to be named by specifying 'model= '
 
 3. Set the parameters: 
 - Batch_size
@@ -19,20 +17,17 @@ Before running the script the follwing steps should be executed:
 - Number of channels
 - Number of iterations
 
-3. Run the train.py file 
+4. Run the train.py file, three model files should be saved in your current directory and in the '02Surface Quality' folder. Next, go to the README in '02Surface Quality'.
 
 
-
-## Using the model for classification: 
+## 2. Testing: 
 
 Before you can use the test.py file for classification execute the following steps: 
 
-1. Create a folder called 'test_data' in the same way you have created 'train_data' and add your test images. The subfolder names should be identical to the ones in 'train_data'.
+1. Specify which pretrained model you want to use for prediction by setting 'model= '.
 
-2. Specify which model you want to use for prediction by setting 'model= '.
+2. Also specify the model name in the checkpoint file. (todo: how can this be done automatically?)
 
-3. Also specify the model name in the checkpoint file. (todo: how can this be done automatically?)
-
-4. If you want to run the pretrained model from Rateke et al. (2019), you have to add a third subfolder in your test_data called 'unpaved'.
+3. Check whether the pretrained model had the same number of classes as your test_data folder and adjust if not. If you want to run the pretrained model from Rateke et al. (2019) on our current OSM data, you have to add a third subfolder in your test_data called 'unpaved'.
 
 4. Run the test.py file

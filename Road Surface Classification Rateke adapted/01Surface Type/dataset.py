@@ -176,11 +176,14 @@ class DataSet(object):
     return self._images[start:end], self._labels[start:end], self._img_names[start:end], self._cls[start:end]
 
 
-def read_train_sets(train_path, image_size, classes, validation_size):
+def read_train_sets(train_path, image_size, classes, validation_size, random_seed):
   class DataSets(object):
     pass
   data_sets = DataSets()
-
+  
+  
+  np.random.seed(random_seed)
+                 
   images, labels, img_names, cls = load_train(train_path, image_size, classes)
   images, labels, img_names, cls = shuffle(images, labels, img_names, cls)  
 
@@ -203,7 +206,7 @@ def read_train_sets(train_path, image_size, classes, validation_size):
   return data_sets
 
 
-def read_test_sets(test_path, image_size, classes):
+def read_test_sets(test_path, image_size, classes, random_seed):
     class Datasets(object):
         pass
     data_sets= Datasets()

@@ -197,7 +197,7 @@ def read_train_sets(train_path, image_size, classes, validation_size):
   data_sets = DataSets()
 
   images, labels, img_names, cls = load_train(train_path, image_size, classes)
-  images, labels, img_names, cls = shuffle(images, labels, img_names, cls)  
+  #images, labels, img_names, cls = shuffle(images, labels, img_names, cls)  eliminate randomness
 
   if isinstance(validation_size, float):
     validation_size = int(validation_size * images.shape[0])
@@ -347,7 +347,7 @@ def read_test_sets(test_path, image_size, classes):
     data_sets= Datasets()
     
     images, labels, img_names, cls = load_test(test_path, image_size, classes)
-    images, labels, img_names, cls = shuffle(images, labels, img_names, cls) 
+    #images, labels, img_names, cls = shuffle(images, labels, img_names, cls) eliminate randomness
     
     data_sets = DataSet(images, labels, img_names, cls)
     
