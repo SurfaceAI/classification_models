@@ -64,8 +64,8 @@ num_filters_conv3 = 64
 fc_layer_size = 128
 
 # random initialization of weights and biases
-def create_weights(shape):
-    return tf.Variable(tf.random.truncated_normal(shape, stddev=0.05))
+def create_weights(shape, seed=None):
+    return tf.Variable(tf.random.truncated_normal(shape, stddev=0.05, seed=seed))
 
 def create_biases(size):
     return tf.Variable(tf.constant(0.05, shape=[size]))
@@ -78,7 +78,7 @@ def create_convolutional_layer(input,
                num_filters):  
     
     ## We shall define the weights that will be trained using create_weights function.
-    weights = create_weights(shape=[conv_filter_size, conv_filter_size, num_input_channels, num_filters])
+    weights = create_weights(shape=[conv_filter_size, conv_filter_size, num_input_channels, num_filters], seed=1)
     ## We create biases using the create_biases function. These are also trained.
     biases = create_biases(num_filters)
 
@@ -125,7 +125,7 @@ def create_fc_layer(input,
              use_relu=True):
     
     #Let's define trainable weights and biases.
-    weights = create_weights(shape=[num_inputs, num_outputs])
+    weights = create_weights(shape=[num_inputs, num_outputs], seed=1)
     biases = create_biases(num_outputs)
 
     # Fully connected layer takes input x and produces wx+b.Since, these are matrices, we use matmul function in Tensorflow
@@ -183,12 +183,12 @@ accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
 
 session.run(tf.compat.v1.global_variables_initializer())
 
-def show_progress(epoch, feed_dict_train, feed_dict_validate, val_loss):
+def show_progress(epoch, feed_dict_train, train_loss, feed_dict_validate, val_loss):
     acc = session.run(accuracy, feed_dict=feed_dict_train)
     #networks needs to be executed for this but not the whole optimizaton part 
     val_acc = session.run(accuracy, feed_dict=feed_dict_validate)
-    msg = "Training Epoch {0} --- Training Accuracy: {1:>6.1%}, Validation Accuracy: {2:>6.1%},  Validation Loss: {3:.3f}"
-    print(msg.format(epoch + 1, acc, val_acc, val_loss))
+    msg = "Training Epoch {0} --- Training Accuracy: {1:>6.1%}, Training Loss: {2:.3f}, Validation Accuracy: {2:>6.1%},  Validation Loss: {3:.3f}"
+    print(msg.format(epoch + 1, acc, train_loss, val_acc, val_loss))
 
 total_iterations = 0
 
@@ -212,15 +212,16 @@ def train(num_iteration):
 
         if i % int(data.train.num_examples/batch_size) == 0: 
             val_loss = session.run(cost, feed_dict=feed_dict_val)
+            train_loss = session.run(cost, feed_dict=feed_dict_tr)
             epoch = int(i / int(data.train.num_examples/batch_size))    
             
-            show_progress(epoch, feed_dict_tr, feed_dict_val, val_loss)
+            show_progress(epoch, feed_dict_tr, train_loss, feed_dict_val, val_loss)
             saver.save(session, f'{execution_directory}/roadsurfacePavedQuality-model') 
 
 
     total_iterations += num_iteration
 
-train(num_iteration=10000)
+train(num_iteration=100)
 
 #os.system('spd-say -t male3 "I have finished my training. Lets do it!"')
 print('\a')

@@ -1,3 +1,2 @@
-model_checkpoint_path: "c:\\Users\\esthe\\Documents\\GitHub\\classification_models\\Road Surface Classification Rateke adapted\\02Surface Quality/roadsurface-model"
-all_model_checkpoint_paths: "c:\\Users\\esthe\\Documents\\GitHub\\classification_models\\Road Surface Classification Rateke adapted\\01Surface Type/roadsurface-model"
-all_model_checkpoint_paths: "c:\\Users\\esthe\\Documents\\GitHub\\classification_models\\Road Surface Classification Rateke adapted\\02Surface Quality/roadsurface-model"
+model_checkpoint_path: "c:\\Users\\esthe\\Documents\\GitHub\\classification_models\\Road Surface Classification Rateke adapted\\02Surface Quality/roadsurfacePavedQuality-model"
+all_model_checkpoint_paths: "c:\\Users\\esthe\\Documents\\GitHub\\classification_models\\Road Surface Classification Rateke adapted\\02Surface Quality/roadsurfacePavedQuality-model"

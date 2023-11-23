@@ -1,15 +1,19 @@
 import cv2
 import tensorflow as tf
-import time
 from datetime import timedelta
-import math
-import random
 import numpy as np
 import os
+import mlflow
 import shutil
+#from mlflow.models import infer_signature
+
 
 # This is the directory in which this .py file is in
 execution_directory = os.path.dirname(os.path.abspath(__file__))
+
+
+#mlflow
+#mlflow.set_tracking_uri("http://127.0.0.1:5000")
 
 #First set which model and which data preprocessing to include, either just cropped or cropped and augmented
 #Models: roadsurface-model.meta; roadsurface-model-augmented.meta
@@ -22,19 +26,17 @@ model = "roadsurface-model"
 dataset = "dataset"
 import dataset
 
-#set parameters
+
+
+#defining hypterparameters and input data
 batch_size = 32
 validation_size = 0.2
 learning_rate = 1e-4
 img_size = 128
 num_channels = 3
 
-#Adding Seed so that random initialization is consistent
-# from numpy.random import seed
-# random_seed = seed(16)
-# from tensorflow.compat.v1 import set_random_seed
-# set_random_seed(16)
-np.random.seed(0)
+
+#Adding global tensorflow seed 
 tf.random.set_seed(0)
 
 #os.system('spd-say -t male3 "I will try to learn this, my master."')
@@ -45,7 +47,7 @@ num_classes = len(classes)
 classes
 
 # We shall load all the train and validation images and labels into memory using openCV and use that during train
-data = dataset.read_train_sets(train_path, img_size, classes, validation_size=validation_size, random_seed=0)
+data = dataset.read_train_sets(train_path, img_size, classes, validation_size=validation_size)
 
 
 print("Complete reading input data. Will Now print a snippet of it")
@@ -54,14 +56,14 @@ print("Number of files in Validation-set:\t{}".format(len(data.valid.labels)))
 
 #Here, we print the first image of our train data after preprocessing to check how it looks.
 # It should pop up in an image editor outside of this window. 
-# cv2.imshow('image view',data.train.images[0])
+# cv2.imshow('image view',data.valid.images[0])
 # k = cv2.waitKey(0) & 0xFF #without this, the execution would crush the kernel on windows
 # if k == 27:         # wait for ESC key to exit
 #     cv2.destroyAllWindows()
-
+#first images of train and valid datasets are always the same
 
 #Alternatively, we can also save our images in separate folders in our directory
-save_folder = 'preprocessed_images'
+#save_folder = 'preprocessed_images'
 
 
 # # Assuming data is an instance of DataSet
@@ -73,10 +75,10 @@ save_folder = 'preprocessed_images'
     
 # Initialize session
 session = tf.compat.v1.Session()
-tf.compat.v1.disable_eager_execution()
+tf.compat.v1.disable_eager_execution() 
+
 x = tf.compat.v1.placeholder(tf.float32, shape=[None, img_size,img_size,num_channels], name='x')
 
-## labels
 y_true = tf.compat.v1.placeholder(tf.float32, shape=[None, num_classes], name='y_true')
 y_true_cls = tf.compat.v1.argmax(y_true, axis=1)
 
@@ -93,8 +95,8 @@ num_filters_conv3 = 64
 
 fc_layer_size = 128
 
-def create_weights(shape):
-    return tf.Variable(tf.compat.v1.truncated_normal(shape, stddev=0.05))
+def create_weights(shape, seed=None):
+    return tf.Variable(tf.compat.v1.truncated_normal(shape, stddev=0.05, seed=seed))
 
 def create_biases(size):
     return tf.Variable(tf.constant(0.05, shape=[size]))
@@ -107,7 +109,7 @@ def create_convolutional_layer(input,
                num_filters):  
     
     ## We shall define the weights that will be trained using create_weights function.
-    weights = create_weights(shape=[conv_filter_size, conv_filter_size, num_input_channels, num_filters])
+    weights = create_weights(shape=[conv_filter_size, conv_filter_size, num_input_channels, num_filters], seed=1)
     ## We create biases using the create_biases function. These are also trained.
     biases = create_biases(num_filters)
 
@@ -129,7 +131,7 @@ def create_convolutional_layer(input,
 
     return layer
 
-    
+
 
 def create_flatten_layer(layer):
     #We know that the shape of the layer will be [batch_size img_size img_size num_channels] 
@@ -151,7 +153,7 @@ def create_fc_layer(input,
              use_relu=True):
     
     #Let's define trainable weights and biases.
-    weights = create_weights(shape=[num_inputs, num_outputs])
+    weights = create_weights(shape=[num_inputs, num_outputs], seed=1)
     biases = create_biases(num_outputs)
 
     # Fully connected layer takes input x and produces wx+b.Since, these are matrices, we use matmul function in Tensorflow
@@ -172,7 +174,7 @@ layer_conv2 = create_convolutional_layer(input=layer_conv1,
                conv_filter_size=filter_size_conv2,
                num_filters=num_filters_conv2)
 
-layer_conv3= create_convolutional_layer(input=layer_conv2,
+layer_conv3 = create_convolutional_layer(input=layer_conv2,
                num_input_channels=num_filters_conv2,
                conv_filter_size=filter_size_conv3,
                num_filters=num_filters_conv3)
@@ -188,6 +190,8 @@ layer_fc2 = create_fc_layer(input=layer_fc1,
                      num_inputs=fc_layer_size,
                      num_outputs=num_classes,
                      use_relu=False) 
+
+
 
 #Prediction
 y_pred = tf.nn.softmax(layer_fc2,name='y_pred')
@@ -224,6 +228,8 @@ def train(num_iteration):
     
     for i in range(total_iterations,
                    total_iterations + num_iteration):
+        
+        tf.random.set_seed(0)
 
         x_batch, y_true_batch, _, cls_batch = data.train.next_batch(batch_size)
         x_valid_batch, y_valid_batch, _, valid_cls_batch = data.valid.next_batch(batch_size)
@@ -241,6 +247,15 @@ def train(num_iteration):
             train_loss = session.run(cost, feed_dict=feed_dict_tr)
             epoch = int(i / int(data.train.num_examples/batch_size))    
             
+            # mlflow.log_metric("train_loss", train_loss, step=i)
+            # mlflow.log_metric("val_loss", val_loss, step=i)
+            
+            # mlflow.log_param("epoch", epoch)
+            # mlflow.log_param("learning_rate", learning_rate)
+            # mlflow.log_param("batch_size", batch_size)
+            
+            # mlflow.tensorflow.log_model(saver, "mlruns")
+                        
             show_progress(epoch, feed_dict_tr, train_loss, feed_dict_val, val_loss)
             saver.save(session, f'{save_path}/{model}') 
             saver.save(session, f'{quality_path}/{model}') #saving model also in out Surface Quality folder as we need it for the combined prediction later
@@ -249,15 +264,42 @@ def train(num_iteration):
 
     total_iterations += num_iteration
 
-train(num_iteration=10000)
+
+train(num_iteration=100)
+
+
+
+# with mlflow.start_run(run_name='new try'):
+#     # Train the model
+#     train(num_iteration=100)
+    
+#     # Disable eager execution for TensorFlow
+#     tf.compat.v1.disable_eager_execution()
+    
+#     # Import the TensorFlow graph
+#     saver = tf.compat.v1.train.import_meta_graph(f'{execution_directory}/{model}.meta')
+#     model_restore = saver.restore(session, tf.compat.v1.train.latest_checkpoint(f'{execution_directory}/'))
+    
+#     # Log metrics to MLflow
+#     #mlflow.log_metric("train_loss", train_loss)
+#     #mlflow.log_metric("val_loss", val_loss)
+#     #mlflow.log_param("num_iteration", 100)
+    
+#     # Log TensorFlow model
+#     mlflow.tensorflow.log_model(saver, "mlruns")
+
+
 
 #saving our model files to the folder '02Surface Quality' so we can access it more easily for the combined prediction
-# model_files = [f'{model}.meta', f'{model}.index', f'{model}.data-00000-of-00001']
+model_files = [f'{model}.meta', f'{model}.index', f'{model}.data-00000-of-00001']
 
-# for file in model_files:
-#     source_path = os.path.join(execution_directory, file)
-#     target_path = os.path.join(target_folder, file)
-#     shutil.copy2(source_path, target_path)
+for file in model_files:
+    source_path = os.path.join(execution_directory, file)
+    target_path = os.path.join(quality_path, file)
+    shutil.copy2(source_path, target_path)
 
 #os.system('spd-say -t male3 "I have finished my train. Lets do it!"')
 print('\a')
+
+
+

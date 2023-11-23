@@ -1,3 +1,4 @@
+from ast import literal_eval
 import cv2 as cv
 import numpy as np
 import tensorflow as tf
@@ -141,18 +142,11 @@ img_size= 128
 test_data_paved = dataset.read_test_sets(paved_images_dir, img_size, classesPQ)
 test_images_paved = test_data_paved.images
 
-test_images_asphalt.shape, test_images_paved.shape
-
-
 #initializing the lists for our labels
 pred_class_type = []
 true_class_type = []
-
-pred_classAQ = []
-true_classAQ = []
-
-pred_classPQ = []
-true_classPQ = []
+pred_classQ = []
+true_classQ = []
 
 test_data_sets = [test_data_asphalt, test_data_paved]
 
@@ -170,6 +164,7 @@ for test_data in test_data_sets:
         result = sess.run(y_pred, feed_dict=feed_dict_testing)
         
         outputs = [result[0,0], result[0,1]]
+
         
         value = max(outputs)
         index = np.argmax(outputs)
@@ -178,8 +173,12 @@ for test_data in test_data_sets:
         #accessing true type label
         if test_data == test_data_asphalt:
              true_index = 0
+             true_indexAQ = np.argmax(test_data.labels[i])
+             true_classQ.append(true_indexAQ)
         else:
              true_index = 1
+             true_indexPQ = np.argmax(test_data.labels[i])
+             true_classQ.append(true_indexPQ)
         true_class_type.append(true_index)
 
 
@@ -195,11 +194,7 @@ for test_data in test_data_sets:
             outputsQ = [resultAQ[0,0], resultAQ[0,1], resultAQ[0,2]]
             valueQ = max(outputsQ)
             indexQ = np.argmax(outputsQ)
-            pred_classAQ.append(indexQ)
-            
-            # accessing true asphalt quality label
-            true_indexAQ = np.argmax(test_data.labels[i])
-            true_classAQ.append(true_indexAQ)
+            pred_classQ.append(indexQ)
             
             if indexQ == 0: #Asphalt - Excellent
                 quality = 'Excellent'
@@ -225,11 +220,7 @@ for test_data in test_data_sets:
             outputsQ = [resultPQ[0,0], resultPQ[0,1], resultPQ[0,2]]
             valueQ = max(outputsQ)
             indexQ = np.argmax(outputsQ)
-            pred_classPQ.append(indexQ)
-                       
-            # accessing true label
-            true_indexPQ = np.argmax(test_data.labels[i])
-            true_classPQ.append(true_indexPQ)
+            pred_classQ.append(indexQ)
             
             if indexQ == 0: #Paved - Bad
                 quality = 'Bad'
@@ -255,38 +246,53 @@ for test_data in test_data_sets:
 # cv.putText(finalimg, quality, (70,55), cv.FONT_HERSHEY_DUPLEX, 0.5, colorQ)
 # cv.putText(finalimg, probQ, (5,75), cv.FONT_HERSHEY_DUPLEX, 0.5, (0,0,0))
 
+
 sess.close()
 sessAQ.close()
 sessPQ.close()
 
+
 # Hier muss ich noch die Performance evaluation für beide Labels kombiniert hinzufügen. 
 
+true_labels_combined = np.column_stack((true_class_type, true_classQ))
+pred_labels_combined = np.column_stack((pred_class_type, pred_classQ))
 
-accuracy = accuracy_score(true_class, pred_class)
-print(f"Accuracy: {accuracy}")
+# somehow this is not working
+# from sklearn.metrics import multilabel_confusion_matrix
+# multilabel_confusion_matrix(true_labels_combined, pred_labels_combined)
+
+correct_pred = true_labels_combined == pred_labels_combined
+correct_pred_count = np.sum(np.all(correct_pred, axis=1))
+print(correct_pred_count)
 
 
-conf_matrix = confusion_matrix(true_class, pred_class)
 
-# Print the confusion matrix
-print("Confusion Matrix:")
-print(conf_matrix)
+#not for multiclass
+# accuracy = accuracy_score(true_labels_combined, pred_labels_combined)
+# print(f"Accuracy: {accuracy}")
 
-# Calculate accuracy
-accuracy = accuracy_score(true_class, pred_class)
-print(f"Accuracy: {accuracy}")
 
-# Calculate precision, recall, and F1-score
-report = classification_report(true_class, pred_class)
-print("Classification Report:")
-print(report)
+# conf_matrix = confusion_matrix(true_class, pred_class)
 
-# Visualize the confusion matrix using a heatmap
-plt.figure(figsize=(8, 6))
-sns.heatmap(conf_matrix, annot=True, fmt="d", cmap="Blues",
-            xticklabels=["paved(asphalt)", "paved(concrete)"],
-            yticklabels=["paved(asphalt)", "paved(concrete)"])
-plt.title("Confusion Matrix")
-plt.xlabel("Predicted Class")
-plt.ylabel("True Class")
-plt.show()
+# # Print the confusion matrix
+# print("Confusion Matrix:")
+# print(conf_matrix)
+
+# # Calculate accuracy
+# accuracy = accuracy_score(true_class, pred_class)
+# print(f"Accuracy: {accuracy}")
+
+# # Calculate precision, recall, and F1-score
+# report = classification_report(true_class, pred_class)
+# print("Classification Report:")
+# print(report)
+
+# # Visualize the confusion matrix using a heatmap
+# plt.figure(figsize=(8, 6))
+# sns.heatmap(conf_matrix, annot=True, fmt="d", cmap="Blues",
+#             xticklabels=["paved(asphalt)", "paved(concrete)"],
+#             yticklabels=["paved(asphalt)", "paved(concrete)"])
+# plt.title("Confusion Matrix")
+# plt.xlabel("Predicted Class")
+# plt.ylabel("True Class")
+# plt.show()

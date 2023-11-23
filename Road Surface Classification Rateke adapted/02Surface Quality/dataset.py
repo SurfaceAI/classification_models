@@ -102,8 +102,6 @@ def load_test(test_path, image_size, classes):
                 flbase = os.path.basename(fl)
 
                 img_names.append(flbase)
-                
-
                 cls.append(fields)
                               
             elif index == 1:
@@ -115,7 +113,15 @@ def load_test(test_path, image_size, classes):
                 img_names.append(flbase)
                 cls.append(fields)
             
-              
+            elif index == 2: #only for quality as we have 3 classes here
+                images.append(image)
+                label = np.zeros(len(classes))
+                label[index] = 1.0
+                labels.append(label)
+                flbase = os.path.basename(fl)
+                img_names.append(flbase)
+                cls.append(fields)
+          
     images = np.array(images)
     labels = np.array(labels)
     img_names = np.array(img_names)
@@ -182,7 +188,7 @@ def read_train_sets(train_path, image_size, classes, validation_size):
   data_sets = DataSets()
 
   images, labels, img_names, cls = load_train(train_path, image_size, classes)
-  images, labels, img_names, cls = shuffle(images, labels, img_names, cls)  
+  images, labels, img_names, cls = shuffle(images, labels, img_names, cls, random_state=1)  
 
   if isinstance(validation_size, float):
     validation_size = int(validation_size * images.shape[0])
@@ -209,7 +215,7 @@ def read_test_sets(test_path, image_size, classes):
     data_sets= Datasets()
     
     images, labels, img_names, cls = load_test(test_path, image_size, classes)
-    images, labels, img_names, cls = shuffle(images, labels, img_names, cls) 
+    images, labels, img_names, cls = shuffle(images, labels, img_names, cls, random_state=1) 
     
     data_sets = DataSet(images, labels, img_names, cls)
     
