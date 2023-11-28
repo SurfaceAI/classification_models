@@ -182,7 +182,7 @@ def show_progress(epoch, feed_dict_train, train_loss, feed_dict_validate, val_lo
     acc = session.run(accuracy, feed_dict=feed_dict_train)
     #networks needs to be executed for this but not the whole optimizaton part 
     val_acc = session.run(accuracy, feed_dict=feed_dict_validate)
-    msg = "Training Epoch {0} --- Training Accuracy: {1:>6.1%}, Training Loss: {2:.3f}, Validation Accuracy: {2:>6.1%},  Validation Loss: {3:.3f}"
+    msg = "Training Epoch {0} --- Training Accuracy: {1:>6.1%}, Training Loss: {2:.3f}, Validation Accuracy: {3:>6.1%},  Validation Loss: {4:.3f}"
     print(msg.format(epoch + 1, acc, train_loss, val_acc, val_loss))
 
 total_iterations = 0
@@ -219,7 +219,7 @@ def train(num_iteration):
 
     total_iterations += num_iteration
 
-train(num_iteration=100)
+train(num_iteration=1000)
 
 #os.system('spd-say -t male3 "I have finished my training. Lets do it!"')
 print('\a')

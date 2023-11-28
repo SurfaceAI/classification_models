@@ -55,7 +55,7 @@ print("Number of files in Training-set:\t\t{}".format(len(data.train.labels)))
 print("Number of files in Validation-set:\t{}".format(len(data.valid.labels)))
 
 #Here, we print the first image of our train data after preprocessing to check how it looks.
-# It should pop up in an image editor outside of this window. 
+#It should pop up in an image editor outside of this window. 
 # cv2.imshow('image view',data.valid.images[0])
 # k = cv2.waitKey(0) & 0xFF #without this, the execution would crush the kernel on windows
 # if k == 27:         # wait for ESC key to exit
@@ -63,13 +63,13 @@ print("Number of files in Validation-set:\t{}".format(len(data.valid.labels)))
 #first images of train and valid datasets are always the same
 
 #Alternatively, we can also save our images in separate folders in our directory
-#save_folder = 'preprocessed_images'
+save_folder = 'preprocessed_images'
 
 
 # # Assuming data is an instance of DataSet
-# for i in range(data.train.num_examples):
-#     image = data.train.images[i].squeeze()  # Remove the batch dimension
-#     dataset.save_image(image, save_folder, f"image_{i}")
+for i in range(data.train.num_examples):
+    image = data.train.images[i].squeeze()  # Remove the batch dimension
+    dataset.save_image(image, save_folder, f"image_{i}")
     
 
     
@@ -265,7 +265,7 @@ def train(num_iteration):
     total_iterations += num_iteration
 
 
-train(num_iteration=100)
+train(num_iteration=1000)
 
 
 
