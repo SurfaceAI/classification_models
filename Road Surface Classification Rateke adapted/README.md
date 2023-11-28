@@ -32,7 +32,7 @@ If you just want to classify images with a pretrained model to test it, you have
 ### 2. In the '01Surface Quality' folder: 
 'test_data_asphalt_quality', 'test_data_paved_quality' and populate them in the same way as in the 01Surface Type folder. Again, put in subfolders named after the respective quality label. 
 
-### 3. If you want to test only the Surface type, got to README in '01Surface Type', if you want to test Surface quality or both combined, go to the README in '02Surface Quality' folder. 
+### If you want to test only the Surface type, go to the README file in '01Surface Type', if you want to test Surface quality or both combined, go to the README in '02Surface Quality' folder. 
 
 
 
