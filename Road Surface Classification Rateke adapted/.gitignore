@@ -2,3 +2,6 @@
 mlruns
 
 .pytest_cache
+
+mlartifacts
+mlruns
