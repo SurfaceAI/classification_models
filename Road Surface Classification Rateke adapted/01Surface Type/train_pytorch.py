@@ -15,22 +15,42 @@ from mlflow import MlflowClient
 import torch.nn.init as init
 import matplotlib.pyplot as plt
 import torch.nn.functional as F
+import wandb
 
 
 
-mlflow.pytorch.get_default_conda_env()
+# weights and biases
+wandb.login()
 
-mlflow.set_tracking_uri("http://127.0.0.1:5000")
-client = MlflowClient(tracking_uri="http://127.0.0.1:5000")
-pytorch_experiment = mlflow.set_experiment("Pytorch_CNN")
+# start a new experiment
+wandb.init(project="pytorch-CNN")
+# capture a dictionary of hyperparameters with config
+config = wandb.config 
+config.learning_rate = 0.001
+config.epochs = 100
+config.seed = 42
 
 
-#overview of experiments
-all_experiments = client.search_experiments()
 
-print(all_experiments)
+# optional: save model at the end
+# model.to_onnx()
+# wandb.save("model.onnx")
 
-#sys.path.append('./')
+
+
+
+
+### mlflow
+
+# mlflow.pytorch.get_default_conda_env()
+# mlflow.set_tracking_uri("http://127.0.0.1:5000")
+# client = MlflowClient(tracking_uri="http://127.0.0.1:5000")
+# pytorch_experiment = mlflow.set_experiment("Pytorch_CNN")
+# mlflow.end_run()
+# #overview of experiments
+# all_experiments = client.search_experiments()
+# print(all_experiments)
+# #sys.path.append('./')
 
 
 # This is the directory in which this .py file is in
@@ -51,11 +71,6 @@ dataset = "dataset_pytorch"
 import dataset_pytorch
 
 
-params = {
-    "batch_size": 32,
-    "learning_rate": 1e-4,
-    "num_epochs": 30
-}
 
 
 
@@ -67,7 +82,7 @@ img_size = 128
 num_channels = 3
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-mlflow.log_param("device", device)
+#mlflow.log_param("device", device)
 
 #Adding global pytorch seed 
 #todo
@@ -235,7 +250,6 @@ class ConvNet(nn.Module):
 
 
 
-num_epochs = 4
 
 #initializing model and choosing loss functiona and optimizer
 model= ConvNet(num_classes)
@@ -244,31 +258,41 @@ criterion = nn.CrossEntropyLoss()
 optimizer = optim.Adam(model.parameters(), lr=learning_rate)
 total_step = len(train_loader)
 
+
+
+# optional: track gradients
+wandb.watch(model, log="all")
+  
 #mlflow.pytorch.autolog()
 
-def train(num_epochs):
-    with mlflow.start_run() as run:
 
-        for epoch in range(num_epochs):
-            model.train()
-            train_loss = 0.0
-            optimizer.zero_grad()
-            for i, (images, labels, img_names, cls) in enumerate(train_loader):
-                images = images.to(device)
-                labels = labels.to(device)
-                
-                outputs = model(images)
-                outputs = F.softmax(outputs, dim=1)
-                loss = criterion(outputs, labels)
-                train_loss += loss.item()
-                loss.backward()
-                optimizer.step()
-                    
-            print('Epoch [{}/{}], Loss: {:.4f}'.format(epoch+1, num_epochs, loss.item()))
+
+
+def train(num_epochs):
+    #with mlflow.start_run() as run:
+
+    for epoch in range(num_epochs):
+        model.train()
+        train_loss = 0.0
+        optimizer.zero_grad()
+        for i, (images, labels, img_names, cls) in enumerate(train_loader):
+            images = images.to(device)
+            labels = labels.to(device)
+            
+            outputs = model(images)
+            outputs = F.softmax(outputs, dim=1)
+            loss = criterion(outputs, labels)
+            train_loss += loss.item()
+            loss.backward()
+            optimizer.step()
+        
+        
+        print('Epoch [{}/{}], Loss: {:.4f}'.format(epoch+1, num_epochs, loss.item()))
             
     avg_train_loss = train_loss / len(train_loader)
-    mlflow.log_metrics("train_loss", avg_train_loss)
-    mlflow.pytorch.log_model(pytorch_model=model, artifact_path="mlartifacts")
+    wandb.log({"train_loss": avg_train_loss})
+    # mlflow.log_metrics("train_loss", avg_train_loss)
+    # mlflow.pytorch.log_model(model, "model")
     
     return avg_train_loss
            
@@ -303,16 +327,26 @@ def validate():
     val_loss_avg = valid_total / len(valid_loader)
     accuracy_avg = accuracy_total / len(valid_loader)
     
+    wandb.log({"validation_loss": val_loss_avg, "validation_accuracy": accuracy_avg})
+    
     return val_loss_avg, accuracy_avg
 
     #print_auto_logged_info(mlflow.get_run(run_id=run.info.run_id))
 
 
-avg_train_loss = train(4)
-val_loss_avg, accuracy_avg = validate()
+train(4)
+validate()
 
-metrics = {"train loss": avg_train_loss, "validation loss": val_loss_avg, "validation accuracy": accuracy_avg}
+# wandb.log({
+#         "Train Loss": avg_train_loss,
+#         "Validation Loss": val_loss_avg,
+#         "Validation Accuracy": accuracy_avg})
 
+
+torch.save(model.state_dict(), "pytorch CNN") # ???
+wandb.save('pytorch_CNN.pt')
+
+wandb.unwatch()
 # with mlflow.start_run() as run:
 #     # Log the parameters used for the model fit
 #     mlflow.log_params(params)

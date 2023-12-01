@@ -1,0 +1,14 @@
+Going to read training images
+Now going to read paved(asphalt) files (Index: 0)
+Now going to read paved(concrete) files (Index: 1)
+Complete reading input data. Will Now print a snippet of it
+Number of files in Training-set:		500
+Number of files in Validation-set:	125
+Traceback (most recent call last):
+  File "c:\Users\esthe\Documents\GitHub\classification_models\Road Surface Classification Rateke adapted\01Surface Type\train_pytorch.py", line 267, in <module>
+    torch.manual_seed(config.seed)
+NameError: name 'config' is not defined
+Traceback (most recent call last):
+  File "c:\Users\esthe\Documents\GitHub\classification_models\Road Surface Classification Rateke adapted\01Surface Type\train_pytorch.py", line 267, in <module>
+    torch.manual_seed(config.seed)
+NameError: name 'config' is not defined

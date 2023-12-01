@@ -1,0 +1,198 @@
+2023-12-01 15:42:47,740 INFO    StreamThr :32296 [internal.py:wandb_internal():86] W&B internal server running at pid: 32296, started at: 2023-12-01 15:42:47.739762
+2023-12-01 15:42:47,742 DEBUG   HandlerThread:32296 [handler.py:handle_request():146] handle_request: status
+2023-12-01 15:42:47,744 INFO    WriterThread:32296 [datastore.py:open_for_write():85] open: C:\Users\esthe\Documents\GitHub\classification_models\Road Surface Classification Rateke adapted\wandb\run-20231201_154247-wbp075pf\run-wbp075pf.wandb
+2023-12-01 15:42:47,747 DEBUG   SenderThread:32296 [sender.py:send():380] send: header
+2023-12-01 15:42:47,789 DEBUG   SenderThread:32296 [sender.py:send():380] send: run
+2023-12-01 15:42:48,345 INFO    SenderThread:32296 [dir_watcher.py:__init__():211] watching files in: C:\Users\esthe\Documents\GitHub\classification_models\Road Surface Classification Rateke adapted\wandb\run-20231201_154247-wbp075pf\files
+2023-12-01 15:42:48,345 INFO    SenderThread:32296 [sender.py:_start_run_threads():1124] run started: wbp075pf with start time 1701441767.739762
+2023-12-01 15:42:48,352 DEBUG   HandlerThread:32296 [handler.py:handle_request():146] handle_request: check_version
+2023-12-01 15:42:48,352 DEBUG   SenderThread:32296 [sender.py:send_request():407] send_request: check_version
+2023-12-01 15:42:48,507 DEBUG   HandlerThread:32296 [handler.py:handle_request():146] handle_request: run_start
+2023-12-01 15:42:48,521 DEBUG   HandlerThread:32296 [system_info.py:__init__():32] System info init
+2023-12-01 15:42:48,521 DEBUG   HandlerThread:32296 [system_info.py:__init__():47] System info init done
+2023-12-01 15:42:48,521 INFO    HandlerThread:32296 [system_monitor.py:start():194] Starting system monitor
+2023-12-01 15:42:48,521 INFO    SystemMonitor:32296 [system_monitor.py:_start():158] Starting system asset monitoring threads
+2023-12-01 15:42:48,522 INFO    HandlerThread:32296 [system_monitor.py:probe():214] Collecting system info
+2023-12-01 15:42:48,531 INFO    SystemMonitor:32296 [interfaces.py:start():190] Started cpu monitoring
+2023-12-01 15:42:48,531 DEBUG   HandlerThread:32296 [system_info.py:probe():196] Probing system
+2023-12-01 15:42:48,532 INFO    SystemMonitor:32296 [interfaces.py:start():190] Started disk monitoring
+2023-12-01 15:42:48,533 INFO    SystemMonitor:32296 [interfaces.py:start():190] Started memory monitoring
+2023-12-01 15:42:48,545 INFO    SystemMonitor:32296 [interfaces.py:start():190] Started network monitoring
+2023-12-01 15:42:48,550 DEBUG   HandlerThread:32296 [system_info.py:_probe_git():181] Probing git
+2023-12-01 15:42:48,631 DEBUG   HandlerThread:32296 [system_info.py:_probe_git():189] Probing git done
+2023-12-01 15:42:48,631 DEBUG   HandlerThread:32296 [system_info.py:probe():244] Probing system done
+2023-12-01 15:42:48,631 DEBUG   HandlerThread:32296 [system_monitor.py:probe():223] {'os': 'Windows-10-10.0.22621-SP0', 'python': '3.9.18', 'heartbeatAt': '2023-12-01T14:42:48.531032', 'startedAt': '2023-12-01T14:42:47.728243', 'docker': None, 'cuda': None, 'args': (), 'state': 'running', 'program': 'c:\\Users\\esthe\\Documents\\GitHub\\classification_models\\Road Surface Classification Rateke adapted\\01Surface Type\\train_pytorch.py', 'codePathLocal': '01Surface Type\\train_pytorch.py', 'codePath': 'Road Surface Classification Rateke adapted\\01Surface Type\\train_pytorch.py', 'git': {'remote': 'https://github.com/SurfaceAI/classification_models.git', 'commit': '8767497bfc8b8eeedb030b9954311d62649b9fc0'}, 'email': 'estherweigmann@posteo.de', 'root': 'C:/Users/esthe/Documents/GitHub/classification_models', 'host': 'LAPTOP-AMDVAI4B', 'username': 'Esther', 'executable': 'C:\\Users\\esthe\\anaconda3\\envs\\SurfaceAI\\python.exe', 'cpu_count': 8, 'cpu_count_logical': 8, 'cpu_freq': {'current': 2000.0, 'min': 0.0, 'max': 2000.0}, 'cpu_freq_per_core': [{'current': 2000.0, 'min': 0.0, 'max': 2000.0}], 'disk': {'/': {'total': 475.69237899780273, 'used': 316.8622131347656}}, 'memory': {'total': 15.366016387939453}}
+2023-12-01 15:42:48,631 INFO    HandlerThread:32296 [system_monitor.py:probe():224] Finished collecting system info
+2023-12-01 15:42:48,631 INFO    HandlerThread:32296 [system_monitor.py:probe():227] Publishing system info
+2023-12-01 15:42:48,631 DEBUG   HandlerThread:32296 [system_info.py:_save_pip():52] Saving list of pip packages installed into the current environment
+2023-12-01 15:42:48,632 DEBUG   HandlerThread:32296 [system_info.py:_save_pip():68] Saving pip packages done
+2023-12-01 15:42:48,632 DEBUG   HandlerThread:32296 [system_info.py:_save_conda():75] Saving list of conda packages installed into the current environment
+2023-12-01 15:42:48,634 ERROR   HandlerThread:32296 [system_info.py:_save_conda():86] Error saving conda packages: [WinError 2] Das System kann die angegebene Datei nicht finden
+Traceback (most recent call last):
+  File "C:\Users\esthe\anaconda3\envs\SurfaceAI\lib\site-packages\wandb\sdk\internal\system\system_info.py", line 82, in _save_conda
+    subprocess.call(
+  File "C:\Users\esthe\anaconda3\envs\SurfaceAI\lib\subprocess.py", line 349, in call
+    with Popen(*popenargs, **kwargs) as p:
+  File "C:\Users\esthe\anaconda3\envs\SurfaceAI\lib\subprocess.py", line 951, in __init__
+    self._execute_child(args, executable, preexec_fn, close_fds,
+  File "C:\Users\esthe\anaconda3\envs\SurfaceAI\lib\subprocess.py", line 1436, in _execute_child
+    hp, ht, pid, tid = _winapi.CreateProcess(executable, args,
+FileNotFoundError: [WinError 2] Das System kann die angegebene Datei nicht finden
+2023-12-01 15:42:48,636 DEBUG   HandlerThread:32296 [system_info.py:_save_conda():87] Saving conda packages done
+2023-12-01 15:42:48,637 INFO    HandlerThread:32296 [system_monitor.py:probe():229] Finished publishing system info
+2023-12-01 15:42:48,651 DEBUG   SenderThread:32296 [sender.py:send():380] send: files
+2023-12-01 15:42:48,651 INFO    SenderThread:32296 [sender.py:_save_file():1380] saving file wandb-metadata.json with policy now
+2023-12-01 15:42:48,662 DEBUG   HandlerThread:32296 [handler.py:handle_request():146] handle_request: stop_status
+2023-12-01 15:42:48,666 DEBUG   SenderThread:32296 [sender.py:send_request():407] send_request: stop_status
+2023-12-01 15:42:48,666 DEBUG   HandlerThread:32296 [handler.py:handle_request():146] handle_request: internal_messages
+2023-12-01 15:42:48,951 DEBUG   SenderThread:32296 [sender.py:send():380] send: telemetry
+2023-12-01 15:42:48,951 DEBUG   SenderThread:32296 [sender.py:send():380] send: telemetry
+2023-12-01 15:42:49,066 DEBUG   SenderThread:32296 [sender.py:send():380] send: telemetry
+2023-12-01 15:42:49,289 INFO    wandb-upload_0:32296 [upload_job.py:push():131] Uploaded file C:\Users\esthe\AppData\Local\Temp\tmpvomm5353wandb\y95av71o-wandb-metadata.json
+2023-12-01 15:42:49,352 INFO    Thread-16 :32296 [dir_watcher.py:_on_file_created():271] file/dir created: C:\Users\esthe\Documents\GitHub\classification_models\Road Surface Classification Rateke adapted\wandb\run-20231201_154247-wbp075pf\files\conda-environment.yaml
+2023-12-01 15:42:49,353 INFO    Thread-16 :32296 [dir_watcher.py:_on_file_created():271] file/dir created: C:\Users\esthe\Documents\GitHub\classification_models\Road Surface Classification Rateke adapted\wandb\run-20231201_154247-wbp075pf\files\wandb-metadata.json
+2023-12-01 15:42:49,353 INFO    Thread-16 :32296 [dir_watcher.py:_on_file_created():271] file/dir created: C:\Users\esthe\Documents\GitHub\classification_models\Road Surface Classification Rateke adapted\wandb\run-20231201_154247-wbp075pf\files\output.log
+2023-12-01 15:42:49,353 INFO    Thread-16 :32296 [dir_watcher.py:_on_file_created():271] file/dir created: C:\Users\esthe\Documents\GitHub\classification_models\Road Surface Classification Rateke adapted\wandb\run-20231201_154247-wbp075pf\files\requirements.txt
+2023-12-01 15:42:51,373 INFO    Thread-16 :32296 [dir_watcher.py:_on_file_modified():288] file/dir modified: C:\Users\esthe\Documents\GitHub\classification_models\Road Surface Classification Rateke adapted\wandb\run-20231201_154247-wbp075pf\files\output.log
+2023-12-01 15:42:53,207 DEBUG   HandlerThread:32296 [handler.py:handle_request():146] handle_request: status_report
+2023-12-01 15:42:57,438 INFO    Thread-16 :32296 [dir_watcher.py:_on_file_modified():288] file/dir modified: C:\Users\esthe\Documents\GitHub\classification_models\Road Surface Classification Rateke adapted\wandb\run-20231201_154247-wbp075pf\files\output.log
+2023-12-01 15:42:58,712 DEBUG   HandlerThread:32296 [handler.py:handle_request():146] handle_request: status_report
+2023-12-01 15:42:58,896 DEBUG   SenderThread:32296 [sender.py:send():380] send: telemetry
+2023-12-01 15:42:58,902 DEBUG   SenderThread:32296 [sender.py:send():380] send: exit
+2023-12-01 15:42:58,902 INFO    SenderThread:32296 [sender.py:send_exit():585] handling exit code: 1
+2023-12-01 15:42:58,902 INFO    SenderThread:32296 [sender.py:send_exit():587] handling runtime: 10
+2023-12-01 15:42:58,903 INFO    SenderThread:32296 [sender.py:_save_file():1380] saving file wandb-summary.json with policy end
+2023-12-01 15:42:58,903 INFO    SenderThread:32296 [sender.py:send_exit():593] send defer
+2023-12-01 15:42:58,904 DEBUG   HandlerThread:32296 [handler.py:handle_request():146] handle_request: defer
+2023-12-01 15:42:58,904 INFO    HandlerThread:32296 [handler.py:handle_request_defer():172] handle defer: 0
+2023-12-01 15:42:58,904 DEBUG   SenderThread:32296 [sender.py:send_request():407] send_request: defer
+2023-12-01 15:42:58,904 INFO    SenderThread:32296 [sender.py:send_request_defer():609] handle sender defer: 0
+2023-12-01 15:42:58,904 INFO    SenderThread:32296 [sender.py:transition_state():613] send defer: 1
+2023-12-01 15:42:58,904 DEBUG   HandlerThread:32296 [handler.py:handle_request():146] handle_request: defer
+2023-12-01 15:42:58,904 INFO    HandlerThread:32296 [handler.py:handle_request_defer():172] handle defer: 1
+2023-12-01 15:42:58,905 DEBUG   SenderThread:32296 [sender.py:send_request():407] send_request: defer
+2023-12-01 15:42:58,905 INFO    SenderThread:32296 [sender.py:send_request_defer():609] handle sender defer: 1
+2023-12-01 15:42:58,905 INFO    SenderThread:32296 [sender.py:transition_state():613] send defer: 2
+2023-12-01 15:42:58,905 DEBUG   HandlerThread:32296 [handler.py:handle_request():146] handle_request: defer
+2023-12-01 15:42:58,905 INFO    HandlerThread:32296 [handler.py:handle_request_defer():172] handle defer: 2
+2023-12-01 15:42:58,905 INFO    HandlerThread:32296 [system_monitor.py:finish():203] Stopping system monitor
+2023-12-01 15:42:58,906 DEBUG   SystemMonitor:32296 [system_monitor.py:_start():172] Starting system metrics aggregation loop
+2023-12-01 15:42:58,906 INFO    HandlerThread:32296 [interfaces.py:finish():202] Joined cpu monitor
+2023-12-01 15:42:58,906 DEBUG   SystemMonitor:32296 [system_monitor.py:_start():179] Finished system metrics aggregation loop
+2023-12-01 15:42:58,906 INFO    HandlerThread:32296 [interfaces.py:finish():202] Joined disk monitor
+2023-12-01 15:42:58,906 DEBUG   SystemMonitor:32296 [system_monitor.py:_start():183] Publishing last batch of metrics
+2023-12-01 15:42:58,906 INFO    HandlerThread:32296 [interfaces.py:finish():202] Joined memory monitor
+2023-12-01 15:42:58,907 INFO    HandlerThread:32296 [interfaces.py:finish():202] Joined network monitor
+2023-12-01 15:42:58,908 DEBUG   SenderThread:32296 [sender.py:send_request():407] send_request: defer
+2023-12-01 15:42:58,908 INFO    SenderThread:32296 [sender.py:send_request_defer():609] handle sender defer: 2
+2023-12-01 15:42:58,908 INFO    SenderThread:32296 [sender.py:transition_state():613] send defer: 3
+2023-12-01 15:42:58,908 DEBUG   SenderThread:32296 [sender.py:send():380] send: stats
+2023-12-01 15:42:58,909 DEBUG   HandlerThread:32296 [handler.py:handle_request():146] handle_request: defer
+2023-12-01 15:42:58,909 INFO    HandlerThread:32296 [handler.py:handle_request_defer():172] handle defer: 3
+2023-12-01 15:42:58,909 DEBUG   SenderThread:32296 [sender.py:send_request():407] send_request: defer
+2023-12-01 15:42:58,909 INFO    SenderThread:32296 [sender.py:send_request_defer():609] handle sender defer: 3
+2023-12-01 15:42:58,909 INFO    SenderThread:32296 [sender.py:transition_state():613] send defer: 4
+2023-12-01 15:42:58,909 DEBUG   HandlerThread:32296 [handler.py:handle_request():146] handle_request: defer
+2023-12-01 15:42:58,909 INFO    HandlerThread:32296 [handler.py:handle_request_defer():172] handle defer: 4
+2023-12-01 15:42:58,909 DEBUG   SenderThread:32296 [sender.py:send_request():407] send_request: defer
+2023-12-01 15:42:58,909 INFO    SenderThread:32296 [sender.py:send_request_defer():609] handle sender defer: 4
+2023-12-01 15:42:58,910 INFO    SenderThread:32296 [sender.py:transition_state():613] send defer: 5
+2023-12-01 15:42:58,910 DEBUG   HandlerThread:32296 [handler.py:handle_request():146] handle_request: defer
+2023-12-01 15:42:58,910 INFO    HandlerThread:32296 [handler.py:handle_request_defer():172] handle defer: 5
+2023-12-01 15:42:58,910 DEBUG   SenderThread:32296 [sender.py:send():380] send: summary
+2023-12-01 15:42:58,911 INFO    SenderThread:32296 [sender.py:_save_file():1380] saving file wandb-summary.json with policy end
+2023-12-01 15:42:58,911 DEBUG   SenderThread:32296 [sender.py:send_request():407] send_request: defer
+2023-12-01 15:42:58,911 INFO    SenderThread:32296 [sender.py:send_request_defer():609] handle sender defer: 5
+2023-12-01 15:42:58,911 INFO    SenderThread:32296 [sender.py:transition_state():613] send defer: 6
+2023-12-01 15:42:58,912 DEBUG   HandlerThread:32296 [handler.py:handle_request():146] handle_request: defer
+2023-12-01 15:42:58,912 INFO    HandlerThread:32296 [handler.py:handle_request_defer():172] handle defer: 6
+2023-12-01 15:42:58,912 DEBUG   SenderThread:32296 [sender.py:send_request():407] send_request: defer
+2023-12-01 15:42:58,912 INFO    SenderThread:32296 [sender.py:send_request_defer():609] handle sender defer: 6
+2023-12-01 15:42:58,916 DEBUG   HandlerThread:32296 [handler.py:handle_request():146] handle_request: status_report
+2023-12-01 15:42:59,133 INFO    SenderThread:32296 [sender.py:transition_state():613] send defer: 7
+2023-12-01 15:42:59,134 DEBUG   HandlerThread:32296 [handler.py:handle_request():146] handle_request: defer
+2023-12-01 15:42:59,134 INFO    HandlerThread:32296 [handler.py:handle_request_defer():172] handle defer: 7
+2023-12-01 15:42:59,134 DEBUG   SenderThread:32296 [sender.py:send_request():407] send_request: defer
+2023-12-01 15:42:59,134 INFO    SenderThread:32296 [sender.py:send_request_defer():609] handle sender defer: 7
+2023-12-01 15:42:59,459 INFO    Thread-16 :32296 [dir_watcher.py:_on_file_modified():288] file/dir modified: C:\Users\esthe\Documents\GitHub\classification_models\Road Surface Classification Rateke adapted\wandb\run-20231201_154247-wbp075pf\files\output.log
+2023-12-01 15:42:59,459 INFO    Thread-16 :32296 [dir_watcher.py:_on_file_modified():288] file/dir modified: C:\Users\esthe\Documents\GitHub\classification_models\Road Surface Classification Rateke adapted\wandb\run-20231201_154247-wbp075pf\files\config.yaml
+2023-12-01 15:42:59,459 INFO    Thread-16 :32296 [dir_watcher.py:_on_file_created():271] file/dir created: C:\Users\esthe\Documents\GitHub\classification_models\Road Surface Classification Rateke adapted\wandb\run-20231201_154247-wbp075pf\files\wandb-summary.json
+2023-12-01 15:42:59,906 DEBUG   HandlerThread:32296 [handler.py:handle_request():146] handle_request: poll_exit
+2023-12-01 15:43:00,916 INFO    SenderThread:32296 [sender.py:transition_state():613] send defer: 8
+2023-12-01 15:43:00,917 DEBUG   SenderThread:32296 [sender.py:send_request():407] send_request: poll_exit
+2023-12-01 15:43:00,917 DEBUG   HandlerThread:32296 [handler.py:handle_request():146] handle_request: defer
+2023-12-01 15:43:00,917 INFO    HandlerThread:32296 [handler.py:handle_request_defer():172] handle defer: 8
+2023-12-01 15:43:00,918 DEBUG   SenderThread:32296 [sender.py:send_request():407] send_request: defer
+2023-12-01 15:43:00,918 INFO    SenderThread:32296 [sender.py:send_request_defer():609] handle sender defer: 8
+2023-12-01 15:43:00,918 INFO    SenderThread:32296 [job_builder.py:build():298] Attempting to build job artifact
+2023-12-01 15:43:00,918 INFO    SenderThread:32296 [job_builder.py:_get_source_type():428] is repo sourced job
+2023-12-01 15:43:00,996 INFO    SenderThread:32296 [job_builder.py:build():404] adding wandb-job metadata file
+2023-12-01 15:43:01,004 INFO    SenderThread:32296 [sender.py:transition_state():613] send defer: 9
+2023-12-01 15:43:01,004 DEBUG   HandlerThread:32296 [handler.py:handle_request():146] handle_request: defer
+2023-12-01 15:43:01,004 DEBUG   SenderThread:32296 [sender.py:send():380] send: artifact
+2023-12-01 15:43:01,004 INFO    HandlerThread:32296 [handler.py:handle_request_defer():172] handle defer: 9
+2023-12-01 15:43:01,469 INFO    Thread-16 :32296 [dir_watcher.py:_on_file_modified():288] file/dir modified: C:\Users\esthe\Documents\GitHub\classification_models\Road Surface Classification Rateke adapted\wandb\run-20231201_154247-wbp075pf\files\output.log
+2023-12-01 15:43:02,058 INFO    SenderThread:32296 [sender.py:send_artifact():1458] sent artifact job-https___github.com_SurfaceAI_classification_models.git_Road..e_Classification_Rateke_adapted_01Surface_Type_train_pytorch.py - {'id': 'QXJ0aWZhY3Q6NjU0NTgyODU4', 'state': 'COMMITTED', 'artifactSequence': {'id': 'QXJ0aWZhY3RDb2xsZWN0aW9uOjEyMDE0MzcxMA==', 'latestArtifact': {'id': 'QXJ0aWZhY3Q6NjU0NTgyODU4', 'versionIndex': 0}}}
+2023-12-01 15:43:02,058 DEBUG   SenderThread:32296 [sender.py:send_request():407] send_request: defer
+2023-12-01 15:43:02,058 INFO    SenderThread:32296 [sender.py:send_request_defer():609] handle sender defer: 9
+2023-12-01 15:43:02,058 INFO    SenderThread:32296 [dir_watcher.py:finish():358] shutting down directory watcher
+2023-12-01 15:43:02,482 INFO    SenderThread:32296 [dir_watcher.py:finish():388] scan: C:\Users\esthe\Documents\GitHub\classification_models\Road Surface Classification Rateke adapted\wandb\run-20231201_154247-wbp075pf\files
+2023-12-01 15:43:02,483 INFO    SenderThread:32296 [dir_watcher.py:finish():402] scan save: C:\Users\esthe\Documents\GitHub\classification_models\Road Surface Classification Rateke adapted\wandb\run-20231201_154247-wbp075pf\files\conda-environment.yaml conda-environment.yaml
+2023-12-01 15:43:02,483 INFO    SenderThread:32296 [dir_watcher.py:finish():402] scan save: C:\Users\esthe\Documents\GitHub\classification_models\Road Surface Classification Rateke adapted\wandb\run-20231201_154247-wbp075pf\files\config.yaml config.yaml
+2023-12-01 15:43:02,484 INFO    SenderThread:32296 [dir_watcher.py:finish():402] scan save: C:\Users\esthe\Documents\GitHub\classification_models\Road Surface Classification Rateke adapted\wandb\run-20231201_154247-wbp075pf\files\output.log output.log
+2023-12-01 15:43:02,486 INFO    SenderThread:32296 [dir_watcher.py:finish():402] scan save: C:\Users\esthe\Documents\GitHub\classification_models\Road Surface Classification Rateke adapted\wandb\run-20231201_154247-wbp075pf\files\requirements.txt requirements.txt
+2023-12-01 15:43:02,487 INFO    SenderThread:32296 [dir_watcher.py:finish():402] scan save: C:\Users\esthe\Documents\GitHub\classification_models\Road Surface Classification Rateke adapted\wandb\run-20231201_154247-wbp075pf\files\wandb-metadata.json wandb-metadata.json
+2023-12-01 15:43:02,487 INFO    SenderThread:32296 [dir_watcher.py:finish():402] scan save: C:\Users\esthe\Documents\GitHub\classification_models\Road Surface Classification Rateke adapted\wandb\run-20231201_154247-wbp075pf\files\wandb-summary.json wandb-summary.json
+2023-12-01 15:43:02,494 INFO    SenderThread:32296 [sender.py:transition_state():613] send defer: 10
+2023-12-01 15:43:02,494 DEBUG   HandlerThread:32296 [handler.py:handle_request():146] handle_request: defer
+2023-12-01 15:43:02,495 INFO    HandlerThread:32296 [handler.py:handle_request_defer():172] handle defer: 10
+2023-12-01 15:43:02,498 DEBUG   SenderThread:32296 [sender.py:send_request():407] send_request: defer
+2023-12-01 15:43:02,498 INFO    SenderThread:32296 [sender.py:send_request_defer():609] handle sender defer: 10
+2023-12-01 15:43:02,498 INFO    SenderThread:32296 [file_pusher.py:finish():175] shutting down file pusher
+2023-12-01 15:43:02,884 INFO    wandb-upload_1:32296 [upload_job.py:push():131] Uploaded file C:\Users\esthe\Documents\GitHub\classification_models\Road Surface Classification Rateke adapted\wandb\run-20231201_154247-wbp075pf\files\output.log
+2023-12-01 15:43:02,981 INFO    wandb-upload_0:32296 [upload_job.py:push():131] Uploaded file C:\Users\esthe\Documents\GitHub\classification_models\Road Surface Classification Rateke adapted\wandb\run-20231201_154247-wbp075pf\files\config.yaml
+2023-12-01 15:43:03,083 INFO    wandb-upload_3:32296 [upload_job.py:push():131] Uploaded file C:\Users\esthe\Documents\GitHub\classification_models\Road Surface Classification Rateke adapted\wandb\run-20231201_154247-wbp075pf\files\wandb-summary.json
+2023-12-01 15:43:03,083 INFO    wandb-upload_2:32296 [upload_job.py:push():131] Uploaded file C:\Users\esthe\Documents\GitHub\classification_models\Road Surface Classification Rateke adapted\wandb\run-20231201_154247-wbp075pf\files\requirements.txt
+2023-12-01 15:43:03,286 INFO    Thread-15 :32296 [sender.py:transition_state():613] send defer: 11
+2023-12-01 15:43:03,286 DEBUG   HandlerThread:32296 [handler.py:handle_request():146] handle_request: defer
+2023-12-01 15:43:03,287 INFO    HandlerThread:32296 [handler.py:handle_request_defer():172] handle defer: 11
+2023-12-01 15:43:03,287 DEBUG   SenderThread:32296 [sender.py:send_request():407] send_request: defer
+2023-12-01 15:43:03,287 INFO    SenderThread:32296 [sender.py:send_request_defer():609] handle sender defer: 11
+2023-12-01 15:43:03,287 INFO    SenderThread:32296 [file_pusher.py:join():181] waiting for file pusher
+2023-12-01 15:43:03,287 INFO    SenderThread:32296 [sender.py:transition_state():613] send defer: 12
+2023-12-01 15:43:03,287 DEBUG   HandlerThread:32296 [handler.py:handle_request():146] handle_request: defer
+2023-12-01 15:43:03,287 INFO    HandlerThread:32296 [handler.py:handle_request_defer():172] handle defer: 12
+2023-12-01 15:43:03,287 DEBUG   SenderThread:32296 [sender.py:send_request():407] send_request: defer
+2023-12-01 15:43:03,287 INFO    SenderThread:32296 [sender.py:send_request_defer():609] handle sender defer: 12
+2023-12-01 15:43:03,287 INFO    SenderThread:32296 [file_stream.py:finish():595] file stream finish called
+2023-12-01 15:43:03,490 INFO    SenderThread:32296 [file_stream.py:finish():599] file stream finish is done
+2023-12-01 15:43:03,490 INFO    SenderThread:32296 [sender.py:transition_state():613] send defer: 13
+2023-12-01 15:43:03,490 DEBUG   HandlerThread:32296 [handler.py:handle_request():146] handle_request: defer
+2023-12-01 15:43:03,490 INFO    HandlerThread:32296 [handler.py:handle_request_defer():172] handle defer: 13
+2023-12-01 15:43:03,491 DEBUG   SenderThread:32296 [sender.py:send_request():407] send_request: defer
+2023-12-01 15:43:03,491 INFO    SenderThread:32296 [sender.py:send_request_defer():609] handle sender defer: 13
+2023-12-01 15:43:03,491 INFO    SenderThread:32296 [sender.py:transition_state():613] send defer: 14
+2023-12-01 15:43:03,491 DEBUG   HandlerThread:32296 [handler.py:handle_request():146] handle_request: defer
+2023-12-01 15:43:03,491 INFO    HandlerThread:32296 [handler.py:handle_request_defer():172] handle defer: 14
+2023-12-01 15:43:03,492 DEBUG   SenderThread:32296 [sender.py:send():380] send: final
+2023-12-01 15:43:03,492 DEBUG   SenderThread:32296 [sender.py:send():380] send: footer
+2023-12-01 15:43:03,492 DEBUG   SenderThread:32296 [sender.py:send_request():407] send_request: defer
+2023-12-01 15:43:03,492 INFO    SenderThread:32296 [sender.py:send_request_defer():609] handle sender defer: 14
+2023-12-01 15:43:03,493 DEBUG   HandlerThread:32296 [handler.py:handle_request():146] handle_request: poll_exit
+2023-12-01 15:43:03,493 DEBUG   HandlerThread:32296 [handler.py:handle_request():146] handle_request: server_info
+2023-12-01 15:43:03,493 DEBUG   HandlerThread:32296 [handler.py:handle_request():146] handle_request: get_summary
+2023-12-01 15:43:03,493 DEBUG   HandlerThread:32296 [handler.py:handle_request():146] handle_request: sampled_history
+2023-12-01 15:43:03,493 DEBUG   HandlerThread:32296 [handler.py:handle_request():146] handle_request: internal_messages
+2023-12-01 15:43:03,493 DEBUG   HandlerThread:32296 [handler.py:handle_request():146] handle_request: job_info
+2023-12-01 15:43:03,494 DEBUG   SenderThread:32296 [sender.py:send_request():407] send_request: poll_exit
+2023-12-01 15:43:03,494 DEBUG   SenderThread:32296 [sender.py:send_request():407] send_request: server_info
+2023-12-01 15:43:03,639 DEBUG   SenderThread:32296 [sender.py:send_request():407] send_request: job_info
+2023-12-01 15:43:03,640 INFO    MainThread:32296 [wandb_run.py:_footer_history_summary_info():3760] rendering history
+2023-12-01 15:43:03,640 INFO    MainThread:32296 [wandb_run.py:_footer_history_summary_info():3792] rendering summary
+2023-12-01 15:43:03,640 INFO    MainThread:32296 [wandb_run.py:_footer_sync_info():3719] logging synced files
+2023-12-01 15:43:03,648 DEBUG   HandlerThread:32296 [handler.py:handle_request():146] handle_request: shutdown
+2023-12-01 15:43:03,648 INFO    HandlerThread:32296 [handler.py:finish():866] shutting down handler
+2023-12-01 15:43:04,509 INFO    WriterThread:32296 [datastore.py:close():294] close: C:\Users\esthe\Documents\GitHub\classification_models\Road Surface Classification Rateke adapted\wandb\run-20231201_154247-wbp075pf\run-wbp075pf.wandb
+2023-12-01 15:43:04,648 INFO    SenderThread:32296 [sender.py:finish():1536] shutting down sender
+2023-12-01 15:43:04,648 INFO    SenderThread:32296 [file_pusher.py:finish():175] shutting down file pusher
+2023-12-01 15:43:04,648 INFO    SenderThread:32296 [file_pusher.py:join():181] waiting for file pusher

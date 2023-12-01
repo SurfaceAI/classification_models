@@ -1,0 +1,45 @@
+{
+    "os": "Windows-10-10.0.22621-SP0",
+    "python": "3.9.18",
+    "heartbeatAt": "2023-12-01T14:58:37.160612",
+    "startedAt": "2023-12-01T14:58:36.079919",
+    "docker": null,
+    "cuda": null,
+    "args": [],
+    "state": "running",
+    "program": "c:\\Users\\esthe\\Documents\\GitHub\\classification_models\\Road Surface Classification Rateke adapted\\01Surface Type\\train_pytorch.py",
+    "codePathLocal": "01Surface Type\\train_pytorch.py",
+    "codePath": "Road Surface Classification Rateke adapted\\01Surface Type\\train_pytorch.py",
+    "git": {
+        "remote": "https://github.com/SurfaceAI/classification_models.git",
+        "commit": "8767497bfc8b8eeedb030b9954311d62649b9fc0"
+    },
+    "email": "estherweigmann@posteo.de",
+    "root": "C:/Users/esthe/Documents/GitHub/classification_models",
+    "host": "LAPTOP-AMDVAI4B",
+    "username": "Esther",
+    "executable": "C:\\Users\\esthe\\anaconda3\\envs\\SurfaceAI\\python.exe",
+    "cpu_count": 8,
+    "cpu_count_logical": 8,
+    "cpu_freq": {
+        "current": 2000.0,
+        "min": 0.0,
+        "max": 2000.0
+    },
+    "cpu_freq_per_core": [
+        {
+            "current": 2000.0,
+            "min": 0.0,
+            "max": 2000.0
+        }
+    ],
+    "disk": {
+        "/": {
+            "total": 475.69237899780273,
+            "used": 317.28132247924805
+        }
+    },
+    "memory": {
+        "total": 15.366016387939453
+    }
+}
