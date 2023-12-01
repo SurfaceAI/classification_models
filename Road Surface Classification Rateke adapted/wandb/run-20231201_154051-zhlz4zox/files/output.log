@@ -1,8 +1,0 @@
-Traceback (most recent call last):
-  File "c:\Users\esthe\Documents\GitHub\classification_models\Road Surface Classification Rateke adapted\01Surface Type\train_pytorch.py", line 34, in <module>
-    model.to_onnx()
-NameError: name 'model' is not defined
-Traceback (most recent call last):
-  File "c:\Users\esthe\Documents\GitHub\classification_models\Road Surface Classification Rateke adapted\01Surface Type\train_pytorch.py", line 34, in <module>
-    model.to_onnx()
-NameError: name 'model' is not defined
