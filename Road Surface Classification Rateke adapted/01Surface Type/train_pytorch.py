@@ -11,9 +11,24 @@ import mlflow
 import shutil
 import sys
 import mlflow.pytorch
+from mlflow import MlflowClient
 import torch.nn.init as init
+import matplotlib.pyplot as plt
+import torch.nn.functional as F
+
+
+
+mlflow.pytorch.get_default_conda_env()
 
 mlflow.set_tracking_uri("http://127.0.0.1:5000")
+client = MlflowClient(tracking_uri="http://127.0.0.1:5000")
+pytorch_experiment = mlflow.set_experiment("Pytorch_CNN")
+
+
+#overview of experiments
+all_experiments = client.search_experiments()
+
+print(all_experiments)
 
 #sys.path.append('./')
 
@@ -35,6 +50,15 @@ model = "roadsurface-model"
 dataset = "dataset_pytorch"
 import dataset_pytorch
 
+
+params = {
+    "batch_size": 32,
+    "learning_rate": 1e-4,
+    "num_epochs": 30
+}
+
+
+
 #defining hypterparameters and input data
 batch_size = 32
 validation_size = 0.2
@@ -43,6 +67,7 @@ img_size = 128
 num_channels = 3
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+mlflow.log_param("device", device)
 
 #Adding global pytorch seed 
 #todo
@@ -110,36 +135,45 @@ image.shape
 class ConvNet(nn.Module):
     def __init__(self, num_classes):
         super(ConvNet, self).__init__()
+        # Conv Layer 1
         self.conv1 = nn.Sequential(
             nn.Conv2d(3, 32, kernel_size=3, padding=1, bias=True),
             nn.MaxPool2d(kernel_size=2, stride=2), 
-            nn.ReLU())     
-        
+            nn.ReLU())    #output is (32,64,64) 
+        # Weight initilization Layer 1
         init.xavier_normal_(self.conv1[0].weight)
         init.constant_(self.conv1[0].bias, 0.05)
         
+        # Conv Layer 2
         self.conv2 = nn.Sequential(
             nn.Conv2d(32, 32, kernel_size=3, padding=1, bias=True),
             nn.MaxPool2d(kernel_size=2, stride=2),
-            nn.ReLU())
+            nn.ReLU()) #output is (32,32,32)
     
         init.xavier_normal_(self.conv2[0].weight)
         init.constant_(self.conv2[0].bias, 0.05)
         
+        # Conv Layer 3
         self.conv3 = nn.Sequential(
             nn.Conv2d(32, 64, kernel_size=3, padding=1, bias=True),
             nn.MaxPool2d(kernel_size=2, stride=2),
-            nn.ReLU())
+            nn.ReLU()) #output is (64, 16, 16)
         
         init.xavier_normal_(self.conv3[0].weight)
-        init.constant_(self.conv3[0].bias, 0.1)
+        init.constant_(self.conv3[0].bias, 0.05)
         
-        self.flat = nn.Flatten()
+        self.flat = nn.Flatten() # output (16384)
+        
         self.fc1 = nn.Sequential(
-            nn.Linear(64 * 16 * 16, 128), 
+            nn.Linear(64 * 16 * 16, 128, bias=True), 
             nn.ReLU()) 
-        self.fc2 = nn.Linear(128, num_classes)
         
+        init.xavier_normal_(self.fc1[0].weight) 
+        init.constant_(self.fc1[0].bias, 0.05)
+        
+        self.fc2 = nn.Linear(128, num_classes, bias=True)
+        init.xavier_normal_(self.fc2.weight)
+        init.constant_(self.fc2.bias, 0.05)
         
         
     def forward(self, x):
@@ -147,10 +181,61 @@ class ConvNet(nn.Module):
         out = self.conv2(out)
         out = self.conv3(out)
         out = self.flat(out)
-        out = out.reshape(out.size(0), -1)
         out = self.fc1(out)
         out = self.fc2(out)
         return out
+    
+    
+#checking our model step by step
+
+# dataiter = iter(train_loader)
+# images, labels, img_names, cls = next(dataiter)
+# image = images[0]
+# image = numpy.transpose(image, (1, 2, 0))
+# plt.imshow(torchvision.utils.make_grid(image))
+
+# conv1 = nn.Sequential(
+#             nn.Conv2d(3, 32, kernel_size=3, padding=1, bias=True),
+#             nn.MaxPool2d(kernel_size=2, stride=2), 
+#             nn.ReLU()) 
+
+# conv2 = nn.Sequential(
+#             nn.Conv2d(32, 32, kernel_size=3, padding=1, bias=True),
+#             nn.MaxPool2d(kernel_size=2, stride=2),
+#             nn.ReLU())
+    
+# conv3 = nn.Sequential(
+#             nn.Conv2d(32, 64, kernel_size=3, padding=1, bias=True),
+#             nn.MaxPool2d(kernel_size=2, stride=2),
+#             nn.ReLU())
+
+# flat = nn.Flatten(0,-1)
+# fc1 =  nn.Sequential(
+#             nn.Linear(64 * 16 * 16, 128, bias=True), 
+#             nn.ReLU())
+
+# fc2 = nn.Linear(128, num_classes, bias=True)
+
+# image = images[0]
+# image.shape
+
+# x = conv1(image)
+# x = conv2(x)
+# x.shape
+# x = conv3(x)
+# x.shape
+# x = flat(x)
+# x.shape
+# x = fc1(x)
+# x.shape
+# x = fc2(x)
+# x.shape
+
+
+
+
+
+num_epochs = 4
 
 #initializing model and choosing loss functiona and optimizer
 model= ConvNet(num_classes)
@@ -159,44 +244,89 @@ criterion = nn.CrossEntropyLoss()
 optimizer = optim.Adam(model.parameters(), lr=learning_rate)
 total_step = len(train_loader)
 
-mlflow.pytorch.autolog()
+#mlflow.pytorch.autolog()
 
 def train(num_epochs):
     with mlflow.start_run() as run:
+
         for epoch in range(num_epochs):
             model.train()
+            train_loss = 0.0
+            optimizer.zero_grad()
             for i, (images, labels, img_names, cls) in enumerate(train_loader):
                 images = images.to(device)
                 labels = labels.to(device)
                 
                 outputs = model(images)
+                outputs = F.softmax(outputs, dim=1)
                 loss = criterion(outputs, labels)
-                
-                optimizer.zero_grad()
+                train_loss += loss.item()
                 loss.backward()
                 optimizer.step()
-                
+                    
             print('Epoch [{}/{}], Loss: {:.4f}'.format(epoch+1, num_epochs, loss.item()))
             
-        model.eval()
-        with torch.no_grad():
-            correct = 0
-            total = 0
-            for images, labels, img_names, cls in valid_loader:
-                images = images.to(device)
-                labels = labels.to(device)
-                outputs = model(images)
-                _, predicted = torch.max(outputs.data, 1)
-                total += labels.size(0)
-                true_cls = torch.argmax(labels, dim=1)
-                correct += (predicted == true_cls).sum().item()
-
-                print('Accuracy of the network on the {} validation images: {} %'.format(222, 100 * correct / total))
+    avg_train_loss = train_loss / len(train_loader)
+    mlflow.log_metrics("train_loss", avg_train_loss)
+    mlflow.pytorch.log_model(pytorch_model=model, artifact_path="mlartifacts")
+    
+    return avg_train_loss
+           
+            
+def validate():
+    model.eval()
+    total = 0
+    valid_total = 0
+    valid_loss = 0
+    accuracy_total = 0
+    correct = 0
+    with torch.no_grad():
+        correct = 0
+        total = 0
+        for images, labels, img_names, cls in valid_loader:
+            images = images.to(device)
+            labels = labels.to(device)
+            outputs = model(images)
+            outputs = F.softmax(outputs, dim=1)
+            valid_loss = criterion(outputs, labels)
+            valid_total += valid_loss
+            _, predicted = torch.max(outputs.data, 1)
+            total += labels.size(0)
+            true_cls = torch.argmax(labels, dim=1)
+            correct += (predicted == true_cls).sum().item()
+            accuracy = 100 * correct / total
+            accuracy_total += accuracy
+            
+            msg = "Validation Accuracy: {0:.2f}%,  Validation Loss: {1:.3f}"
+            print(msg.format(accuracy, valid_loss))
+    
+    val_loss_avg = valid_total / len(valid_loader)
+    accuracy_avg = accuracy_total / len(valid_loader)
+    
+    return val_loss_avg, accuracy_avg
 
     #print_auto_logged_info(mlflow.get_run(run_id=run.info.run_id))
 
 
-train(4)
+avg_train_loss = train(4)
+val_loss_avg, accuracy_avg = validate()
+
+metrics = {"train loss": avg_train_loss, "validation loss": val_loss_avg, "validation accuracy": accuracy_avg}
+
+# with mlflow.start_run() as run:
+#     # Log the parameters used for the model fit
+#     mlflow.log_params(params)
+
+#     # Log the error metrics that were calculated during validation
+#     mlflow.log_metrics(metrics)
+
+#     # Log an instance of the trained model for later use
+#     mlflow.pytorch.log_model(pytorch_model=model, artifact_path="mlartifacts")
+
+
+
+
+
 
 
 # def train(num_epochs):
