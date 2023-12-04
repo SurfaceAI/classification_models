@@ -1,7 +1,8 @@
 .vscode
-mlruns
-
 .pytest_cache
 
 mlartifacts
 mlruns
+
+pytorch CNN
+wandb
