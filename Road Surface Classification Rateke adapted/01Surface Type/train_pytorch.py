@@ -45,10 +45,10 @@ if torch.cuda.is_available():
 
 
 # set hypterparameters 
-batch_size = 16
+batch_size = 8
 
 learning_rate = 1e-4
-num_epochs = 50
+num_epochs = 100
 
 img_size = 128
 num_channels = 3
@@ -62,7 +62,7 @@ wandb.init(
     
     #track hyperparameters and run metadata
     config={
-    "run": "run 5",
+    "name": "run 9",
     "architecture": "CNN Rateke pytorch",
     "dataset": "v2",
     "learning_rate": learning_rate,
@@ -139,9 +139,11 @@ max_index = 4 #maximum index we want to read, here we have 5 classes
 torch.manual_seed(42)
 numpy.random.seed(42)
 
+import dataset_pytorch
 # We shall load all the train and validation images and labels into memory using openCV and use that during train
 data = dataset_pytorch.read_train_sets(train_path, img_size, classes, validation_size=validation_size, max_index=max_index)
 
+data.valid
 
 print("Complete reading input data. Will Now print a snippet of it")
 print("Number of files in Training-set:\t\t{}".format(len(data.train.labels)))
