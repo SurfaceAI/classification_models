@@ -5,70 +5,55 @@ from sklearn.utils import shuffle
 import numpy as np
 from torchvision import transforms
 
-def load_train(train_path, image_size, classes):
+def load_train(train_path, image_size, classes, max_index):
     images = []
     labels = []
     img_names = []
     cls = []
-    
-
 
     print('Going to read training images')
-    for fields in classes:   
-        index = classes.index(fields)
+    
+    for index, fields in enumerate(classes):
+        if index > max_index:
+            break
+        
         print('Now going to read {} files (Index: {})'.format(fields, index))
         path = os.path.join(train_path, fields, '*g')
         files = glob.glob(path)
+        
         for fl in files:
             image = cv2.imread(fl)
             image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-
 
             # Region Of Interest (ROI)
             height, width = image.shape[:2]
             newHeight = int(round(height/2))
             image = image[newHeight-5:height-50, 0:width]
             
-            image = cv2.resize(image, (image_size, image_size),0,0, cv2.INTER_LINEAR)
+            image = cv2.resize(image, (image_size, image_size), 0, 0, cv2.INTER_LINEAR)
             image = np.transpose(image, (2, 0, 1))
             image = image.astype(np.float32)
             image = np.multiply(image, 1.0 / 255.0)
 
-        
-            if index == 0:
-                images.append(image)
+            images.append(image)
               
-                label = np.zeros(len(classes))
-                label[index] = 1.0
-
-                labels.append(label)       
+            label = np.zeros(len(classes))
+            label[index] = 1.0
+            labels.append(label)       
                
-                flbase = os.path.basename(fl)
+            flbase = os.path.basename(fl)
+            img_names.append(flbase)
+            cls.append(fields)
 
-                img_names.append(flbase)
-                
-                cls.append(fields)
-                
-            elif index == 1:
-                images.append(image)
-                                  
-                label = np.zeros(len(classes))
-                label[index] = 1.0
-
-                labels.append(label)       
-                  
-                flbase = os.path.basename(fl)
-
-                img_names.append(flbase)
-                  
-                cls.append(fields)
-                              
     images = np.array(images)
     labels = np.array(labels)
     img_names = np.array(img_names)
     cls = np.array(cls)
 
     return images, labels, img_names, cls
+            
+            
+        
             
 def load_test(test_path, image_size, classes):
     images = []
@@ -194,13 +179,13 @@ class DataSet(object):
 
 
 
-def read_train_sets(train_path, image_size, classes, validation_size):
+def read_train_sets(train_path, image_size, classes, validation_size, max_index):
   class DataSets(object):
     pass
   data_sets = DataSets()
   
                  
-  images, labels, img_names, cls = load_train(train_path, image_size, classes)
+  images, labels, img_names, cls = load_train(train_path, image_size, classes, max_index)
   images, labels, img_names, cls = shuffle(images, labels, img_names, cls, random_state=1)  
 
   if isinstance(validation_size, float):
@@ -265,4 +250,6 @@ def save_image(image, folder, filename):
     # Save the preprocessed image
     save_path = os.path.join(folder, filename + ".jpg")
     cv2.imwrite(save_path, cv2.cvtColor((image * 255).astype(np.uint8), cv2.COLOR_BGR2RGB))
+
+
 

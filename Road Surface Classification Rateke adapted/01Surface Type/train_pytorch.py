@@ -17,6 +17,7 @@ import matplotlib.pyplot as plt
 import torch.nn.functional as F
 import wandb
 import pprint
+import glob
 
 
 
@@ -28,23 +29,13 @@ execution_directory = os.path.dirname(os.path.abspath(__file__))
 #Models: roadsurface-model.meta; roadsurface-model-augmented.meta
 #Dataset files: "dataset", "dataset_augmented"
 
-train_path = os.path.join(execution_directory, 'train_data')
+train_path = os.path.join(execution_directory, 'train_data_v2')
 save_path = execution_directory
 quality_path = os.path.join(os.path.dirname(execution_directory), '02Surface Quality') #our surface quality folder
 model = "roadsurface-model"
 dataset = "dataset_pytorch"
 import dataset_pytorch
 
-
-
-
-
-#defining hypterparameters and input data
-#batch_size = 20
-validation_size = 0.2
-#learning_rate = 1e-4
-img_size = 128
-num_channels = 3
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
@@ -53,27 +44,45 @@ if torch.cuda.is_available():
     torch.backends.cudnn.benchmark = False
 
 
+# set hypterparameters 
+batch_size = 16
 
-# weights and biases experiment tracking
-# wandb.login()
-# wandb.init(project="pytorch-CNN") 
-# config = wandb.config 
-# config.learning_rate = learning_rate
-# config.seed = 42
-# config.batch_size = batch_size
+learning_rate = 1e-4
+num_epochs = 50
+
+img_size = 128
+num_channels = 3
+validation_size = 0.2
+
+#weights and biases experiment tracking, set tags
+wandb.login()
+wandb.init(
+    #set project and tags 
+    project = "road surface classification", tags = ["first try"],
+    
+    #track hyperparameters and run metadata
+    config={
+    "run": "run 5",
+    "architecture": "CNN Rateke pytorch",
+    "dataset": "v2",
+    "learning_rate": learning_rate,
+    "batch_size": batch_size,
+    "seed": 42,
+    "augmented": "No"
+    }
+) 
 
 
 #w&b sweep hyperparameter optimization
-sweep_config = {
-    "method": "random",
-    "metric": {"goal": "minimize", "name": "val_loss_avg"},
-    "parameters": {
-        "batch_size": {"values": [8, 16, 32]},
-        "num_epochs": {"values": [10, 20, 50]},
-        "learning_rate": {"values": [0.0001, 0.001]},
-    }
-}
-
+# sweep_config = {
+#     "method": "random",
+#     "metric": {"goal": "minimize", "name": "val_loss_avg"},
+#     "parameters": {
+#         "batch_size": {"values": [8, 16, 32]},
+#         "num_epochs": {"values": [10, 20, 50]},
+#         "learning_rate": {"values": [0.0001, 0.001]},
+#     }
+# }
 
 #pprint.pprint(sweep_config)
 #for bayes optimization
@@ -81,30 +90,58 @@ sweep_config = {
 #     'name': 'loss',
 #     'goal': 'minimize'   
 #     }
+# sweep_id = wandb.sweep(sweep_config, project="pytorch-CNN-sweep")
+# config = wandb.config
 
-
-sweep_id = wandb.sweep(sweep_config, project="pytorch-CNN-sweep")
-config = wandb.config
-
-wandb.init(config=config)
-
-
-
+# wandb.init(config=config)
 
 
 
 #Prepare input data
-batch_size = 10
 classes = os.listdir(train_path) 
 num_classes = len(classes)
-classes
+max_index = 4 #maximum index we want to read, here we have 5 classes
+
+# enumerate(classes)
+
+# for index, field in enumerate(classes):
+#     print(f"Index: {index}, Class: {field}")
+#     path = os.path.join(train_path, field, '*g')
+#     files = glob.glob(path)
+    
+#     for fl in files:
+#         image = cv2.imread(fl)
+#         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+
+
+
+
+# index = 3
+# field = "unpaved"
+# images = []
+
+# print(f"Index: {index}, Class: {field}")
+# path = os.path.join(train_path, field, '*g')
+# files = glob.glob(path)
+    
+# for fl in files:
+#     image = cv2.imread(fl)
+#     image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+#     images.append(image)
+
+# len(images)
+
+
+# path
+# len(files)
+
 
 torch.manual_seed(42)
 numpy.random.seed(42)
 
 # We shall load all the train and validation images and labels into memory using openCV and use that during train
-data = dataset_pytorch.read_train_sets(train_path, img_size, classes, validation_size=validation_size)
-data.train.labels
+data = dataset_pytorch.read_train_sets(train_path, img_size, classes, validation_size=validation_size, max_index=max_index)
+
 
 print("Complete reading input data. Will Now print a snippet of it")
 print("Number of files in Training-set:\t\t{}".format(len(data.train.labels)))
@@ -125,7 +162,7 @@ print("Number of files in Validation-set:\t{}".format(len(data.valid.labels)))
 # for i in range(data.train.num_examples):
 #     image = data.train.images[i].squeeze()  # Remove the batch dimension
 #     dataset_pytorch.save_image(image, save_folder, f"image_{i}")
-  
+
 
 #todo
 # all_transforms = transforms.Compose([transforms.Resize((32,32)),
@@ -138,9 +175,9 @@ print("Number of files in Validation-set:\t{}".format(len(data.valid.labels)))
 # Data loader objects allow us to iterate through our images in batches
 
 train_loader = torch.utils.data.DataLoader(dataset = data.train,
-                                           batch_size = batch_size,
-                                           shuffle = True,
-                                           worker_init_fn=torch.manual_seed(42))
+                                        batch_size = batch_size,
+                                        shuffle = True,
+                                        worker_init_fn=torch.manual_seed(42))
 
 
 #check that the loader is reproducible with torch.manual_seed
@@ -148,10 +185,10 @@ train_loader = torch.utils.data.DataLoader(dataset = data.train,
 #     print(image)
 
 valid_loader = torch.utils.data.DataLoader(dataset = data.valid,
-                                           batch_size = batch_size,
-                                           shuffle = False, #in the validation set we don't need shuffling
-                                           worker_init_fn=torch.manual_seed(42)
-                                           )
+                                        batch_size = batch_size,
+                                        shuffle = False, #in the validation set we don't need shuffling
+                                        worker_init_fn=torch.manual_seed(42)
+                                        )
 
 
 
@@ -217,58 +254,18 @@ class ConvNet(nn.Module):
         out = self.fc2(out)
         return out
     
-    
-#checking our model step by step
+   
+#printing a picture 
 
-def imshow(img):
-    plt.imshow(numpy.transpose(img, (1, 2, 0)))
-    plt.show()
+# def imshow(img):
+#     plt.imshow(numpy.transpose(img, (1, 2, 0)))
+#     plt.show()
 
-dataiter = iter(train_loader)
-images, labels, _, _ = next(dataiter)
-img = images[1]
+# dataiter = iter(train_loader)
+# images, labels, _, _ = next(dataiter)
+# img = images[20]
 
-imshow(img)
-
-
-# conv1 = nn.Sequential(
-#             nn.Conv2d(3, 32, kernel_size=3, padding=1, bias=True),
-#             nn.MaxPool2d(kernel_size=2, stride=2), 
-#             nn.ReLU()) 
-
-# conv2 = nn.Sequential(
-#             nn.Conv2d(32, 32, kernel_size=3, padding=1, bias=True),
-#             nn.MaxPool2d(kernel_size=2, stride=2),
-#             nn.ReLU())
-    
-# conv3 = nn.Sequential(
-#             nn.Conv2d(32, 64, kernel_size=3, padding=1, bias=True),
-#             nn.MaxPool2d(kernel_size=2, stride=2),
-#             nn.ReLU())
-
-# flat = nn.Flatten(0,-1)
-# fc1 =  nn.Sequential(
-#             nn.Linear(64 * 16 * 16, 128, bias=True), 
-#             nn.ReLU())
-
-# fc2 = nn.Linear(128, num_classes, bias=True)
-
-# image = images[0]
-# image.shape
-
-# x = conv1(image)
-# x = conv2(x)
-# x.shape
-# x = conv3(x)
-# x.shape
-# x = flat(x)
-# x.shape
-# x = fc1(x)
-# x.shape
-# x = fc2(x)
-# x.shape
-
-
+# imshow(img)
 
 
 
@@ -277,25 +274,23 @@ imshow(img)
 model= ConvNet(num_classes)
 #model = ConvNet().to(device)
 criterion = nn.CrossEntropyLoss() #this already includes the Argmax
-#optimizer = optim.Adam(model.parameters(), lr=config.learning_rate)
+optimizer = optim.Adam(model.parameters(), lr=learning_rate)
 total_step = len(train_loader)
 
 
 
 # optional: track gradients
 #wandb.watch(model, log="all")
-  
 
 
-def train(config=None):
-    wandb.init(config=config)
 
-    for epoch in range(config.num_epochs):
-        model.train(config=config)
-        loss = 0.0
+def train(num_epochs):
+
+    for epoch in range(num_epochs):
+        model.train()
         total_train_loss = 0.0
         
-        optimizer = optim.Adam(model.parameters(), lr=config.learning_rate)
+        #optimizer = optim.Adam(model.parameters(), lr=config.learning_rate)
 
         for i, (images, labels, _, _) in enumerate(train_loader):
             images = images.to(device)
@@ -314,20 +309,19 @@ def train(config=None):
             optimizer.step()
         
         
-        print('Epoch [{}/{}], Loss: {:.4f}'.format(epoch+1, config.num_epochs, loss.item()))
+        print('Epoch [{}/{}], Loss: {:.4f}'.format(epoch+1, num_epochs, loss.item()))
         wandb.log({'epoch': epoch+1, 'train loss': loss})
                 
-    avg_train_loss = total_train_loss / (len(train_loader.dataset) // config.batch_size)
+    avg_train_loss = total_train_loss / (len(train_loader.dataset) // batch_size)
     wandb.log({"avg train loss": avg_train_loss})
     
     return avg_train_loss
-           
+        
             
 def validate():
     model.eval()
     total = 0
     valid_total = 0
-    valid_loss = 0
     accuracy_total = 0
     correct = 0
     with torch.no_grad():
@@ -348,40 +342,22 @@ def validate():
             print(msg.format(accuracy, valid_loss))
             wandb.log({"validation_loss": valid_loss, "validation_accuracy": accuracy})
     
-    val_loss_avg = valid_total / (len(valid_loader.dataset) // config.batch_size)
-    accuracy_avg = accuracy_total / len(valid_loader.dataset)
+    val_loss_avg = valid_total / (len(valid_loader.dataset) // batch_size)
+    accuracy_avg = accuracy_total / len(valid_loader)
     
-    wandb.log({"val loss avg": val_loss_avg, "val accuracy avg": accuracy_avg})
+    wandb.log({"average validation loss": val_loss_avg, "average validation accuracy": accuracy_avg})
     
-    return val_loss_avg, accuracy_avg
 
-    #print_auto_logged_info(mlflow.get_run(run_id=run.info.run_id))
+train(num_epochs)
+validate()
 
-
-
-
-wandb.agent(sweep_id=sweep_id, function=train(config=config), count=5)
-
-# wandb.log({
-#         "Train Loss": avg_train_loss,
-#         "Validation Loss": val_loss_avg,
-#         "Validation Accuracy": accuracy_avg})
+#wandb.agent(sweep_id=sweep_id, function=train(config=config), count=5)
 
 
 torch.save(model.state_dict(), "pytorch CNN") # ???
-# wandb.save('pytorch_CNN.pt')
+wandb.save('pytorch_CNN.pt')
 
 wandb.unwatch()
-# with mlflow.start_run() as run:
-#     # Log the parameters used for the model fit
-#     mlflow.log_params(params)
-
-#     # Log the error metrics that were calculated during validation
-#     mlflow.log_metrics(metrics)
-
-#     # Log an instance of the trained model for later use
-#     mlflow.pytorch.log_model(pytorch_model=model, artifact_path="mlartifacts")
-
 
 
 
