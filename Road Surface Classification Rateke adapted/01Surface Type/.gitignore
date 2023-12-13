@@ -3,6 +3,8 @@ __pycache__
 
 test_data
 train_data
+train_data_v2
+train_data_v2_mit_subfolder
 
 roadsurface-model.data-00000-of-00001
 roadsurface-model.index
@@ -10,4 +12,5 @@ roadsurface-model.meta
 
 mlflow_test.py
 wandb
-git ad
+
+train_pytorch_l.py

@@ -4,71 +4,84 @@ import glob
 from sklearn.utils import shuffle
 import numpy as np
 from torchvision import transforms
+import torch
+from torch.utils.data import Dataset
+from torchvision.transforms import ToTensor
+import matplotlib.pyplot as plt
+import pandas as pd
+from torchvision.io import read_image
+from sklearn.model_selection import train_test_split
 
-def load_train(train_path, image_size, classes):
+
+class CustomDataset(Dataset):
+    def __init__(self, images, labels, img_names, cls):
+        self.num_examples = images.shape[0]
+        self.images = images
+        self.labels = labels
+        self.img_names = img_names
+        self.cls = cls
+
+    def __len__(self):
+        return len(self.labels)
+
+    def __getitem__(self, index):
+            image = self.images[index]
+            label = self.labels[index]
+            img_name = self.img_names[index]
+            cls = self.cls[index]
+
+            return torch.Tensor(image), torch.Tensor(label), img_name, cls
+
+
+def load_train(train_path, image_size, classes, max_index):
     images = []
     labels = []
     img_names = []
     cls = []
-    
-
 
     print('Going to read training images')
-    for fields in classes:   
-        index = classes.index(fields)
+    
+    for index, fields in enumerate(classes):
+        if index > max_index:
+            break
+        
         print('Now going to read {} files (Index: {})'.format(fields, index))
         path = os.path.join(train_path, fields, '*g')
         files = glob.glob(path)
+        
         for fl in files:
             image = cv2.imread(fl)
             image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-
 
             # Region Of Interest (ROI)
             height, width = image.shape[:2]
             newHeight = int(round(height/2))
             image = image[newHeight-5:height-50, 0:width]
             
-            image = cv2.resize(image, (image_size, image_size),0,0, cv2.INTER_LINEAR)
+            image = cv2.resize(image, (image_size, image_size), 0, 0, cv2.INTER_LINEAR)
             image = np.transpose(image, (2, 0, 1))
             image = image.astype(np.float32)
             image = np.multiply(image, 1.0 / 255.0)
 
-        
-            if index == 0:
-                images.append(image)
+            images.append(image)
               
-                label = np.zeros(len(classes))
-                label[index] = 1.0
-
-                labels.append(label)       
+            label = np.zeros(len(classes))
+            label[index] = 1.0
+            labels.append(label)       
                
-                flbase = os.path.basename(fl)
+            flbase = os.path.basename(fl)
+            img_names.append(flbase)
+            cls.append(fields)
 
-                img_names.append(flbase)
-                
-                cls.append(fields)
-                
-            elif index == 1:
-                images.append(image)
-                                  
-                label = np.zeros(len(classes))
-                label[index] = 1.0
-
-                labels.append(label)       
-                  
-                flbase = os.path.basename(fl)
-
-                img_names.append(flbase)
-                  
-                cls.append(fields)
-                              
     images = np.array(images)
     labels = np.array(labels)
     img_names = np.array(img_names)
     cls = np.array(cls)
 
     return images, labels, img_names, cls
+            
+            
+        
             
 def load_test(test_path, image_size, classes):
     images = []
@@ -129,110 +142,55 @@ def load_test(test_path, image_size, classes):
     return images, labels, img_names, cls
 
 
-import torch
-from torch.utils.data import Dataset
 
-class DataSet(object):
-    def __init__(self, images, labels, img_names, cls):
-        self._num_examples = images.shape[0]
-        self._images = images
-        self._labels = labels
-        self._img_names = img_names
-        self._cls = cls
-        self._epochs_done = 0
-        self._index_in_epoch = 0
-        
-    @property
-    def images(self):
-        return self._images
+### This is the version without sklearn train_test_split function
+
+# def read_train_sets(train_path, img_size, classes, validation_size, max_index):
     
-    @property
-    def labels(self):
-        return self._labels
+#     images, labels, img_names, cls = load_train(train_path, img_size, classes, max_index)
+#     images, labels, img_names, cls = shuffle(images, labels, img_names, cls, random_state=1)  
     
-    @property
-    def img_names(self):
-        return self._img_names
     
-    @property
-    def cls(self):
-        return self._cls
-    
-    @property
-    def num_examples(self):
-        return self._num_examples
-    
-    @property
-    def epochs_done(self):
-        return self._epochs_done
+#     if isinstance(validation_size, float):
+#         validation_size = int(validation_size * images.shape[0])
 
-    def __len__(self):
-        return self._num_examples
+#     validation_images = images[:validation_size]
+#     validation_labels = labels[:validation_size]
+#     validation_img_names = img_names[:validation_size]
+#     validation_cls = cls[:validation_size]
 
-    def __getitem__(self, index):
-        image = self._images[index]
-        label = self._labels[index]
-        img_name = self._img_names[index]
-        cls = self._cls[index]
+#     train_images = images[validation_size:]
+#     train_labels = labels[validation_size:]
+#     train_img_names = img_names[validation_size:]
+#     train_cls = cls[validation_size:] 
 
-        return torch.Tensor(image), torch.Tensor(label), img_name, cls
+#     data = Dataset()
+#     data.train = CustomDataset(train_images, train_labels, train_img_names, train_cls)
+#     data.valid = CustomDataset(validation_images, validation_labels, validation_img_names, validation_cls)
 
-    def next_batch(self, batch_size):
-        """Return the next `batch_size` examples from this dataset."""
-        start = self._index_in_epoch
-        self._index_in_epoch += batch_size
-
-        if self._index_in_epoch > self._num_examples:
-            # After each epoch we update this
-            self._epochs_done += 1
-            start = 0
-            self._index_in_epoch = batch_size
-            assert batch_size <= self._num_examples
-        end = self._index_in_epoch
-
-        return torch.Tensor(self._images[start:end]), self._labels[start:end], self._img_names[start:end], self._cls[start:end]
+#     return data
 
 
+### This is the version with sklearn train_test_split function
 
-def read_train_sets(train_path, image_size, classes, validation_size):
-  class DataSets(object):
-    pass
-  data_sets = DataSets()
-  
-                 
-  images, labels, img_names, cls = load_train(train_path, image_size, classes)
-  images, labels, img_names, cls = shuffle(images, labels, img_names, cls, random_state=1)  
+def read_train_sets(train_path, img_size, classes, validation_size, max_index):
+    images, labels, img_names, cls = load_train(train_path, img_size, classes, max_index)
+    #images, labels, img_names, cls = shuffle(images, labels, img_names, cls, random_state=1) 
+    # shuffling is included in the train_test_split function 
 
-  if isinstance(validation_size, float):
-    validation_size = int(validation_size * images.shape[0])
+    # Using train_test_split to split data into training and validation sets
+    train_images, validation_images, train_labels, validation_labels, train_img_names, validation_img_names, train_cls, validation_cls = \
+        train_test_split(images, labels, img_names, cls, test_size=validation_size, random_state=1)
 
-  validation_images = images[:validation_size]
-  validation_labels = labels[:validation_size]
-  validation_img_names = img_names[:validation_size]
-  validation_cls = cls[:validation_size]
+    # Create data dictionary with train and valid keys
+    data = Dataset()
+    data.train = CustomDataset(train_images, train_labels, train_img_names, train_cls)
+    data.valid = CustomDataset(validation_images, validation_labels, validation_img_names, validation_cls)
 
-  train_images = images[validation_size:]
-  train_labels = labels[validation_size:]
-  train_img_names = img_names[validation_size:]
-  train_cls = cls[validation_size:]
-
-  data_sets.train = DataSet(train_images, train_labels, train_img_names, train_cls)
-  data_sets.valid = DataSet(validation_images, validation_labels, validation_img_names, validation_cls)
-
-  return data_sets
+    return data
 
 
-def read_test_sets(test_path, image_size, classes, random_seed):
-    class Datasets(object):
-        pass
-    data_sets= Datasets()
-    
-    images, labels, img_names, cls = load_test(test_path, image_size, classes)
-    images, labels, img_names, cls = shuffle(images, labels, img_names, cls, random_state=1) 
-    
-    data_sets = DataSet(images, labels, img_names, cls)
-    
-    return data_sets
+
   
 
 #function to create folders in the current directory
@@ -265,4 +223,6 @@ def save_image(image, folder, filename):
     # Save the preprocessed image
     save_path = os.path.join(folder, filename + ".jpg")
     cv2.imwrite(save_path, cv2.cvtColor((image * 255).astype(np.uint8), cv2.COLOR_BGR2RGB))
+
+
 
