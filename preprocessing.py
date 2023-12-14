@@ -3,40 +3,22 @@ from torch.utils.data import Subset
 from sklearn.model_selection import StratifiedShuffleSplit
 
 def train_validation_spilt_datasets(root, validation_size, train_transform, valid_transform, random_state):
-    full_dataset = datasets.ImageFolder(root)
 
+    # create complete dataset
+    complete_dataset = datasets.ImageFolder(root)
+
+    # split indices for training and validation sets
     stratified_splitter = StratifiedShuffleSplit(n_splits=1, test_size=validation_size, random_state=random_state)
-    train_idx, valid_idx = next(stratified_splitter.split(full_dataset, full_dataset.targets))
+    train_idx, valid_idx = next(stratified_splitter.split(complete_dataset, complete_dataset.targets))
 
-    # Aufteilung des Datasets basierend auf den Indizes
-    train_dataset = Subset(full_dataset, train_idx)
-    valid_dataset = Subset(full_dataset, valid_idx)
-
-    # (samples_train, samples_valid,
-    #  targets_train, targets_valid,
-    #  imgs_train, imgs_valid) = train_test_split(dataset.samples, dataset.targets, dataset.imgs, test_size=validation_size, random_state=random_state, stratify=dataset.targets)
-    
-    # train_dataset = dataset
-    # train_dataset.samples = samples_train
-    # train_dataset.targets = targets_train
-    # train_dataset.imgs = imgs_train
-    # train_dataset.transform = train_transform
-
-    # valid_dataset = dataset
-    # valid_dataset.samples = samples_valid
-    # valid_dataset.targets = targets_valid
-    # valid_dataset.imgs = imgs_valid
-    # valid_dataset.transform = valid_transform
+    # split datasets based on indices
+    train_dataset = Subset(complete_dataset, train_idx)
+    train_dataset.dataset.transform = train_transform
+    valid_dataset = Subset(complete_dataset, valid_idx)
+    valid_dataset.dataset.transform = valid_transform
 
     return train_dataset, valid_dataset
 
-# def transform(height=256, width=256, rotation=0, horizontal_flip=None, ):
-#     train_transforms = transforms.Compose([transforms.RandomRotation(10),
-#                                            transforms.Resize((image_height, image_width)),
-#                                            transforms.RandomHorizontalFlip(),
-#                                            transforms.ToTensor(),
-#                                            transforms.Normalize([0.485, 0.456, 0.406],
-#                                                                     [0.229, 0.224, 0.225])])
     
 def transform(resize=None,
               to_tensor=True,
