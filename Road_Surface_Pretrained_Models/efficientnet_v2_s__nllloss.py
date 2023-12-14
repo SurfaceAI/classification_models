@@ -6,17 +6,21 @@ import torch
 from torch import nn, optim
 import torch.nn.functional as F
 from torchvision import datasets, transforms, models
+from collections import OrderedDict
 from pathlib import Path
 import os
 import preprocessing
+import training
+
+import wandb
 
 # config
 batch_size = 48
-test_batch_size = 48
-epochs = 10
-# lr = 0.003
-# lr = 0.001
-lr = 0.0003
+valid_batch_size = 48
+epochs = 2
+# learning_rate = 0.003
+# learning_rate = 0.001
+learning_rate = 0.0003
 seed = 42
 
 validation_size = 0.2
@@ -38,7 +42,24 @@ data_version = 'V0'
 # image data path
 data_path = '/Users/edith/HTW Cloud/SHARED/SurfaceAI/data/mapillary_images/training_data'
 
-data_root= os.path.join(data_path, data_version)
+
+# W&B initialisation
+wandb.login()
+wandb.init(
+    #set project and tags 
+    project = "road-surface-classification-type", 
+    name = "efficient net", 
+    
+    #track hyperparameters and run metadata
+    config={
+    "architecture": "Efficient Net v2 s",
+    "dataset": data_version,
+    "learning_rate": learning_rate,
+    "batch_size": batch_size,
+    "seed": seed,
+    "augmented": "Yes"
+    }
+) 
 
 # preprocessing
 
@@ -49,13 +70,16 @@ general_transform = {
 
 train_augmentation = {
     'random_horizontal_flip': horizontal_flip,
-    'random_rotation': 10,
+    'random_rotation': random_rotation,
 }
+
 
 train_transform = preprocessing.transform(**general_transform, **train_augmentation)
 valid_transform = preprocessing.transform(**general_transform)
 
 # dataset
+data_root= os.path.join(data_path, data_version)
+
 train_data, valid_data = preprocessing.train_validation_spilt_datasets(data_root, validation_size, train_transform, valid_transform, random_state=seed)
 # len(torch.tensor(train_data.dataset.targets)[train_data.indices])
 
@@ -71,10 +95,10 @@ train_data, valid_data = preprocessing.train_validation_spilt_datasets(data_root
 # train_data_old = datasets.ImageFolder(data_root, transform=train_transforms)
 # trainloader_old = torch.utils.data.DataLoader(train_data_old, batch_size=batch_size, shuffle=True)
 
-num_classes = len(train_data.dataset.classes)
+num_classes = len(train_data.classes)
 
 trainloader = torch.utils.data.DataLoader(train_data, batch_size=batch_size, shuffle=True)
-validloader = torch.utils.data.DataLoader(valid_data, batch_size=test_batch_size)
+validloader = torch.utils.data.DataLoader(valid_data, batch_size=valid_batch_size)
 
 
 # model
@@ -85,7 +109,6 @@ for param in model.parameters():
     param.requires_grad = True
 
 # adapt output layer
-from collections import OrderedDict
 fc = nn.Sequential(OrderedDict([
     ('fc1', nn.Linear(1280, num_classes)),
     ('output', nn.LogSoftmax(dim=1))
@@ -96,10 +119,10 @@ model.classifier[1] = fc
 # optimizer
 # Start with training the output layer parameters, feature parameters are frozen
 # TODO: unfreeze parameters
-optimizer = optim.Adam(model.classifier[1].parameters(), lr=lr)
+optimizer = optim.Adam(model.classifier[1].parameters(), lr=learning_rate)
 
 # loss, reduction='sum'
-criterion = nn.NLLLoss(reduction='sum')
+criterion = nn.NLLLoss()
 
 # Use GPU if it's available
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -107,9 +130,6 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 model.to(device)
 
 torch.manual_seed(seed)
-
-# config wandb
-# TODO
 
 # train the model
 
@@ -119,56 +139,25 @@ accuracy_list = []
 
 for epoch in range(epochs):
 
-    # train with all batches for one epoch
-    train_loss = 0
-    model.train()
-    for inputs, labels in trainloader:
-        # Move input and label tensors to the default device
-        inputs, labels = inputs.to(device), labels.to(device)
+    train_loss = training.train_epoch(model, trainloader, criterion, optimizer, device)
 
-        # # unfreeze and optimize all parameters after x epochs
-        # if unfreeze and epoch >= epochs_freeze:
-        #     optimizer = optim.Adam(model.parameters(), lr=lr)
-
-        optimizer.zero_grad()
-        outputs = model.forward(inputs)
-        loss = criterion(outputs, labels)
-        loss.backward()
-        optimizer.step()
-
-        train_loss += loss.item()
-        # for i, l in enumerate(logps):
-        #   print(f"Train: True Label: {labels[i]}, prediction: {l}")
-
-    # validate after one epoch
-    with torch.no_grad():
-        valid_loss = 0
-        correct_predictions = 0
-        model.eval()
-        for inputs, labels in validloader:
-
-            inputs, labels = inputs.to(device), labels.to(device)
-
-            outputs = model.forward(inputs)
-            loss = criterion(outputs, labels)
-
-            valid_loss += loss.item()
-
-            predictions = torch.argmax(outputs, dim=1)
-            correct_predictions += (predictions == labels).sum().item()
-
-            # for i, l in enumerate(logps):
-            #   print(f"Test:  True Label: {labels[i]}, prediction: {l}")
+    val_loss, val_accuracy = training.validate_epoch(model, validloader, criterion, device)
 
 
-    train_loss_list.append(train_loss/len(trainloader.sampler))
-    valid_loss_list.append(valid_loss/len(validloader.sampler))
-    accuracy_list.append(correct_predictions/len(validloader.sampler))
+    train_loss_list.append(train_loss)
+    valid_loss_list.append(val_loss)
+    accuracy_list.append(val_accuracy)
+
+    wandb.log({'epoch': epoch+1, 'train loss': train_loss_list[-1], 'validation loss': valid_loss_list[-1], 'validation accuracy': accuracy_list[-1]})
 
 
     print(f"Epoch {epoch+1}/{epochs}.. ",
           f"Train loss: {train_loss_list[-1]:.3f}.. ",
           f"Test loss: {valid_loss_list[-1]:.3f}.. ",
           f"Test accuracy: {accuracy_list[-1]:.3f}",)
+
+wandb.save('efficientnet_v2_s__nllloss.pt')
+
+wandb.unwatch()
 
 print("Done.")
