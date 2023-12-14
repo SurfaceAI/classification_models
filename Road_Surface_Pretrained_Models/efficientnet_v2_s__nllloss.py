@@ -13,7 +13,7 @@ import preprocessing
 # config
 batch_size = 48
 test_batch_size = 48
-epochs = 20
+epochs = 10
 # lr = 0.003
 # lr = 0.001
 lr = 0.0003
@@ -57,10 +57,25 @@ valid_transform = preprocessing.transform(**general_transform)
 
 # dataset
 train_data, valid_data = preprocessing.train_validation_spilt_datasets(data_root, validation_size, train_transform, valid_transform, random_state=seed)
+# len(torch.tensor(train_data.dataset.targets)[train_data.indices])
+
+# # Define transforms for the training data and testing data
+# train_transforms = transforms.Compose([transforms.RandomRotation(10),
+#                                        transforms.Resize((image_height, image_width)),
+#                                        transforms.RandomHorizontalFlip(),
+#                                        transforms.ToTensor(),
+#                                        transforms.Normalize([0.485, 0.456, 0.406],
+#                                                             [0.229, 0.224, 0.225])])
+
+# # Create dataset
+# train_data_old = datasets.ImageFolder(data_root, transform=train_transforms)
+# trainloader_old = torch.utils.data.DataLoader(train_data_old, batch_size=batch_size, shuffle=True)
+
 num_classes = len(train_data.dataset.classes)
 
 trainloader = torch.utils.data.DataLoader(train_data, batch_size=batch_size, shuffle=True)
 validloader = torch.utils.data.DataLoader(valid_data, batch_size=test_batch_size)
+
 
 # model
 model = models.efficientnet_v2_s(weights='IMAGENET1K_V1')
@@ -83,8 +98,8 @@ model.classifier[1] = fc
 # TODO: unfreeze parameters
 optimizer = optim.Adam(model.classifier[1].parameters(), lr=lr)
 
-# loss
-criterion = nn.NLLLoss()
+# loss, reduction='sum'
+criterion = nn.NLLLoss(reduction='sum')
 
 # Use GPU if it's available
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -146,9 +161,9 @@ for epoch in range(epochs):
             #   print(f"Test:  True Label: {labels[i]}, prediction: {l}")
 
 
-    train_loss_list.append(train_loss/len(trainloader))
-    valid_loss_list.append(valid_loss/len(validloader))
-    accuracy_list.append(correct_predictions/len(validloader))
+    train_loss_list.append(train_loss/len(trainloader.sampler))
+    valid_loss_list.append(valid_loss/len(validloader.sampler))
+    accuracy_list.append(correct_predictions/len(validloader.sampler))
 
 
     print(f"Epoch {epoch+1}/{epochs}.. ",
