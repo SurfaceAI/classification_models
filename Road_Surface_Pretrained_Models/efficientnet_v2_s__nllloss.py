@@ -4,13 +4,13 @@ sys.path.append('./')
 import numpy as np
 import torch
 from torch import nn, optim
-import torch.nn.functional as F
-from torchvision import datasets, transforms, models
+from torchvision import models
 from collections import OrderedDict
-from pathlib import Path
 import os
 import preprocessing
 import training
+import helper
+import random
 
 import wandb
 
@@ -45,7 +45,7 @@ data_path = '/Users/edith/HTW Cloud/SHARED/SurfaceAI/data/mapillary_images/train
 
 # W&B initialisation
 wandb.login()
-wandb.init(
+run = wandb.init(
     #set project and tags 
     project = "road-surface-classification-type", 
     name = "efficient net", 
@@ -76,6 +76,11 @@ train_augmentation = {
 
 train_transform = preprocessing.transform(**general_transform, **train_augmentation)
 valid_transform = preprocessing.transform(**general_transform)
+
+
+torch.manual_seed(seed)
+# np.random.seed(seed)
+# random.seed(seed)
 
 # dataset
 data_root= os.path.join(data_path, data_version)
@@ -129,8 +134,6 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 model.to(device)
 
-torch.manual_seed(seed)
-
 # train the model
 
 train_loss_list = []
@@ -156,6 +159,7 @@ for epoch in range(epochs):
           f"Test loss: {valid_loss_list[-1]:.3f}.. ",
           f"Test accuracy: {accuracy_list[-1]:.3f}",)
 
+torch.save(model, 'efficientnet_v2_s__nllloss.pt')
 wandb.save('efficientnet_v2_s__nllloss.pt')
 
 wandb.unwatch()
