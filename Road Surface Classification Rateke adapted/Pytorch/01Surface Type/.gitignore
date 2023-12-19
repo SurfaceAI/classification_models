@@ -1,15 +1,16 @@
 
 __pycache__
 
+#train images
+V2_with_subfolder
+V2
+V3
 
-train_data_v2
-train_data_v2_mit_subfolder
+#saved images
+preprocessed_images
 
-roadsurface-model.data-00000-of-00001
-roadsurface-model.index
-roadsurface-model.meta
-
-mlflow_test.py
+#logging
 wandb
 
+#unused scripts
 train_pytorch_l.py

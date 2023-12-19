@@ -7,7 +7,6 @@ from torch.utils.data import DataLoader, TensorDataset
 from torchvision import transforms
 import torchvision
 import os
-import mlflow
 import shutil
 import sys
 import mlflow.pytorch
@@ -19,23 +18,16 @@ import wandb
 import pprint
 import glob
 
-
-
+sys.path.append(r'C:\Users\esthe\Documents\GitHub\classification_models')
+import preprocessing
 
 # This is the directory in which this .py file is in
 execution_directory = os.path.dirname(os.path.abspath(__file__))
-
-#First set which model and which data preprocessing to include, either just cropped or cropped and augmented
-#Models: roadsurface-model.meta; roadsurface-model-augmented.meta
-#Dataset files: "dataset", "dataset_augmented"
-
-train_path = os.path.join(execution_directory, 'train_data_v2')
+train_path = os.path.join(execution_directory, 'V2')
 save_path = execution_directory
-quality_path = os.path.join(os.path.dirname(execution_directory), '02Surface Quality') #our surface quality folder
-model = "roadsurface-model"
-dataset = "dataset_pytorch"
-import dataset_pytorch
-
+#quality_path = os.path.join(os.path.dirname(execution_directory), '02Surface Quality') #our surface quality folder
+#dataset = "dataset_pytorch"
+#import dataset_pytorch
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
@@ -44,63 +36,81 @@ if torch.cuda.is_available():
     torch.backends.cudnn.benchmark = False
 
 
-# set hypterparameters 
-batch_size = 64
 
-learning_rate = 1e-4
-num_epochs = 100
-
+# config
+batch_size = 48
+valid_batch_size = 48
+epochs = 2 #num_epochs
+# learning_rate = 0.003
+# learning_rate = 0.001
+learning_rate = 0.0003
+seed = 42
 img_size = 128
-num_channels = 3
+
 validation_size = 0.2
 
-#weights and biases experiment tracking, set tags
-wandb.login()
-wandb.init(
-    #set project and tags 
-    project = "road-surface-classification-type", 
-    name = "run 10", 
+#Edith 
+# image_height = 256
+# image_width = 256
+# norm_mean = [0.485, 0.456, 0.406]
+# norm_std = [0.229, 0.224, 0.225]
+# horizontal_flip = True
+# random_rotation = 10
+
+
+data_version = 'V2'
+# image data path -> save path in my case
+#data_path = '/Users/edith/HTW Cloud/SHARED/SurfaceAI/data/mapillary_images/training_data'
+
+# wandb.login()
+# wandb.init(
+#     #set project and tags 
+#     project = "road-surface-classification-type", 
+#     name = "Rateke", 
     
-    #track hyperparameters and run metadata
-    config={
-    "architecture": "CNN Rateke pytorch",
-    "dataset": "v2",
-    "learning_rate": learning_rate,
-    "batch_size": batch_size,
-    "seed": 42,
-    "augmented": "No"
-    }
-) 
-
-
-#w&b sweep hyperparameter optimization
-# sweep_config = {
-#     "method": "random",
-#     "metric": {"goal": "minimize", "name": "val_loss_avg"},
-#     "parameters": {
-#         "batch_size": {"values": [8, 16, 32]},
-#         "num_epochs": {"values": [10, 20, 50]},
-#         "learning_rate": {"values": [0.0001, 0.001]},
+#     #track hyperparameters and run metadata
+#     config={
+#     "architecture": "CNN Rateke pytorch",
+#     "dataset": data_version,
+#     "learning_rate": learning_rate,
+#     "batch_size": batch_size,
+#     "seed": seed,
+#     "augmented": "No"
 #     }
+# ) 
+
+
+
+# preprocessing Edith
+
+general_transform = {
+    'resize': (img_size, img_size),
+    #'normalize': (norm_mean, norm_std),
+}
+
+# train_augmentation = {
+#     'random_horizontal_flip': horizontal_flip,
+#     'random_rotation': random_rotation,
 # }
 
-#pprint.pprint(sweep_config)
-#for bayes optimization
-# metric = {
-#     'name': 'loss',
-#     'goal': 'minimize'   
-#     }
-# sweep_id = wandb.sweep(sweep_config, project="pytorch-CNN-sweep")
-# config = wandb.config
 
-# wandb.init(config=config)
+train_transform = preprocessing.transform(**general_transform)
+valid_transform = preprocessing.transform(**general_transform)
 
 
+
+#data_root= os.path.join(data_path, data_version)
+
+train_data, valid_data = preprocessing.train_validation_spilt_datasets(train_path, validation_size, train_transform, valid_transform, random_state=seed)
+
+num_classes = len(train_data.classes)
+trainloader = torch.utils.data.DataLoader(train_data, batch_size=batch_size, shuffle=True)
+validloader = torch.utils.data.DataLoader(valid_data, batch_size=valid_batch_size)
 
 #Prepare input data
 classes = os.listdir(train_path) 
 num_classes = len(classes)
-max_index = 4 #maximum index we want to read, here we have 5 classes
+max_index = num_classes - 1 #maximum index we want to read, here we have 5 classes
 
 
 
@@ -110,7 +120,6 @@ numpy.random.seed(42)
 import dataset_pytorch
 # We shall load all the train and validation images and labels into memory using openCV and use that during train
 data = dataset_pytorch.read_train_sets(train_path, img_size, classes, validation_size=validation_size, max_index=max_index)
-
 
 
 print("Complete reading input data. Will Now print a snippet of it")
@@ -126,12 +135,13 @@ print("Number of files in Validation-set:\t{}".format(len(data.valid.labels)))
 #first images of train and valid datasets are always the same
 
 #Alternatively, we can also save our images in separate folders in our directory
-# save_folder = os.path.join(execution_directory, 'preprocessed_images')
+save_folder = os.path.join(execution_directory, 'preprocessed_images')
 
-# # # Assuming data is an instance of DataSet
-# for i in range(data.train.num_examples):
-#     image = data.train.images[i].squeeze()  # Remove the batch dimension
-#     dataset_pytorch.save_image(image, save_folder, f"image_{i}")
+# # Assuming data is an instance of DataSet
+for i in range(train_data.):
+    image = data.train.images[i].squeeze()# Remove the batch dimension
+    image = numpy.transpose(image, (1, 2, 0))
+    dataset_pytorch.save_image(image, save_folder, f"image_{i}")
 
 
 #todo
@@ -144,7 +154,7 @@ print("Number of files in Validation-set:\t{}".format(len(data.valid.labels)))
 
 # Data loader objects allow us to iterate through our images in batches
 
-train_loader = torch.utils.data.DataLoader(dataset = data.train,
+train_loader = torch.utils.data.DataLoader(dataset = train_data,
                                         batch_size = batch_size,
                                         shuffle = True,
                                         worker_init_fn=torch.manual_seed(42))
@@ -154,7 +164,7 @@ train_loader = torch.utils.data.DataLoader(dataset = data.train,
 # for image in train_loader:
 #     print(image)
 
-valid_loader = torch.utils.data.DataLoader(dataset = data.valid,
+valid_loader = torch.utils.data.DataLoader(dataset = valid_data,
                                         batch_size = batch_size,
                                         shuffle = False, #in the validation set we don't need shuffling
                                         worker_init_fn=torch.manual_seed(42)
@@ -245,7 +255,7 @@ def train(num_epochs):
         model.train()
         total_train_loss = 0.0
         
-        for i, (images, labels, _, _) in enumerate(train_loader):
+        for i, (images, labels) in enumerate(train_loader):
             images = images.to(device)
             labels = labels.to(device)
             
@@ -260,6 +270,7 @@ def train(num_epochs):
             #zbackpropagation and update weights
             loss.backward()
             optimizer.step()
+           
             
         model.eval()
         total = 0
@@ -281,30 +292,26 @@ def train(num_epochs):
                 accuracy = 100 * correct / total
                 accuracy_total += accuracy 
         
+        avg_train_loss = total_train_loss / len(train_loader)
+        avg_val_loss = valid_total / len(valid_loader)
+        avg_accuracy = accuracy_total / len(valid_loader.dataset)
         
-        print('Epoch [{}/{}], Train Loss: {:.4f}, Validation Loss: {:.4f}, Validation Accuracy: {:.2f}%'.format(epoch+1, num_epochs, loss.item(), valid_loss, accuracy))
-        wandb.log({'epoch': epoch+1, 'train loss': loss, 'validation loss': valid_loss, 'validation accuracy': accuracy})
-                
-    avg_train_loss = total_train_loss / (len(train_loader.dataset) // batch_size)
-    val_loss_avg = valid_total / (len(valid_loader.dataset) // batch_size)
-    accuracy_avg = accuracy_total / len(valid_loader)
-    wandb.log({"avg train loss": avg_train_loss, "average validation loss": val_loss_avg, "average validation accuracy": accuracy_avg})
-    
-    return avg_train_loss
-        
-            
+        #if i % 100 == 0:
+        print('Epoch [{}/{}], Train Loss: {:.4f}, Validation Loss: {:.4f}, Validation Accuracy: {:.2f}%'.format(epoch+1, num_epochs, avg_train_loss, avg_val_loss, avg_accuracy))
+        #wandb.log({'epoch': epoch+1, 'train loss': avg_train_loss, 'validation loss': avg_val_loss, 'validation accuracy': avg_accuracy})
+
     
 
-train(num_epochs)
+train(5)
 
 
 #wandb.agent(sweep_id=sweep_id, function=train(config=config), count=5)
 
 
-torch.save(model.state_dict(), "pytorch_CNN") 
-wandb.save('pytorch_CNN.pt')
+# torch.save(model.state_dict(), "pytorch_CNN") 
+# wandb.save('pytorch_CNN.pt')
 
-wandb.unwatch()
+# wandb.unwatch()
 
 
 
