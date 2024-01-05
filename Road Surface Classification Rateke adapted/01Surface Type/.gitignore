@@ -1,0 +1,13 @@
+
+__pycache__
+
+#train images
+training_data
+
+#model files
+models
+
+#logging
+wandb
+
+
