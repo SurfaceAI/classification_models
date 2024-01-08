@@ -1,5 +1,7 @@
 import sys
 sys.path.append('./')
+sys.path.append('../')
+
 
 import numpy as np
 import torch
@@ -14,6 +16,7 @@ import random
 import matplotlib.pyplot as plt
 import wandb
 
+import config
 
 # complete training routine
 def config_and_train_model(config, load_model, optimizer_class, criterion, augment=None):
@@ -78,7 +81,7 @@ def config_and_train_model(config, load_model, optimizer_class, criterion, augme
 # create images data path
 # TODO: generalize for all users
 def create_data_path():
-    data_path = r'C:\Users\esthe\Documents\GitHub\classification_models\Road Surface Classification Rateke adapted\01Surface Type\training_data'
+    data_path = config.training_data_path
     return data_path
 
 
@@ -207,7 +210,8 @@ def validate_epoch(model, dataloader, criterion, device):
 # save model locally
 def save_model(model, model_name):
     
-    path = r"C:\Users\esthe\Documents\GitHub\classification_models\Road Surface Classification Rateke adapted\01Surface Type"
+    path = config.rateke_surface_type_model_path
+    #path = r"C:\Users\esthe\Documents\GitHub\classification_models\Road Surface Classification Rateke adapted\01Surface Type"
     folder = "models"
 
     folder_path = os.path.join(path, folder)

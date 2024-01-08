@@ -1,5 +1,6 @@
 import sys
 sys.path.append('./')
+sys.path.append('../')
 
 import numpy as np
 import torch
@@ -12,6 +13,8 @@ import helper
 import random
 
 import wandb
+
+import config
 
 # complete training routine
 def config_and_train_model(config, load_model, optimizer_class, criterion, augment=None):
@@ -67,7 +70,8 @@ def config_and_train_model(config, load_model, optimizer_class, criterion, augme
 # create images data path
 # TODO: generalize for all users
 def create_data_path():
-    data_path = '/Users/edith/HTW Cloud/SHARED/SurfaceAI/data/mapillary_images/training_data'
+    data_path = config.training_data_path
+    #data_path = '/Users/edith/HTW Cloud/SHARED/SurfaceAI/data/mapillary_images/training_data'
     return data_path
 
 
