@@ -14,7 +14,7 @@ import random
 
 import wandb
 
-import config
+import config as general_config
 
 # complete training routine
 def config_and_train_model(config, load_model, optimizer_class, criterion, augment=None):
@@ -62,7 +62,7 @@ def config_and_train_model(config, load_model, optimizer_class, criterion, augme
 
     # Use GPU if it's available
     #device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    device = torch.device(f"cuda:{config.gpu_kernel}" if torch.cuda.is_available() else "cpu")
+    device = torch.device(f"cuda:{general_config.gpu_kernel}" if torch.cuda.is_available() else "cpu")
     print(device)
 
 
