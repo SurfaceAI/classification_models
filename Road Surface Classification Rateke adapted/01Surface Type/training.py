@@ -16,7 +16,7 @@ import random
 import matplotlib.pyplot as plt
 import wandb
 
-import config
+import config as general_config
 
 # complete training routine
 def config_and_train_model(config, load_model, optimizer_class, criterion, augment=None):
@@ -69,7 +69,7 @@ def config_and_train_model(config, load_model, optimizer_class, criterion, augme
 
     # Use GPU if it's available
     #device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    device = torch.device(f"cuda:{config.gpu_kernel}" if torch.cuda.is_available() else "cpu")
+    device = torch.device(f"cuda:{general_config.gpu_kernel}" if torch.cuda.is_available() else "cpu")
     print(device)
 
     trained_model = train(model, config.get('save_name'), trainloader, validloader, criterion, optimizer, device, config.get('epochs'))
@@ -83,7 +83,7 @@ def config_and_train_model(config, load_model, optimizer_class, criterion, augme
 # create images data path
 # TODO: generalize for all users
 def create_data_path():
-    data_path = config.training_data_path
+    data_path = general_config.training_data_path
     return data_path
 
 
@@ -212,7 +212,7 @@ def validate_epoch(model, dataloader, criterion, device):
 # save model locally
 def save_model(model, model_name):
     
-    path = config.rateke_surface_type_model_path
+    path = general_config.rateke_surface_type_model_path
     #path = r"C:\Users\esthe\Documents\GitHub\classification_models\Road Surface Classification Rateke adapted\01Surface Type"
     folder = "models"
 
