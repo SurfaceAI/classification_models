@@ -61,7 +61,9 @@ def config_and_train_model(config, load_model, optimizer_class, criterion, augme
     optimizer = optimizer_class(optimizer_params, lr=config.get('learning_rate'))
 
     # Use GPU if it's available
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    #device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    device = torch.device(f"cuda:{config.gpu_kernel}" if torch.cuda.is_available() else "cpu")
+
 
     trained_model = train(model, config.get('save_name'), trainloader, validloader, criterion, optimizer, device, config.get('epochs'))
 
