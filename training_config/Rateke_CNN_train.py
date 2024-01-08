@@ -1,7 +1,12 @@
+import sys
+sys.path.append('.')
+sys.path.append('..')
+
+
 import torch
 from torch import nn, optim
-import Rateke_CNN_model
-import training
+from model_config import Rateke_CNN_model
+from utils import training_esther
 
 # import sys
 # sys.path.append(r'C:\Users\esthe\Documents\GitHub\classification_models')
@@ -43,4 +48,4 @@ criterion = nn.CrossEntropyLoss()
 
 
 # train model
-training.config_and_train_model(config, Rateke_CNN_model.load_model, optimizer, criterion, augmentation)
+training_esther.config_and_train_model(config, Rateke_CNN_model.load_model, optimizer, criterion, augmentation)

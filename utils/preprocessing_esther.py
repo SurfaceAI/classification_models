@@ -1,3 +1,6 @@
+import sys
+sys.path.append('./')
+
 from torchvision import datasets, transforms
 from torch.utils.data import Subset
 from sklearn.model_selection import StratifiedShuffleSplit
@@ -37,8 +40,12 @@ def train_validation_spilt_datasets(root, validation_size, train_transform, vali
 
     return train_dataset, valid_dataset
 
+def custom_crop(img):
+    cropped_img = transforms.functional.crop(img, 512, 256, 256, 256)
+    return cropped_img
     
-def transform(resize=None,
+def transform(crop=None,
+              resize=None,
               to_tensor=True,
               normalize=None,
               random_rotation=None,
@@ -74,7 +81,13 @@ def transform(resize=None,
 
     if resize is not None:
         transform_list.append(transforms.Resize(resize))
-
+        
+    if crop is not None:
+        transform_list.append(transforms.Lambda(custom_crop))
+        
+    # if crop is not None:
+    #     transform_list.append(crop_image(*crop))
+        
     if random_horizontal_flip:
         transform_list.append(transforms.RandomHorizontalFlip())
 
@@ -96,3 +109,73 @@ def transform(resize=None,
     composed_transform = transforms.Compose(transform_list)
 
     return composed_transform
+
+
+# def crop_image(image):
+    
+#     height, width, _ = image.shape #get original height and width
+
+#     left = (width - 256) // 2
+#     upper = 2 * height // 3
+#     right = left + 256
+#     lower = height
+    
+#     cropped_image = image[upper:lower, left:right]
+    
+#     return cropped_image
+
+# import cv2
+# import numpy as np
+ 
+# img = cv2.imread('training_data/annotated_images/asphalt/bad/129525449781518.jpg')
+
+# cv2.imshow("img", img)
+# print(img.shape) # Print image shape
+
+# height, width, _ = img.shape #get original height and width
+
+# left = (width - 256) // 2
+# #upper = height - 224
+# upper = 2 * height // 3
+# right = left + 256
+# lower = height
+ 
+# # Cropping an image
+# cropped_image = img[upper:lower, left:right]
+# cropped_image.shape
+# cv2.imshow("cropped", cropped_image)
+ 
+# # Display cropped image
+# cv2.imshow("cropped", cropped_image)
+ 
+# # Save the cropped image
+# cv2.imwrite("Cropped Image.jpg", cropped_image)
+ 
+# cv2.waitKey(0)
+# cv2.destroyAllWindows()
+
+# cv2.imshow('image view', cropped_image)
+# k = cv2.waitKey(0) & 0xFF #without this, the execution would crush the kernel on windows
+# if k == 27:         # wait for ESC key to exit
+#     cv2.destroyAllWindows()
+# #plt.imshow(np.transpose(images[0].numpy(), (1, 2, 0)))
+
+
+
+
+# import torch 
+# import torchvision.transforms as transforms 
+# from PIL import Image 
+
+
+# image
+  
+# # create an transform for crop the image 
+# transform = transforms.CenterCrop(200) 
+  
+# # use above created transform to crop  
+# # the image 
+# image_crop = transform(image) 
+  
+# # display result 
+# image_crop.show() 

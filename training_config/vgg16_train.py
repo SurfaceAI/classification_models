@@ -1,9 +1,10 @@
 import sys
-sys.path.append('./')
+sys.path.append('.')
+sys.path.append('..')
 
 from torch import nn, optim
-import vgg16_model
-import training
+from model_config import vgg16_model
+from utils import training_esther
 
 # config
 config = dict(
@@ -40,4 +41,4 @@ criterion = nn.CrossEntropyLoss()
 
 
 # train model
-training.config_and_train_model(config, vgg16_model.load_model, optimizer, criterion, augmentation)
+training_esther.config_and_train_model(config, vgg16_model.load_model, optimizer, criterion, augmentation)

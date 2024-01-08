@@ -1,0 +1,7 @@
+{
+    "restructuredtext.syntaxHighlighting.disabled": true,
+    "python.defaultInterpreterPath": "/Users/alexandra/opt/anaconda3/envs/mapbox/bin",
+    "python.testing.unittestEnabled": false,
+    "python.testing.pytestEnabled": true
+    
+}
