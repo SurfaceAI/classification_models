@@ -4,5 +4,7 @@
 mlartifacts
 mlruns
 
-pytorch CNN
+
 wandb
+
+data
