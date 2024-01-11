@@ -22,14 +22,15 @@ config = dict(
     dataset = 'annotated_images',
     batch_size = 16,
     valid_batch_size = 48,
-    epochs = 2,
+    epochs = 50,
     learning_rate = 0.0002,
     seed = 42,
     validation_size = 0.2,
-    image_size_h_w = (768, 768),
-    crop_size = [512, 256, 256, 256],
-    norm_mean = [0.485, 0.456, 0.406],
-    norm_std = [0.229, 0.224, 0.225],
+    image_size_h_w = (256, 256),
+    #crop_size = [512, 256, 256, 256],
+    normalize = 'from_data',
+    # norm_mean = [0.485, 0.456, 0.406],
+    # norm_std = [0.229, 0.224, 0.225],
 
 )
 

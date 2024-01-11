@@ -121,8 +121,8 @@ def create_transform(config, augment=None):
     # TODO: check if image_size/normalize in config
     general_transform = {
         'resize': config.get('image_size_h_w'),
-        'crop': config.get('crop_size'),
-        #'normalize': (config.get('norm_mean'), config.get('norm_std')),
+        #'crop': config.get('crop_size'),
+        'normalize': (config.get('norm_mean'), config.get('norm_std')),
     }
 
     train_augmentation = augment

@@ -1,11 +1,31 @@
 import sys
 sys.path.append('./')
 
+import numpy as np
 from torchvision import datasets, transforms
 from torch.utils.data import Subset
 from sklearn.model_selection import StratifiedShuffleSplit
 from sklearn.model_selection import train_test_split
 import copy
+
+def compute_mean_std(train_dataset):
+    """
+    Compute mean and standard deviation of the training dataset.
+    """
+    mean = np.zeros(3)  # Assuming 3 channels for RGB images
+    std = np.zeros(3)
+
+    for path, target in train_dataset.samples:
+        img = Image.open(path).convert("RGB")
+        img = np.array(img) / 255.0  # Normalize pixel values to [0, 1]
+        mean += np.mean(img, axis=(0, 1))
+        std += np.std(img, axis=(0, 1))
+
+    mean /= len(train_dataset)
+    std /= len(train_dataset)
+
+    return mean, std
+
 
 def train_validation_spilt_datasets(root, validation_size, train_transform, valid_transform, random_state):
 
@@ -37,8 +57,10 @@ def train_validation_spilt_datasets(root, validation_size, train_transform, vali
     valid_dataset.targets = targets_valid
     valid_dataset.imgs = imgs_valid
     valid_dataset.transform = valid_transform
+    
+    train_mean, train_std = compute_mean_std(train_dataset)#unklar wie ich diese Werte weitergeben soll
 
-    return train_dataset, valid_dataset
+    return train_dataset, valid_dataset, train_mean, train_std
 
 def custom_crop(img):
     cropped_img = transforms.functional.crop(img, 512, 256, 256, 256)
