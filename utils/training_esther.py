@@ -26,12 +26,12 @@ def config_and_train_model(config, load_model, optimizer_class, criterion, augme
     _ = init_wandb(config, augment)
 
     # dataset
-    data_path = create_data_path()
-    data_root= os.path.join(data_path, config.get('dataset'))
+    data_root = general_config.training_data_path #create_data_path()
+    data_path = os.path.join(data_root, config.get('dataset'), config.get('label_type'))
 
     train_transform, valid_transform = create_transform(config, augment)
 
-    train_data, valid_data = preprocessing_esther.train_validation_spilt_datasets(data_root, config.get('validation_size'), train_transform, valid_transform, random_state=config.get('seed'))
+    train_data, valid_data = preprocessing_esther.train_validation_spilt_datasets(data_path, config.get('validation_size'), train_transform, valid_transform, random_state=config.get('seed'))
 
     #here we are calculating counts weights for our imbalanced groups
     class_counts = Counter(train_data.targets)
