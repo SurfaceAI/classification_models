@@ -1,10 +1,10 @@
 import sys
-sys.path.append('./')
+sys.path.append('.')
 
 from torch import nn, optim
-import efficientnet_v2_s_logsoftmax_model
-import training
-import efficientnet_v2_s_logsoftmax_model
+from model_config import efficientnet_v2_s_logsoftmax_model
+from utils import training, constants
+
 
 # config
 config = dict(
@@ -12,7 +12,8 @@ config = dict(
     name = "efficient net",
     save_name = 'efficientnet_v2_s__nllloss.pt',
     architecture = "Efficient Net v2 s",
-    dataset = 'V0',
+    dataset = 'V4', #'annotated_images',
+    label_type = 'annotated', #'predicted
     batch_size = 48,
     valid_batch_size = 48,
     epochs = 2,
@@ -20,8 +21,15 @@ config = dict(
     seed = 42,
     validation_size = 0.2,
     image_size_h_w = (256, 256),
+    crop = 'lower_middle_third',
     norm_mean = [0.485, 0.456, 0.406],
     norm_std = [0.229, 0.224, 0.225],
+    selected_classes = [constants.ASPHALT,
+                        constants.CONCRETE,
+                        constants.SETT,
+                        constants.UNPAVED,
+                        constants.PAVING_STONES,
+    ]
 
 )
 

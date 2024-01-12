@@ -31,7 +31,7 @@ def config_and_train_model(config, load_model, optimizer_class, criterion, augme
 
     train_transform, valid_transform = create_transform(config, augment)
 
-    train_data, valid_data = preprocessing_esther.train_validation_spilt_datasets(data_path, config.get('validation_size'), train_transform, valid_transform, random_state=config.get('seed'))
+    train_data, valid_data = preprocessing_esther.train_validation_split_datasets(data_path, config.get('validation_size'), train_transform, valid_transform, random_state=config.get('seed'))
 
     #here we are calculating counts weights for our imbalanced groups
     class_counts = Counter(train_data.targets)

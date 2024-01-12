@@ -27,7 +27,7 @@ def compute_mean_std(train_dataset):
     return mean, std
 
 
-def train_validation_spilt_datasets(root, validation_size, train_transform, valid_transform, random_state):
+def train_validation_split_datasets(root, validation_size, train_transform, valid_transform, random_state):
 
     # create complete dataset
     complete_dataset = datasets.ImageFolder(root)

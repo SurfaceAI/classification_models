@@ -1,6 +1,6 @@
 import sys
-sys.path.append('./')
-sys.path.append('../')
+sys.path.append('.')
+# sys.path.append('..')
 
 import numpy as np
 import torch
@@ -8,28 +8,29 @@ from torch import nn, optim
 from torchvision import models
 from collections import OrderedDict
 import os
-import preprocessing
-import helper
+from utils import preprocessing
+from utils import helper
 import random
 
 import wandb
 
-import config as general_config
+from utils import general_config
 
 # complete training routine
 def config_and_train_model(config, load_model, optimizer_class, criterion, augment=None):
 
     torch.manual_seed(config.get('seed'))
-
-    _ = init_wandb(config, augment)
+    
+    if general_config.wandb_record:
+        _ = init_wandb(config, augment)
 
     # dataset
-    data_path = create_data_path()
-    data_root= os.path.join(data_path, config.get('dataset'))
+    data_root = general_config.training_data_path #create_data_path()
+    data_path = os.path.join(data_root, config.get('dataset'), config.get('label_type'))
 
     train_transform, valid_transform = create_transform(config, augment)
 
-    train_data, valid_data = preprocessing.train_validation_spilt_datasets(data_root, config.get('validation_size'), train_transform, valid_transform, random_state=config.get('seed'))
+    train_data, valid_data = preprocessing.train_validation_split_datasets(data_path, config.get('selected_classes'), config.get('validation_size'), train_transform, valid_transform, random_state=config.get('seed'))
 
     trainloader = torch.utils.data.DataLoader(train_data, batch_size=config.get('batch_size'), shuffle=True)
     validloader = torch.utils.data.DataLoader(valid_data, batch_size=config.get('valid_batch_size'))
@@ -70,12 +71,12 @@ def config_and_train_model(config, load_model, optimizer_class, criterion, augme
 
 
 
-# create images data path
-# TODO: generalize for all users
-def create_data_path():
-    data_path = general_config.training_data_path
-    #data_path = '/Users/edith/HTW Cloud/SHARED/SurfaceAI/data/mapillary_images/training_data'
-    return data_path
+# # create images data path
+# # TODO: generalize for all users
+# def create_data_path():
+#     data_path = general_config.training_data_path
+#     #data_path = '/Users/edith/HTW Cloud/SHARED/SurfaceAI/data/mapillary_images/training_data'
+#     return data_path
 
 
 # W&B initialisation
@@ -100,7 +101,9 @@ def init_wandb(config_input, augment=None):
         "learning_rate": config_input.get('learning_rate'),
         "batch_size": config_input.get('batch_size'),
         "seed": config_input.get('seed'),
-        "augmented": augmented
+        "augmented": augmented,
+        "crop": config_input.get('crop'),
+        "selected_classes": config_input.get('selected_classes'),
         }
     ) 
 
@@ -110,6 +113,7 @@ def create_transform(config, augment=None):
     # TODO: check if image_size/normalize in config
     general_transform = {
         'resize': config.get('image_size_h_w'),
+        'crop': config.get('crop'),
         'normalize': (config.get('norm_mean'), config.get('norm_std')),
     }
 
@@ -135,7 +139,8 @@ def train(model, model_name, trainloader, validloader, criterion, optimizer, dev
 
         val_loss, val_accuracy = validate_epoch(model, validloader, criterion, device)
 
-        wandb.log({'epoch': epoch+1, 'train loss': train_loss, 'validation loss': val_loss, 'validation accuracy': val_accuracy})
+        if general_config.wandb_record:
+            wandb.log({'epoch': epoch+1, 'train loss': train_loss, 'validation loss': val_loss, 'validation accuracy': val_accuracy})
 
         print(f"Epoch {epoch+1}/{epochs}.. ",
             f"Train loss: {train_loss:.3f}.. ",
@@ -143,8 +148,9 @@ def train(model, model_name, trainloader, validloader, criterion, optimizer, dev
             f"Test accuracy: {val_accuracy:.3f}",)
 
     save_model(model, model_name)
-    wandb.save(model_name)
-    wandb.unwatch()
+    if general_config.wandb_record:
+        wandb.save(model_name)
+        wandb.unwatch()
 
     print("Done.")
 
@@ -158,6 +164,8 @@ def train_epoch(model, dataloader, criterion, optimizer, device):
     running_loss = 0.0
 
     for inputs, labels in dataloader:
+
+        helper.multi_imshow(inputs, labels)
 
         inputs, labels = inputs.to(device), labels.to(device)
 
@@ -196,16 +204,19 @@ def validate_epoch(model, dataloader, criterion, device):
 # save model locally
 def save_model(model, model_name):
     
-    path = "Road_Surface_Pretrained_Models"
-    folder = "models"
+    save_path = general_config.save_path
 
-    folder_path = os.path.join(path, folder)
-
-    if not os.path.exists(path):
-        os.makedirs(path)
-
-    if not os.path.exists(folder_path):
-        os.makedirs(folder_path)
+    if not os.path.exists(save_path):
+        os.makedirs(save_path)
     
-    model_path = os.path.join(folder_path, model_name)
+    model_path = os.path.join(save_path, model_name)
     torch.save(model, model_path)
+
+# load model from wandb
+def load_wandb_model(model_name, run_path):
+
+    best_model = wandb.restore(model_name, run_path=run_path)
+
+    model = torch.load(best_model.name)
+
+    return model

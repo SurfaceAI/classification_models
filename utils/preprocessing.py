@@ -1,18 +1,45 @@
 import sys
-sys.path.append('./')
+sys.path.append('.')
 
 from torchvision import datasets, transforms
 from torch.utils.data import Subset
 from sklearn.model_selection import StratifiedShuffleSplit
 from sklearn.model_selection import train_test_split
 import copy
+import os
+from utils import general_config
+
+class PartialImageFolder(datasets.ImageFolder):
+    def __init__(self,
+                 root,
+                 transform=None,
+                 target_transform=None,
+                 loader=datasets.folder.default_loader,
+                 is_valid_file=None,
+                 selected_classes=None
+                 ):
+        self.selected_classes = selected_classes
+        super(PartialImageFolder, self).__init__(root,
+                                                 transform=transform,
+                                                 target_transform=target_transform,
+                                                 loader=loader,
+                                                 is_valid_file=is_valid_file)
+    
+    def find_classes(self, directory):
+        classes = sorted(entry.name for entry in os.scandir(directory) if entry.is_dir())
+        if self.selected_classes is not None:
+            classes = [c for c in classes if c in self.selected_classes]
+        if not classes:
+            raise FileNotFoundError(f"Couldn't find any class folder in {directory}.")
+
+        class_to_idx = {cls_name: i for i, cls_name in enumerate(classes)}
+        return classes, class_to_idx
 
 
-
-def train_validation_spilt_datasets(root, validation_size, train_transform, valid_transform, random_state):
+def train_validation_split_datasets(root, selected_classes, validation_size, train_transform, valid_transform, random_state):
 
     # create complete dataset
-    complete_dataset = datasets.ImageFolder(root)
+    complete_dataset = PartialImageFolder(root, selected_classes=selected_classes)
 
     # # split indices for training and validation sets
     # stratified_splitter = StratifiedShuffleSplit(n_splits=1, test_size=validation_size, random_state=random_state)
@@ -23,6 +50,11 @@ def train_validation_spilt_datasets(root, validation_size, train_transform, vali
     # train_dataset.dataset.transform = train_transform
     # valid_dataset = Subset(complete_dataset, valid_idx)
     # valid_dataset.dataset.transform = valid_transform
+
+    # # select classes
+    # complete_dataset.samples = [(path, class_idx) for path, class_idx in complete_dataset.samples if complete_dataset.classes[class_idx] in general_config.selected_classes]
+    # complete_dataset.imgs = [(path, class_idx) for path, class_idx in complete_dataset.imgs if complete_dataset.classes[class_idx] in general_config.selected_classes]
+    # complete_dataset.targets = [class_idx for path, class_idx in complete_dataset.samples]
 
     (samples_train, samples_valid,
      targets_train, targets_valid,
@@ -42,8 +74,22 @@ def train_validation_spilt_datasets(root, validation_size, train_transform, vali
 
     return train_dataset, valid_dataset
 
+def custom_crop(img, crop_style=None):
+
+    im_width, im_height = img.size
+    if crop_style == 'lower_middle_third':
+        top = im_height / 3 * 2
+        left = im_width / 3
+        height = im_height - top
+        width = im_width / 3
+    else: # None, or not valid
+        return img
+    
+    cropped_img = transforms.functional.crop(img, top, left, height, width)
+    return cropped_img
     
 def transform(resize=None,
+              crop=None,
               to_tensor=True,
               normalize=None,
               random_rotation=None,
@@ -57,6 +103,7 @@ def transform(resize=None,
 
     Parameters:
         - resize (tuple or None): Target size for resizing, e.g. (height, width).
+        - crop (string): crop style e.g. 'lower_middle_third'
         - to_tensor (bool): Converts the PIL Image (H x W x C) in the range [0, 255] to a torch.FloatTensor of shape (C x H x W) in the range [0.0, 1.0]
         - normalize (tuple of lists [r, g, b] or None): Mean and standard deviation for normalization.
         - random_rotation (float (non-negative) or None): Maximum rotation angle in degrees for random rotation.
@@ -77,6 +124,9 @@ def transform(resize=None,
     if random_rotation is not None:
         transform_list.append(transforms.RandomRotation(random_rotation))
 
+    if crop is not None:
+        transform_list.append(transforms.Lambda(lambda img: custom_crop(img, crop)))
+        
     if resize is not None:
         transform_list.append(transforms.Resize(resize))
 
