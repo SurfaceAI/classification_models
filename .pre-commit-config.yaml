@@ -1,0 +1,17 @@
+repos:
+-   repo: https://github.com/psf/black
+    rev: 22.10.0
+    hooks:
+    - id: black
+      language_version: python3.8
+-   repo: https://github.com/pycqa/isort
+    rev: 5.12.0
+    hooks:
+      - id: isort
+        files: '.*'
+        args: [ --profile=black, --project=pandas_profiling ]
+
+ci:
+  autoupdate_commit_msg: 'ci: pre-commit-config update'
+  autofix_prs: false
+  autofix_commit_msg: 'ci: pre-commit auto fixes'

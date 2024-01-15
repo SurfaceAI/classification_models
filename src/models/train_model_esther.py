@@ -1,0 +1,267 @@
+import sys
+
+sys.path.append(".")
+# sys.path.append('..')
+
+
+import os
+import random
+from collections import Counter, OrderedDict
+
+import matplotlib.pyplot as plt
+import numpy as np
+import torch
+from torch import nn, optim
+from torch.utils.data import WeightedRandomSampler
+from torchvision import models
+
+import wandb
+from src import general_config
+from utils import helper_esther, preprocessing_esther
+
+
+# complete training routine
+def config_and_train_model(config):
+
+    torch.manual_seed(config.get("seed"))
+
+    # _ = init_wandb(config)
+
+    # dataset
+    data_root = general_config.training_data_path  # create_data_path()
+    data_path = os.path.join(data_root, config.get("dataset"), config.get("label_type"))
+
+    train_transform, valid_transform = create_transform(config)
+
+    train_data, valid_data = preprocessing_esther.train_validation_spilt_datasets(
+        data_path,
+        config.get("validation_size"),
+        train_transform,
+        valid_transform,
+        random_state=config.get("seed"),
+    )
+
+    # here we are calculating counts weights for our imbalanced groups
+    class_counts = Counter(train_data.targets)
+    sample_weights = [1 / class_counts[i] for i in train_data.targets]
+    sampler = WeightedRandomSampler(
+        weights=sample_weights, num_samples=len(train_data)
+    )  # I don't know how to verify if this is working
+
+    trainloader = torch.utils.data.DataLoader(
+        train_data, batch_size=config.get("batch_size"), sampler=sampler
+    )  # shuffle=True (mutually exclusive with sampler),
+    validloader = torch.utils.data.DataLoader(
+        valid_data, batch_size=config.get("valid_batch_size")
+    )
+
+    # load model
+    num_classes = len(train_data.classes)
+
+    model_class = config.get("model")
+    # TODO: instanciate model!
+    model = model_class(num_classes)
+    if isinstance(model, tuple):
+        model, optimizer_layers = model
+    else:
+        optimizer_layers = None
+
+    # Unfreeze parameters
+    for param in model.parameters():
+        param.requires_grad = True
+
+    # setup optimizer
+    if optimizer_layers is None:
+        optimizer_params = model.parameters()
+    else:
+        optimizer_params = []
+        for layer in optimizer_layers:
+            optimizer_params += [p for p in layer.parameters()]
+
+    # set parameters to optimize
+    optimizer_class = config.get("optimizer")
+    optimizer = optimizer_class(optimizer_params, lr=config.get("learning_rate"))
+
+    # Use GPU if it's available
+    # device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    device = torch.device(
+        f"cuda:{general_config.gpu_kernel}" if torch.cuda.is_available() else "cpu"
+    )
+    # print(device)
+
+    train(
+        model,
+        config.get("save_name"),
+        trainloader,
+        validloader,
+        config.get("criterion"),
+        optimizer,
+        device,
+        config.get("epochs"),
+    )
+
+    # inputs, labels = next(iter(trainloader))
+    # helper_esther.multi_imshow(inputs, labels)
+    # plt.show()
+
+
+# W&B initialisation
+def init_wandb(config_input):
+
+    # set augmentation
+    if config_input.get("augmentation") is not None:
+        augmented = "Yes"
+    else:
+        augmented = "No"
+
+    wandb.login()
+    wandb.init(
+        # set project and tags
+        project=config_input.get("project"),
+        name=config_input.get("name"),
+        # track hyperparameters and run metadata
+        # TODO: config=config???
+        config={
+            "architecture": config_input.get("architecture"),
+            "dataset": config_input.get("dataset"),
+            "learning_rate": config_input.get("learning_rate"),
+            "batch_size": config_input.get("batch_size"),
+            "crop_size": config_input.get("crop_size"),
+            "seed": config_input.get("seed"),
+            "augmented": augmented,
+        },
+    )
+
+
+# preprocessing
+def create_transform(config):
+
+    # TODO: check if image_size/normalize in config
+    general_transform = {
+        "resize": config.get("image_size_h_w"),
+        "crop": config.get("crop_size"),
+        #'normalize': (config.get('norm_mean'), config.get('norm_std')),
+    }
+
+    train_augmentation = config.get("augmentation")
+
+    train_transform = preprocessing_esther.transform(
+        **general_transform, **train_augmentation
+    )
+    valid_transform = preprocessing_esther.transform(**general_transform)
+
+    return train_transform, valid_transform
+
+
+# train the model
+def train(
+    model, model_name, trainloader, validloader, criterion, optimizer, device, epochs
+):
+
+    model.to(device)
+
+    for epoch in range(epochs):
+
+        train_loss = train_epoch(model, trainloader, criterion, optimizer, device)
+
+        val_loss, val_accuracy = validate_epoch(model, validloader, criterion, device)
+
+        wandb.log(
+            {
+                "epoch": epoch + 1,
+                "train loss": train_loss,
+                "validation loss": val_loss,
+                "validation accuracy": val_accuracy,
+            }
+        )
+
+        print(
+            f"Epoch {epoch+1}/{epochs}.. ",
+            f"Train loss: {train_loss:.3f}.. ",
+            f"Test loss: {val_loss:.3f}.. ",
+            f"Test accuracy: {val_accuracy:.3f}",
+        )
+
+    # save_model(model, model_name)
+    wandb.save(model_name)
+    wandb.unwatch()
+
+    print("Done.")
+
+    return model
+
+
+# train a single epoch
+def train_epoch(model, dataloader, criterion, optimizer, device):
+    model.train()
+    criterion.reduction = "sum"
+    running_loss = 0.0
+    # correct_train = 0
+
+    for inputs, labels in dataloader:
+
+        inputs, labels = inputs.to(device), labels.to(device)
+
+        optimizer.zero_grad()
+
+        outputs = model(inputs)
+        loss = criterion(outputs, labels)
+        loss.backward()
+        optimizer.step()
+
+        running_loss += loss.item()
+
+    running_loss_epoch = running_loss / len(dataloader.sampler)
+
+    return running_loss_epoch
+
+
+# validate a single epoch
+def validate_epoch(model, dataloader, criterion, device):
+    model.eval()
+    criterion.reduction = "sum"
+    running_loss = 0.0
+    correct_predictions = 0
+
+    with torch.no_grad():
+        for inputs, labels in dataloader:
+            inputs, labels = inputs.to(device), labels.to(device)
+
+            outputs = model(inputs)
+            loss = criterion(outputs, labels)
+
+            running_loss += loss.item()
+
+            predictions = torch.argmax(outputs, dim=1)
+            correct_predictions += (predictions == labels).sum().item()
+        # accuracy = 100 * correct_predictions / len(dataloader.sampler)
+        # accuracy_total += accuracy
+
+    return running_loss / len(dataloader.sampler), 100 * correct_predictions / len(
+        dataloader.sampler
+    )
+
+
+# save model locally
+def save_model(model, model_name):
+
+    folder_path = general_config.save_path
+    # path = r"C:\Users\esthe\Documents\GitHub\classification_models\Road Surface Classification Rateke adapted\01Surface Type"
+    # folder = "models"
+
+    # folder_path = os.path.join(path, folder)
+
+    if not os.path.exists(path):
+        os.makedirs(path)
+
+    if not os.path.exists(folder_path):
+        os.makedirs(folder_path)
+
+    model_path = os.path.join(folder_path, model_name)
+    torch.save(model, model_path)
+
+
+# torch.save(model.state_dict(), "pytorch_CNN")
+# wandb.save('pytorch_CNN.pt')
+
+# wandb.unwatch()

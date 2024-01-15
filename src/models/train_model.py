@@ -1,46 +1,55 @@
 import sys
-sys.path.append('./')
-sys.path.append('../')
 
+sys.path.append("./")
+sys.path.append("../")
+
+import os
+import random
+from collections import OrderedDict
+
+import config as general_config
+import helper
 import numpy as np
+import preprocessing
 import torch
 from torch import nn, optim
 from torchvision import models
-from collections import OrderedDict
-import os
-import preprocessing
-import helper
-import random
 
 import wandb
 
-import config as general_config
 
 # complete training routine
-def config_and_train_model(config, load_model, optimizer_class, criterion, augment=None):
+def config_and_train_model(
+    config, load_model, optimizer_class, criterion, augment=None
+):
 
-    torch.manual_seed(config.get('seed'))
+    torch.manual_seed(config.get("seed"))
 
     _ = init_wandb(config, augment)
 
     # dataset
     data_path = create_data_path()
-    data_root= os.path.join(data_path, config.get('dataset'))
+    data_root = os.path.join(data_path, config.get("dataset"))
 
     train_transform, valid_transform = create_transform(config, augment)
 
-    train_data, valid_data = preprocessing.train_validation_spilt_datasets(data_root, config.get('validation_size'), train_transform, valid_transform, random_state=config.get('seed'))
+    train_data, valid_data = preprocessing.train_validation_spilt_datasets(
+        data_root,
+        config.get("validation_size"),
+        train_transform,
+        valid_transform,
+        random_state=config.get("seed"),
+    )
 
-    trainloader = torch.utils.data.DataLoader(train_data, batch_size=config.get('batch_size'), shuffle=True)
-    validloader = torch.utils.data.DataLoader(valid_data, batch_size=config.get('valid_batch_size'))
+    trainloader = torch.utils.data.DataLoader()
 
     # load model
     num_classes = len(train_data.classes)
 
-    #TODO: instanciate model!
+    # TODO: instanciate model!
     result = load_model(num_classes)
     if isinstance(result, tuple):
-            model, optimizer_layers = result
+        model, optimizer_layers = result
     else:
         model = result
         optimizer_layers = None
@@ -58,63 +67,71 @@ def config_and_train_model(config, load_model, optimizer_class, criterion, augme
             optimizer_params += [p for p in layer.parameters()]
 
     # set parameters to optimize
-    optimizer = optimizer_class(optimizer_params, lr=config.get('learning_rate'))
+    optimizer = optimizer_class(optimizer_params, lr=config.get("learning_rate"))
 
     # Use GPU if it's available
-    #device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    device = torch.device(f"cuda:{general_config.gpu_kernel}" if torch.cuda.is_available() else "cpu")
+    # device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    device = torch.device(
+        f"cuda:{general_config.gpu_kernel}" if torch.cuda.is_available() else "cpu"
+    )
     print(device)
 
-
-    trained_model = train(model, config.get('save_name'), trainloader, validloader, criterion, optimizer, device, config.get('epochs'))
-
+    trained_model = train(
+        model,
+        config.get("save_name"),
+        trainloader,
+        validloader,
+        criterion,
+        optimizer,
+        device,
+        config.get("epochs"),
+    )
 
 
 # create images data path
 # TODO: generalize for all users
 def create_data_path():
     data_path = general_config.training_data_path
-    #data_path = '/Users/edith/HTW Cloud/SHARED/SurfaceAI/data/mapillary_images/training_data'
+    # data_path = '/Users/edith/HTW Cloud/SHARED/SurfaceAI/data/mapillary_images/training_data'
     return data_path
 
 
 # W&B initialisation
 def init_wandb(config_input, augment=None):
 
-    #set augmentation
+    # set augmentation
     if augment is not None:
         augmented = "Yes"
     else:
         augmented = "No"
     wandb.login()
     wandb.init(
-        #set project and tags 
-        project = config_input.get('project'), 
-        name = config_input.get('name'),
-        
-        #track hyperparameters and run metadata
+        # set project and tags
+        project=config_input.get("project"),
+        name=config_input.get("name"),
+        # track hyperparameters and run metadata
         # TODO: config=config???
         config={
-        "architecture": config_input.get('architecture'),
-        "dataset": config_input.get('dataset'),
-        "learning_rate": config_input.get('learning_rate'),
-        "batch_size": config_input.get('batch_size'),
-        "seed": config_input.get('seed'),
-        "augmented": augmented
-        }
-    ) 
+            "architecture": config_input.get("architecture"),
+            "dataset": config_input.get("dataset"),
+            "learning_rate": config_input.get("learning_rate"),
+            "batch_size": config_input.get("batch_size"),
+            "seed": config_input.get("seed"),
+            "augmented": augmented,
+        },
+    )
+
 
 # preprocessing
 def create_transform(config, augment=None):
 
     # TODO: check if image_size/normalize in config
     general_transform = {
-        'resize': config.get('image_size_h_w'),
-        'normalize': (config.get('norm_mean'), config.get('norm_std')),
+        "resize": config.get("image_size_h_w"),
+        "normalize": (config.get("norm_mean"), config.get("norm_std")),
     }
 
     train_augmentation = augment
-
 
     train_transform = preprocessing.transform(**general_transform, **train_augmentation)
     valid_transform = preprocessing.transform(**general_transform)
@@ -122,10 +139,10 @@ def create_transform(config, augment=None):
     return train_transform, valid_transform
 
 
-
-
 # train the model
-def train(model, model_name, trainloader, validloader, criterion, optimizer, device, epochs):
+def train(
+    model, model_name, trainloader, validloader, criterion, optimizer, device, epochs
+):
 
     model.to(device)
 
@@ -135,12 +152,21 @@ def train(model, model_name, trainloader, validloader, criterion, optimizer, dev
 
         val_loss, val_accuracy = validate_epoch(model, validloader, criterion, device)
 
-        wandb.log({'epoch': epoch+1, 'train loss': train_loss, 'validation loss': val_loss, 'validation accuracy': val_accuracy})
+        wandb.log(
+            {
+                "epoch": epoch + 1,
+                "train loss": train_loss,
+                "validation loss": val_loss,
+                "validation accuracy": val_accuracy,
+            }
+        )
 
-        print(f"Epoch {epoch+1}/{epochs}.. ",
+        print(
+            f"Epoch {epoch+1}/{epochs}.. ",
             f"Train loss: {train_loss:.3f}.. ",
             f"Test loss: {val_loss:.3f}.. ",
-            f"Test accuracy: {val_accuracy:.3f}",)
+            f"Test accuracy: {val_accuracy:.3f}",
+        )
 
     save_model(model, model_name)
     wandb.save(model_name)
@@ -154,7 +180,7 @@ def train(model, model_name, trainloader, validloader, criterion, optimizer, dev
 # train a single epoch
 def train_epoch(model, dataloader, criterion, optimizer, device):
     model.train()
-    criterion.reduction = 'sum'
+    criterion.reduction = "sum"
     running_loss = 0.0
 
     for inputs, labels in dataloader:
@@ -172,13 +198,14 @@ def train_epoch(model, dataloader, criterion, optimizer, device):
 
     return running_loss / len(dataloader.sampler)
 
+
 # validate a single epoch
 def validate_epoch(model, dataloader, criterion, device):
     model.eval()
-    criterion.reduction = 'sum'
+    criterion.reduction = "sum"
     running_loss = 0.0
     correct_predictions = 0
-    
+
     with torch.no_grad():
         for inputs, labels in dataloader:
             inputs, labels = inputs.to(device), labels.to(device)
@@ -191,11 +218,14 @@ def validate_epoch(model, dataloader, criterion, device):
             predictions = torch.argmax(outputs, dim=1)
             correct_predictions += (predictions == labels).sum().item()
 
-    return running_loss / len(dataloader.sampler), correct_predictions / len(dataloader.sampler)
+    return running_loss / len(dataloader.sampler), correct_predictions / len(
+        dataloader.sampler
+    )
+
 
 # save model locally
 def save_model(model, model_name):
-    
+
     path = "Road_Surface_Pretrained_Models"
     folder = "models"
 
@@ -206,6 +236,6 @@ def save_model(model, model_name):
 
     if not os.path.exists(folder_path):
         os.makedirs(folder_path)
-    
+
     model_path = os.path.join(folder_path, model_name)
     torch.save(model, model_path)

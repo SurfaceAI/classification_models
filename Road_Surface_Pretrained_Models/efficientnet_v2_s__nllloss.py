@@ -1,17 +1,19 @@
 import sys
-sys.path.append('./')
 
+sys.path.append("./")
+
+import os
+import random
+from collections import OrderedDict
+
+import helper
 import numpy as np
+import preprocessing
 import torch
 from torch import nn, optim
 from torchvision import models
-from collections import OrderedDict
-import os
-import preprocessing
-import training
-import helper
-import random
 
+import src.training as training
 import wandb
 
 # config
@@ -31,46 +33,47 @@ norm_mean = [0.485, 0.456, 0.406]
 norm_std = [0.229, 0.224, 0.225]
 horizontal_flip = True
 random_rotation = 10
- 
+
 
 # # # unfreeze all parameters after x epochs
 # # unfreeze = False
 # epochs_freeze = 5
 
-data_version = 'V0'
+data_version = "V0"
 
 # image data path
-data_path = '/Users/edith/HTW Cloud/SHARED/SurfaceAI/data/mapillary_images/training_data'
+data_path = (
+    "/Users/edith/HTW Cloud/SHARED/SurfaceAI/data/mapillary_images/training_data"
+)
 
 
 # W&B initialisation
 wandb.login()
 run = wandb.init(
-    #set project and tags 
-    project = "road-surface-classification-type", 
-    name = "efficient net", 
-    
-    #track hyperparameters and run metadata
+    # set project and tags
+    project="road-surface-classification-type",
+    name="efficient net",
+    # track hyperparameters and run metadata
     config={
-    "architecture": "Efficient Net v2 s",
-    "dataset": data_version,
-    "learning_rate": learning_rate,
-    "batch_size": batch_size,
-    "seed": seed,
-    "augmented": "Yes"
-    }
-) 
+        "architecture": "Efficient Net v2 s",
+        "dataset": data_version,
+        "learning_rate": learning_rate,
+        "batch_size": batch_size,
+        "seed": seed,
+        "augmented": "Yes",
+    },
+)
 
 # preprocessing
 
 general_transform = {
-    'resize': (image_height, image_width),
-    'normalize': (norm_mean, norm_std),
+    "resize": (image_height, image_width),
+    "normalize": (norm_mean, norm_std),
 }
 
 train_augmentation = {
-    'random_horizontal_flip': horizontal_flip,
-    'random_rotation': random_rotation,
+    "random_horizontal_flip": horizontal_flip,
+    "random_rotation": random_rotation,
 }
 
 
@@ -83,9 +86,11 @@ torch.manual_seed(seed)
 # random.seed(seed)
 
 # dataset
-data_root= os.path.join(data_path, data_version)
+data_root = os.path.join(data_path, data_version)
 
-train_data, valid_data = preprocessing.train_validation_spilt_datasets(data_root, validation_size, train_transform, valid_transform, random_state=seed)
+train_data, valid_data = preprocessing.train_validation_spilt_datasets(
+    data_root, validation_size, train_transform, valid_transform, random_state=seed
+)
 # len(torch.tensor(train_data.dataset.targets)[train_data.indices])
 
 # # Define transforms for the training data and testing data
@@ -102,22 +107,25 @@ train_data, valid_data = preprocessing.train_validation_spilt_datasets(data_root
 
 num_classes = len(train_data.classes)
 
-trainloader = torch.utils.data.DataLoader(train_data, batch_size=batch_size, shuffle=True)
+trainloader = torch.utils.data.DataLoader(
+    train_data, batch_size=batch_size, shuffle=True
+)
 validloader = torch.utils.data.DataLoader(valid_data, batch_size=valid_batch_size)
 
 
 # model
-model = models.efficientnet_v2_s(weights='IMAGENET1K_V1')
+model = models.efficientnet_v2_s(weights="IMAGENET1K_V1")
 
 # Unfreeze parameters
 for param in model.parameters():
     param.requires_grad = True
 
 # adapt output layer
-fc = nn.Sequential(OrderedDict([
-    ('fc1', nn.Linear(1280, num_classes)),
-    ('output', nn.LogSoftmax(dim=1))
-    ]))
+fc = nn.Sequential(
+    OrderedDict(
+        [("fc1", nn.Linear(1280, num_classes)), ("output", nn.LogSoftmax(dim=1))]
+    )
+)
 
 model.classifier[1] = fc
 
@@ -144,23 +152,32 @@ for epoch in range(epochs):
 
     train_loss = training.train_epoch(model, trainloader, criterion, optimizer, device)
 
-    val_loss, val_accuracy = training.validate_epoch(model, validloader, criterion, device)
-
+    val_loss, val_accuracy = training.validate_epoch(
+        model, validloader, criterion, device
+    )
 
     train_loss_list.append(train_loss)
     valid_loss_list.append(val_loss)
     accuracy_list.append(val_accuracy)
 
-    wandb.log({'epoch': epoch+1, 'train loss': train_loss_list[-1], 'validation loss': valid_loss_list[-1], 'validation accuracy': accuracy_list[-1]})
+    wandb.log(
+        {
+            "epoch": epoch + 1,
+            "train loss": train_loss_list[-1],
+            "validation loss": valid_loss_list[-1],
+            "validation accuracy": accuracy_list[-1],
+        }
+    )
 
+    print(
+        f"Epoch {epoch+1}/{epochs}.. ",
+        f"Train loss: {train_loss_list[-1]:.3f}.. ",
+        f"Test loss: {valid_loss_list[-1]:.3f}.. ",
+        f"Test accuracy: {accuracy_list[-1]:.3f}",
+    )
 
-    print(f"Epoch {epoch+1}/{epochs}.. ",
-          f"Train loss: {train_loss_list[-1]:.3f}.. ",
-          f"Test loss: {valid_loss_list[-1]:.3f}.. ",
-          f"Test accuracy: {accuracy_list[-1]:.3f}",)
-
-torch.save(model, 'efficientnet_v2_s__nllloss.pt')
-wandb.save('efficientnet_v2_s__nllloss.pt')
+torch.save(model, "efficientnet_v2_s__nllloss.pt")
+wandb.save("efficientnet_v2_s__nllloss.pt")
 
 wandb.unwatch()
 
