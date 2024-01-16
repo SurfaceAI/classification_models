@@ -17,20 +17,27 @@ import wandb
 from utils import general_config
 
 # complete training routine
-def config_and_train_model(config, load_model, optimizer_class, criterion, augment=None):
+def config_and_train_model(config, load_model, optimizer_class, criterion, augmentation=None):
 
     torch.manual_seed(config.get('seed'))
     
     if general_config.wandb_record:
-        _ = init_wandb(config, augment)
+        _ = init_wandb(config, augmentation)
 
-    # dataset
-    data_root = general_config.training_data_path #create_data_path()
-    data_path = os.path.join(data_root, config.get('dataset'), config.get('label_type'))
+    
+    general_transform = {
+        'resize': config.get('image_size_h_w'),
+        'crop': config.get('crop'),
+        'normalize': config.get('normalization'),
+    }
 
-    train_transform, valid_transform = create_transform(config, augment)
-
-    train_data, valid_data = preprocessing.train_validation_split_datasets(data_path, config.get('selected_classes'), config.get('validation_size'), train_transform, valid_transform, random_state=config.get('seed'))
+    train_data, valid_data = preprocessing.create_train_validation_datasets(config.get('dataset'),
+                                                                            config.get('label_type'),
+                                                                            config.get('selected_classes'),
+                                                                            config.get('validation_size'),
+                                                                            general_transform,
+                                                                            augmentation,
+                                                                            random_state=config.get('seed'))
 
     trainloader = torch.utils.data.DataLoader(train_data, batch_size=config.get('batch_size'), shuffle=True)
     validloader = torch.utils.data.DataLoader(valid_data, batch_size=config.get('valid_batch_size'))
@@ -71,14 +78,6 @@ def config_and_train_model(config, load_model, optimizer_class, criterion, augme
 
 
 
-# # create images data path
-# # TODO: generalize for all users
-# def create_data_path():
-#     data_path = general_config.training_data_path
-#     #data_path = '/Users/edith/HTW Cloud/SHARED/SurfaceAI/data/mapillary_images/training_data'
-#     return data_path
-
-
 # W&B initialisation
 def init_wandb(config_input, augment=None):
 
@@ -106,26 +105,6 @@ def init_wandb(config_input, augment=None):
         "selected_classes": config_input.get('selected_classes'),
         }
     ) 
-
-# preprocessing
-def create_transform(config, augment=None):
-
-    # TODO: check if image_size/normalize in config
-    general_transform = {
-        'resize': config.get('image_size_h_w'),
-        'crop': config.get('crop'),
-        'normalize': (config.get('norm_mean'), config.get('norm_std')),
-    }
-
-    train_augmentation = augment
-
-
-    train_transform = preprocessing.transform(**general_transform, **train_augmentation)
-    valid_transform = preprocessing.transform(**general_transform)
-
-    return train_transform, valid_transform
-
-
 
 
 # train the model

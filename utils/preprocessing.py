@@ -2,12 +2,17 @@ import sys
 sys.path.append('.')
 
 from torchvision import datasets, transforms
-from torch.utils.data import Subset
+import torch
+from torch.utils.data import DataLoader
 from sklearn.model_selection import StratifiedShuffleSplit
 from sklearn.model_selection import train_test_split
 import copy
 import os
-from utils import general_config
+from utils import general_config, constants
+from tqdm import tqdm
+from pathlib import Path
+    
+
 
 class PartialImageFolder(datasets.ImageFolder):
     def __init__(self,
@@ -35,26 +40,83 @@ class PartialImageFolder(datasets.ImageFolder):
         class_to_idx = {cls_name: i for i, cls_name in enumerate(classes)}
         return classes, class_to_idx
 
+def create_train_validation_datasets(dataset, label_type, selected_classes, validation_size, general_transform, augmentation, random_state):
 
-def train_validation_split_datasets(root, selected_classes, validation_size, train_transform, valid_transform, random_state):
+    # data path
+    data_root = general_config.training_data_path
+    data_path = os.path.join(data_root, dataset, label_type)
 
     # create complete dataset
-    complete_dataset = PartialImageFolder(root, selected_classes=selected_classes)
+    complete_dataset = PartialImageFolder(data_path, selected_classes=selected_classes)
 
-    # # split indices for training and validation sets
-    # stratified_splitter = StratifiedShuffleSplit(n_splits=1, test_size=validation_size, random_state=random_state)
-    # train_idx, valid_idx = next(stratified_splitter.split(complete_dataset, complete_dataset.targets))
+    if general_transform.get('normalize') is not None:
+        general_transform['normalize'] = load_normalization(general_transform.get('normalize'), dataset, label_type)
+    
+    train_transform = transform(**general_transform, **augmentation)
+    valid_transform = transform(**general_transform)
 
-    # # split datasets based on indices
-    # train_dataset = Subset(complete_dataset, train_idx)
-    # train_dataset.dataset.transform = train_transform
-    # valid_dataset = Subset(complete_dataset, valid_idx)
-    # valid_dataset.dataset.transform = valid_transform
+    train_dataset, valid_dataset = train_validation_split_datasets(complete_dataset, validation_size, train_transform, valid_transform, random_state)
 
-    # # select classes
-    # complete_dataset.samples = [(path, class_idx) for path, class_idx in complete_dataset.samples if complete_dataset.classes[class_idx] in general_config.selected_classes]
-    # complete_dataset.imgs = [(path, class_idx) for path, class_idx in complete_dataset.imgs if complete_dataset.classes[class_idx] in general_config.selected_classes]
-    # complete_dataset.targets = [class_idx for path, class_idx in complete_dataset.samples]
+    return train_dataset, valid_dataset
+
+
+def load_normalization(normalization_type, dataset, label_type):
+
+    tuple_mean_sd = None
+    if normalization_type == 'imagenet':
+        tuple_mean_sd = (constants.IMAGNET_MEAN, constants.IMAGNET_SD)
+    elif normalization_type == 'from_data':
+        mean_name = f'{dataset}_{label_type}_mean'.upper()
+        mean_value = getattr(constants, mean_name, None)
+        sd_name = f'{dataset}_{label_type}_sd'.upper()
+        sd_value = getattr(constants, sd_name, None)
+        if mean_value is None or sd_value is None:
+            mean_value, sd_value = calculate_dataset_normalization(dataset, label_type)
+        tuple_mean_sd =(mean_value, sd_value)
+
+    return tuple_mean_sd
+    
+
+# TODO: more efficient method?
+def calculate_dataset_normalization(dataset, label_type):
+
+    # calculate normalization parameters
+    data_root = general_config.training_data_path
+    data_path = os.path.join(data_root, dataset, label_type)
+
+    image_size = (256, 256)
+
+    transform = transforms.Compose([
+        transforms.Resize(image_size),
+        transforms.ToTensor(),
+    ])
+
+    image_dataset = datasets.ImageFolder(data_path, transform = transform)
+    # TODO: does larger batch make any difference?
+    image_loader = DataLoader(image_dataset, batch_size=1, shuffle=False)
+
+    std_sum = torch.zeros(3)
+    mean_sum = torch.zeros(3)
+
+    for input, _ in tqdm(image_loader, desc=f'{dataset}_{label_type} normalization'):
+        std_image, mean_image = torch.std_mean(input, dim=[0, 2, 3])
+        std_sum += std_image
+        mean_sum += mean_image
+
+    total_std = (std_sum / len(image_loader.sampler)).tolist()
+    total_mean = (mean_sum / len(image_loader.sampler)).tolist()
+    
+    # write values to constants file
+    folder = Path(__file__).parent
+    
+    with open(os.path.join(folder, 'constants.py'), 'a') as f:
+        f.write(f'\n{f"{dataset}_{label_type}_mean".upper()} = {total_mean}\n')
+        f.write(f'{f"{dataset}_{label_type}_sd".upper()} = {total_std}\n')
+    
+    return total_mean, total_std
+
+
+def train_validation_split_datasets(complete_dataset, validation_size, train_transform, valid_transform, random_state):
 
     (samples_train, samples_valid,
      targets_train, targets_valid,

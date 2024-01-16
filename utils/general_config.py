@@ -1,7 +1,7 @@
 from pathlib import Path
 from utils import constants
 gpu_kernel = 1
-wandb_record = True
+wandb_record = False
 
 ROOT_DIR = Path(__file__).parent.parent
 training_data_path = ROOT_DIR / 'data' / 'training'

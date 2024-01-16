@@ -22,8 +22,9 @@ config = dict(
     validation_size = 0.2,
     image_size_h_w = (256, 256),
     crop = 'lower_middle_third',
-    norm_mean = [0.485, 0.456, 0.406],
-    norm_std = [0.229, 0.224, 0.225],
+    normalization = 'from_data', # None, # 'imagenet', 'from_data'
+    # norm_mean = [0.485, 0.456, 0.406],
+    # norm_std = [0.229, 0.224, 0.225],
     selected_classes = [constants.ASPHALT,
                         constants.CONCRETE,
                         constants.SETT,
