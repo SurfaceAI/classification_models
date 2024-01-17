@@ -17,7 +17,7 @@ import wandb
 from utils import general_config
 
 # complete training routine
-def config_and_train_model(config, load_model, optimizer_class, criterion, augmentation=None):
+def config_and_train_model(config, model_class, optimizer_class, criterion, augmentation=None):
 
     torch.manual_seed(config.get('seed'))
     
@@ -46,12 +46,11 @@ def config_and_train_model(config, load_model, optimizer_class, criterion, augme
     num_classes = len(train_data.classes)
 
     #TODO: instanciate model!
-    result = load_model(num_classes)
-    if isinstance(result, tuple):
-            model, optimizer_layers = result
-    else:
-        model = result
-        optimizer_layers = None
+    model = model_class(num_classes)
+
+    optimizer_layers = None
+    if hasattr(model, 'get_optimizer_layers') and callable(model.get_optimizer_layers):
+            optimizer_layers = model.get_optimizer_layers()
 
     # Unfreeze parameters
     for param in model.parameters():

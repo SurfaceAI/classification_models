@@ -2,7 +2,7 @@ import sys
 sys.path.append('.')
 
 from torch import nn, optim
-from model_config import efficientnet_v2_s_logsoftmax_model
+from model_config import efficientnet_models
 from utils import training, constants
 
 
@@ -49,4 +49,4 @@ criterion = nn.NLLLoss()
 
 
 # train model
-training.config_and_train_model(config, efficientnet_v2_s_logsoftmax_model.load_model, optimizer, criterion, augmentation)
+training.config_and_train_model(config, efficientnet_models.CustomEfficientNetV2SLogsoftmax, optimizer, criterion, augmentation)
