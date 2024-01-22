@@ -84,7 +84,7 @@ def calculate_dataset_normalization(dataset, label_type):
     data_root = general_config.training_data_path
     data_path = os.path.join(data_root, dataset, label_type)
 
-    image_size = (256, 256)
+    image_size = constants.H256_W256
 
     transform = transforms.Compose([
         transforms.Resize(image_size),

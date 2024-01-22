@@ -3,6 +3,7 @@ from torch import nn, Tensor
 from torchvision import models
 from collections import OrderedDict
 
+architecture = "Efficient Net v2 s"
 
 class CustomEfficientNetV2SLogsoftmax(nn.Module):
     def __init__(self, num_classes):
@@ -13,7 +14,7 @@ class CustomEfficientNetV2SLogsoftmax(nn.Module):
         in_features = model.classifier[-1].in_features
         fc = nn.Sequential(OrderedDict([
             ('fc1', nn.Linear(in_features, num_classes, bias=True)),
-            ('output', nn.LogSoftmax(dim=1))
+            ('output', nn.LogSoftmax(dim=1))   # criterion = nn.NLLLoss()
             ]))
         model.classifier[-1] = fc
         
@@ -34,3 +35,5 @@ class CustomEfficientNetV2SLogsoftmax(nn.Module):
     
     def get_optimizer_layers(self):
         return self.classifier
+
+
