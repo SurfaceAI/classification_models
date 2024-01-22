@@ -75,8 +75,6 @@ def config_and_train_model(config, model_class, optimizer_class, criterion, augm
 
     trained_model = train(model, config.get('save_name'), trainloader, validloader, criterion, optimizer, device, config.get('epochs'))
 
-
-
 # W&B initialisation
 def init_wandb(config_input, augment=None):
 
@@ -143,7 +141,7 @@ def train_epoch(model, dataloader, criterion, optimizer, device):
 
     for inputs, labels in dataloader:
 
-        helper.multi_imshow(inputs, labels)
+        #helper.multi_imshow(inputs, labels)
 
         inputs, labels = inputs.to(device), labels.to(device)
 

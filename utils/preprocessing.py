@@ -3,7 +3,8 @@ sys.path.append('.')
 
 from torchvision import datasets, transforms
 import torch
-from torch.utils.data import DataLoader
+from torch.utils.data import Dataset, DataLoader
+from torchvision.io import read_image
 from sklearn.model_selection import StratifiedShuffleSplit
 from sklearn.model_selection import train_test_split
 import copy
@@ -11,6 +12,8 @@ import os
 from utils import general_config, constants
 from tqdm import tqdm
 from pathlib import Path
+from PIL import Image
+import cv2
     
 
 
@@ -40,6 +43,30 @@ class PartialImageFolder(datasets.ImageFolder):
         class_to_idx = {cls_name: i for i, cls_name in enumerate(classes)}
         return classes, class_to_idx
 
+
+#Here we read images that are not sorted in subfolders
+class TestImages(Dataset):
+    def __init__(self, data_path, transform):
+        self.data_path = data_path
+        self.transform = transform
+        self.total_imgs = os.listdir(data_path)
+
+    def __len__(self):
+        return len(self.total_imgs)
+
+    def __getitem__(self, idx):
+        img_path = os.path.join(self.data_path, self.total_imgs[idx])
+
+        # Using PIL to read the image
+        image = Image.open(img_path).convert("RGB")
+
+        # Apply transformations
+        if self.transform is not None:
+            image = self.transform(image)
+
+        return image
+
+
 def create_train_validation_datasets(dataset, label_type, selected_classes, validation_size, general_transform, augmentation, random_state):
 
     # data path
@@ -60,6 +87,25 @@ def create_train_validation_datasets(dataset, label_type, selected_classes, vali
     return train_dataset, valid_dataset
 
 
+def create_test_dataset(dataset, label_type, general_transform, random_state):
+    
+    # Data path
+    data_root = general_config.test_data_path
+    data_path = os.path.join(data_root, dataset, label_type)
+        
+    if general_transform.get('normalize') is not None:
+        general_transform['normalize'] = load_normalization(general_transform.get('normalize'), dataset, label_type)
+    
+    test_transform = transform(**general_transform)
+    
+    # Reading complete dataset
+    complete_dataset = TestImages(data_path, transform=test_transform)
+    
+    return complete_dataset
+
+
+
+
 def load_normalization(normalization_type, dataset, label_type):
 
     tuple_mean_sd = None
@@ -77,43 +123,43 @@ def load_normalization(normalization_type, dataset, label_type):
     return tuple_mean_sd
     
 
-# TODO: more efficient method?
-def calculate_dataset_normalization(dataset, label_type):
+# # TODO: more efficient method?
+# def calculate_dataset_normalization(dataset, label_type):
 
-    # calculate normalization parameters
-    data_root = general_config.training_data_path
-    data_path = os.path.join(data_root, dataset, label_type)
+#     # calculate normalization parameters
+#     data_root = general_config.training_data_path
+#     data_path = os.path.join(data_root, dataset, label_type)
 
-    image_size = (256, 256)
+#     image_size = (256, 256)
 
-    transform = transforms.Compose([
-        transforms.Resize(image_size),
-        transforms.ToTensor(),
-    ])
+#     transform = transforms.Compose([
+#         transforms.Resize(image_size),
+#         transforms.ToTensor(),
+#     ])
 
-    image_dataset = datasets.ImageFolder(data_path, transform = transform)
-    # TODO: does larger batch make any difference?
-    image_loader = DataLoader(image_dataset, batch_size=1, shuffle=False)
+#     image_dataset = datasets.ImageFolder(data_path, transform = transform)
+#     # TODO: does larger batch make any difference?
+#     image_loader = DataLoader(image_dataset, batch_size=1, shuffle=False)
 
-    std_sum = torch.zeros(3)
-    mean_sum = torch.zeros(3)
+#     std_sum = torch.zeros(3)
+#     mean_sum = torch.zeros(3)
 
-    for input, _ in tqdm(image_loader, desc=f'{dataset}_{label_type} normalization'):
-        std_image, mean_image = torch.std_mean(input, dim=[0, 2, 3])
-        std_sum += std_image
-        mean_sum += mean_image
+#     for input, _ in tqdm(image_loader, desc=f'{dataset}_{label_type} normalization'):
+#         std_image, mean_image = torch.std_mean(input, dim=[0, 2, 3])
+#         std_sum += std_image
+#         mean_sum += mean_image
 
-    total_std = (std_sum / len(image_loader.sampler)).tolist()
-    total_mean = (mean_sum / len(image_loader.sampler)).tolist()
+#     total_std = (std_sum / len(image_loader.sampler)).tolist()
+#     total_mean = (mean_sum / len(image_loader.sampler)).tolist()
     
-    # write values to constants file
-    folder = Path(__file__).parent
+#     # write values to constants file
+#     folder = Path(__file__).parent
     
-    with open(os.path.join(folder, 'constants.py'), 'a') as f:
-        f.write(f'\n{f"{dataset}_{label_type}_mean".upper()} = {total_mean}\n')
-        f.write(f'{f"{dataset}_{label_type}_sd".upper()} = {total_std}\n')
+#     with open(os.path.join(folder, 'constants.py'), 'a') as f:
+#         f.write(f'\n{f"{dataset}_{label_type}_mean".upper()} = {total_mean}\n')
+#         f.write(f'{f"{dataset}_{label_type}_sd".upper()} = {total_std}\n')
     
-    return total_mean, total_std
+#     return total_mean, total_std
 
 
 def train_validation_split_datasets(complete_dataset, validation_size, train_transform, valid_transform, random_state):
