@@ -13,6 +13,7 @@ from utils import general_config, constants
 from tqdm import tqdm
 from pathlib import Path
 from PIL import Image
+from functools import partial
 
 
 class PartialImageFolder(datasets.ImageFolder):
@@ -193,6 +194,8 @@ def custom_crop(img, crop_style=None):
     
     cropped_img = transforms.functional.crop(img, top, left, height, width)
     return cropped_img
+
+
     
 def transform(resize=None,
               crop=None,
@@ -230,9 +233,14 @@ def transform(resize=None,
     if random_rotation is not None:
         transform_list.append(transforms.RandomRotation(random_rotation))
 
+    # if crop is not None:
+    #     transform_list.append(transforms.Lambda(lambda img: custom_crop(img, crop)))
+    
+
     if crop is not None:
-        transform_list.append(transforms.Lambda(lambda img: custom_crop(img, crop)))
-        
+        transform_list.append(transforms.Lambda(partial(custom_crop, crop_style=crop)))
+    
+    
     if resize is not None:
         transform_list.append(transforms.Resize(resize))
 

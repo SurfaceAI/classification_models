@@ -38,6 +38,8 @@ def config_and_train_model(config, model_class, optimizer_class, criterion, augm
                                                                             general_transform,
                                                                             augmentation,
                                                                             random_state=config.get('seed'))
+    
+    torch.save(valid_data, os.path.join(general_config.save_path, "valid_data.pt"))
 
     trainloader = torch.utils.data.DataLoader(train_data, batch_size=config.get('batch_size'), shuffle=True)
     validloader = torch.utils.data.DataLoader(valid_data, batch_size=config.get('valid_batch_size'))

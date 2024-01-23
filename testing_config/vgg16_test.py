@@ -96,10 +96,21 @@ OSM_tags["image_id"] = OSM_tags["image_id"].astype("Int64")
 
 # Merge predictions and OSM_tags based on 'image_id'
 merged_predictions = pd.merge(model_predictions, OSM_tags, on="image_id")
+
+
+#load our last training session's validation data
+valid_data = torch.load(os.path.join(general_config.save_path, "valid_data.pt"))
+valid_data_numbers = [int(os.path.splitext(os.path.basename(path))[0]) for path, _ in valid_data.imgs]
+valid_data_numbers
+
+merged_predictions["validation_data"] = merged_predictions["image_id"].isin(valid_data_numbers).astype(int)
+
+
 merged_predictions.to_csv(
-    r"C:\Users\esthe\Documents\GitHub\classification_models\data\osm_model_predictions_1.csv",
+    r"C:\Users\esthe\Documents\GitHub\classification_models\data\osm_model_predictions.csv",
     index=False,
 )
+
 
 # Accuracy and confusion matrix
 accuracy = accuracy_score(
@@ -115,18 +126,23 @@ cm = confusion_matrix(
 disp = ConfusionMatrixDisplay(
     confusion_matrix=cm, display_labels=config["selected_classes"]
 )
+
+# Plotting
 plt.figure(figsize=(8, 6))
 disp.plot(cmap="Blues", values_format=".0f")
+
+# Adjusting axis names
 plt.xticks(rotation=45, ha="right")
-plt.xlabel("model prediction")
-plt.ylabel("osm prediction")
+plt.xlabel("Model Prediction")
+plt.ylabel("OSM Prediction")
 plt.title("Confusion Matrix")
-plt.show()
 
 # Save confusion matrix plot
 plt.savefig(
     r"C:\Users\esthe\Documents\GitHub\classification_models\data\confusion_matrix_plot.png"
 )
+
+
 
 # Classification report
 classification_rep = classification_report(
@@ -135,3 +151,7 @@ classification_rep = classification_report(
     labels=config["selected_classes"],
 )
 print(classification_rep)
+
+# Save classification report to a text file
+with open(r"C:\Users\esthe\Documents\GitHub\classification_models\data\classification_report.txt", "w") as f:
+    f.write(classification_rep)
