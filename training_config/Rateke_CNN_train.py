@@ -32,12 +32,13 @@ config = dict(
     normalization = 'imagenet', # None, # 'imagenet', 'from_data'
     # norm_mean = [0.485, 0.456, 0.406],
     # norm_std = [0.229, 0.224, 0.225],
-    selected_classes = [constants.ASPHALT,
-                        constants.CONCRETE,
-                        constants.SETT,
-                        constants.UNPAVED,
-                        constants.PAVING_STONES,
-    ]
+    selected_classes=[
+            constants.ASPHALT,
+            constants.CONCRETE,
+            constants.PAVING_STONES,
+            constants.SETT,
+            constants.UNPAVED,
+        ]
 
 
 )
