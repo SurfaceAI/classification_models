@@ -13,8 +13,6 @@ from utils import general_config, constants
 from tqdm import tqdm
 from pathlib import Path
 from PIL import Image
-import cv2
-    
 
 
 class PartialImageFolder(datasets.ImageFolder):
