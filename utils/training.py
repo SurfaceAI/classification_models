@@ -17,7 +17,7 @@ import wandb
 from utils import general_config
 
 # complete training routine
-def config_and_train_model(config, model_class, optimizer_class, criterion, augmentation=None):
+def config_and_train_model(config, model_class, optimizer_class, criterion, type_class=None, augmentation=None):
 
     torch.manual_seed(config.get('seed'))
     
@@ -33,11 +33,12 @@ def config_and_train_model(config, model_class, optimizer_class, criterion, augm
 
     train_data, valid_data = preprocessing.create_train_validation_datasets(config.get('dataset'),
                                                                             config.get('label_type'),
-                                                                            config.get('selected_classes'),
+                                                                            config.get('selected_classes'), 
                                                                             config.get('validation_size'),
                                                                             general_transform,
                                                                             augmentation,
-                                                                            random_state=config.get('seed'))
+                                                                            random_state=config.get('seed'),
+                                                                            type_class=type_class)
     
     torch.save(valid_data, os.path.join(general_config.save_path, "valid_data.pt"))
 
@@ -129,6 +130,7 @@ def train(model, model_name, trainloader, validloader, criterion, optimizer, dev
     if general_config.wandb_record:
         wandb.save(model_name)
         wandb.unwatch()
+        wandb.finish() #added this for when we want to record multiple runs in one script (train quality models)
 
     print("Done.")
 
@@ -188,7 +190,7 @@ def save_model(model, model_name):
         os.makedirs(save_path)
     
     model_path = os.path.join(save_path, model_name)
-    torch.save(model, model_path)
+    torch.save(model.state_dict(), model_path)
 
 # load model from wandb
 def load_wandb_model(model_name, run_path):

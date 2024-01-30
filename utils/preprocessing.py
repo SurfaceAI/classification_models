@@ -34,13 +34,115 @@ class PartialImageFolder(datasets.ImageFolder):
     
     def find_classes(self, directory):
         classes = sorted(entry.name for entry in os.scandir(directory) if entry.is_dir())
+        
         if self.selected_classes is not None:
             classes = [c for c in classes if c in self.selected_classes]
         if not classes:
             raise FileNotFoundError(f"Couldn't find any class folder in {directory}.")
-
+        
         class_to_idx = {cls_name: i for i, cls_name in enumerate(classes)}
         return classes, class_to_idx
+
+
+    
+class FlattenFolders(datasets.ImageFolder):
+    def __init__(self,
+                 root,
+                 transform=None,
+                 target_transform=None,
+                 loader=datasets.folder.default_loader,
+                 is_valid_file=None,
+                 selected_classes=None
+                 ):
+        self.selected_classes = selected_classes
+
+        super(FlattenFolders, self).__init__(root,
+                                            transform=transform,
+                                            target_transform=target_transform,
+                                            loader=loader,
+                                            is_valid_file=is_valid_file)
+
+    def find_classes(self, directory):
+        # find type classes
+        type_classes = sorted(entry.name for entry in os.scandir(directory) if entry.is_dir())
+
+        # only take the ones that are in selected_classes
+        if self.selected_classes is not None:
+            type_classes = [c for c in type_classes if c in self.selected_classes]
+        if not type_classes:
+            raise FileNotFoundError(f"Couldn't find any class folder in {directory}.")
+
+        flattened_classes = []
+        # for each type class, we find all the sub-classes and store them separately
+        for type_class in type_classes:
+            type_directory = os.path.join(directory, type_class)
+            quality_classes = sorted(entry.name for entry in os.scandir(type_directory) if entry.is_dir())
+            quality_classes = [(type_class + '__' + c) for c in quality_classes]
+            flattened_classes.extend(quality_classes)
+            
+        flattened_class_to_idx = {cls_name: i for i, cls_name in enumerate(flattened_classes)}
+
+        return flattened_classes, flattened_class_to_idx
+    
+    def make_dataset(
+        self,
+        directory,
+        flattened_class_to_idx = None,
+        extensions = None,
+        is_valid_file = None,
+    ):
+      
+        directory = os.path.expanduser(directory)
+
+        if flattened_class_to_idx is None:
+            _, flattened_class_to_idx = find_classes(directory)
+        elif not flattened_class_to_idx:
+            raise ValueError("'class_to_index' must have at least one entry to collect any samples.")
+
+        both_none = extensions is None and is_valid_file is None
+        both_something = extensions is not None and is_valid_file is not None
+        if both_none or both_something:
+            raise ValueError("Both extensions and is_valid_file cannot be None or not None at the same time")
+
+        # if extensions is not None:
+
+        #     def is_valid_file(x: str) -> bool:
+        #         return has_file_allowed_extension(x, extensions)  # type: ignore[arg-type]
+
+        #is_valid_file = cast(Callable[[str], bool], is_valid_file)
+
+        instances = []
+        available_classes = set()
+    
+        
+        for target_class in sorted(flattened_class_to_idx.keys()):
+            class_index = flattened_class_to_idx[target_class]
+            
+            t_q_split = target_class.split('__', 1)
+            type_class, quality_class = t_q_split[0], t_q_split[1]
+            
+            target_dir = os.path.join(directory, type_class, quality_class)
+            
+            if not os.path.isdir(target_dir):
+                continue
+            for root, _, fnames in sorted(os.walk(target_dir, followlinks=True)):
+                for fname in sorted(fnames):
+                    path = os.path.join(root, fname)
+                    #if is_valid_file(path):
+                    item = path, class_index
+                    instances.append(item)
+
+                    if target_class not in available_classes:
+                        available_classes.add(target_class)
+
+        empty_classes = set(flattened_class_to_idx.keys()) - available_classes
+        if empty_classes:
+            msg = f"Found no valid file for the classes {', '.join(sorted(empty_classes))}. "
+            if extensions is not None:
+                msg += f"Supported extensions are: {extensions if isinstance(extensions, str) else ', '.join(extensions)}"
+            raise FileNotFoundError(msg)
+
+        return instances
 
 
 #Here we read images that are not sorted in subfolders
@@ -66,14 +168,43 @@ class TestImages(Dataset):
         return image
 
 
-def create_train_validation_datasets(dataset, label_type, selected_classes, validation_size, general_transform, augmentation, random_state):
+def create_train_validation_datasets(dataset, label_type, selected_classes, validation_size, general_transform, augmentation, random_state, type_class=None):
+
+    # data path
+    data_root = general_config.training_data_path
+    
+    if type_class is None: 
+        data_path = os.path.join(data_root, dataset, label_type)
+    
+    if type_class is not None:
+        data_path = os.path.join(data_root, dataset, label_type, type_class)
+
+    # create complete dataset
+    complete_dataset = PartialImageFolder(data_path, selected_classes=selected_classes)
+
+    if general_transform.get('normalize') is not None:
+        general_transform['normalize'] = load_normalization(general_transform.get('normalize'), dataset, label_type)
+    
+    train_transform = transform(**general_transform, **augmentation)
+    valid_transform = transform(**general_transform)
+
+    train_dataset, valid_dataset = train_validation_split_datasets(complete_dataset, validation_size, train_transform, valid_transform, random_state)
+
+    return train_dataset, valid_dataset
+
+
+#das ist eigentlich die gleiche Funktion wie create_train_validation_datasets bis auf das Aufrufen der Dataset Class mit Flatten Folders. Daher hatte ich mal in der config eine dataset_class eingeführt.
+#allerdings hat das übergeben aus der config nicht funktioniert, da bräuchte man nochmal eine extra Funktion für, oder? 
+# Gerade ist es etwas unpraktisch, da ich im training die Funktion ändern muss, wenn ich ein flat dataset erzeugen möchte. 
+
+def create_flat_train_validation_datasets(dataset, label_type, selected_classes, validation_size, general_transform, augmentation, random_state):
 
     # data path
     data_root = general_config.training_data_path
     data_path = os.path.join(data_root, dataset, label_type)
 
     # create complete dataset
-    complete_dataset = PartialImageFolder(data_path, selected_classes=selected_classes)
+    complete_dataset = FlattenFolders(data_path, selected_classes=selected_classes)
 
     if general_transform.get('normalize') is not None:
         general_transform['normalize'] = load_normalization(general_transform.get('normalize'), dataset, label_type)

@@ -17,9 +17,10 @@ from utils import training, constants
 config = dict(
     project = "road-surface-classification-type",
     name = "Rateke CNN",
-    save_name = 'Simple_CNN.pt',
+    save_name = 'Simple_CNN_type',
     architecture = "Simple CNN not pretrained",
     dataset = 'V4', #'annotated_images',
+    #dataset_class = 'FlattenFolders', #'FlattenFolders', #'PartialImageFolder'
     label_type = 'annotated', #'predicted
     batch_size = 16,
     valid_batch_size = 48,
@@ -39,8 +40,6 @@ config = dict(
             constants.SETT,
             constants.UNPAVED,
         ]
-
-
 )
 
 augmentation = dict(
@@ -58,5 +57,5 @@ criterion = nn.CrossEntropyLoss()
 
 
 # train model
-training.config_and_train_model(config, Rateke_CNN_model.load_model, optimizer, criterion, augmentation)
+training.config_and_train_model(config, Rateke_CNN_model.ConvNet, optimizer, criterion, augmentation=augmentation)
 

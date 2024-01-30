@@ -13,6 +13,7 @@ config = dict(
     architecture = "VGG16",
     dataset = 'V4', #'annotated_images',
     label_type = 'annotated', #'predicted
+    #dataset_class = 'PartialImageFolder', #'FlattenFolders', #'PartialImageFolder'
     batch_size = 32,
     valid_batch_size = 32,
     epochs = 2,
@@ -50,4 +51,4 @@ criterion = nn.CrossEntropyLoss()
 
 
 # train model
-training.config_and_train_model(config, vgg16_model.load_model, optimizer, criterion, augmentation)
+training.config_and_train_model(config, vgg16_model.CustomVGG16, optimizer, criterion, augmentation=augmentation)
