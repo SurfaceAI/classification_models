@@ -1,9 +1,12 @@
 import sys
+
+from src import constants
+from src.config import general_config
 sys.path.append('.')
 
 from torch import nn, optim
 from model_config import efficientnet_models
-from utils import training, constants, general_config
+from src.models import training
 import os
 
 
