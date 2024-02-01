@@ -5,8 +5,9 @@ sys.path.append('..')
 
 
 from torch import nn, optim
-from model_config import vgg16_model
-from utils import training, constants
+from src.architecture import vgg16
+from src.models import training
+from src import constants
 
 surfaces=[
                 constants.ASPHALT,
@@ -65,4 +66,4 @@ for type_class in surfaces:
     criterion = nn.CrossEntropyLoss()
 
     config['selected_classes'] = config['selected_quality_classes'][type_class]
-    training.config_and_train_model(config, vgg16_model.CustomVGG16, optimizer, criterion, type_class=type_class, augmentation=augmentation)
+    training.config_and_train_model(config, vgg16.CustomVGG16, optimizer, criterion, type_class=type_class, augmentation=augmentation)

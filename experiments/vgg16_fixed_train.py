@@ -7,13 +7,13 @@ from src.config import train_config
 
 project = constants.PROJECT_SURFACE_FIXED
 
-name = "efficientnet"
+name = "VGG16_surface"
 
 level = constants.SURFACE
 
 # save_name = 'efficientnet_v2_s__nllloss.pt'   # which model will be saved in sweep?
 
-model = "efficientNetV2SLogsoftmax" # constants.efficientnet ?
+model = "vgg16" # constants.VGG16 ?
 
 individual_params = train_config.fixed_params
 

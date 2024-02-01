@@ -3,6 +3,8 @@ import torch.nn as nn
 from torchvision import models
 from collections import OrderedDict
 
+architecture = "VGG16"
+
 class CustomVGG16(nn.Module):
     def __init__(self, num_classes):
         super(CustomVGG16, self).__init__()
@@ -21,14 +23,14 @@ class CustomVGG16(nn.Module):
         model.classifier = nn.Sequential(*features)  # Replace the model classifier
 
         # Save the modified model as a member variable
-        self.model = model
         self.features = model.features
+        self.avgpool = model.avgpool
         self.classifier = model.classifier
 
     def forward(self, x):
         x = self.features(x)
 
-        #x = self.avgpool(x)
+        x = self.avgpool(x)
         x = torch.flatten(x, 1)
 
         x = self.classifier(x)

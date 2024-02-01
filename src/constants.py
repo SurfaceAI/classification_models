@@ -20,6 +20,10 @@ BAD = "bad"
 VERY_BAD = "very_bad"
 HORRIBLE = "horrible"
 
+# classification level
+SURFACE = "surface"
+SMOOTHNESS = "smoothness"
+
 # dataset
 V0 = 'V0'
 V1 = 'V1'
@@ -31,8 +35,8 @@ V4 = 'V4'
 ANNOTATED = 'annotated'
 
 # project names
-PROJECT_SURFACE_FIXED = "test_road-surface-classification-type"
-PROJECT_SURFACE_SWEEP = "test_sweep-road-surface-classification-type"
+PROJECT_SURFACE_FIXED = "road-surface-classification-type"
+PROJECT_SURFACE_SWEEP = "sweep-road-surface-classification-type"
 
 # model names
 EFFICIENTNET = "efficient_net_v2_s__logsoftmax"

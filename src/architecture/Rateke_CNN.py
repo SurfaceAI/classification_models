@@ -2,7 +2,7 @@ from torch import nn
 from torchvision import models
 from collections import OrderedDict
 
-
+architecture = "Simple CNN not pretrained"
    
 class ConvNet(nn.Module):
     def __init__(self, num_classes):

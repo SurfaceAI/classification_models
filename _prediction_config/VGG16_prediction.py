@@ -5,8 +5,10 @@ import torch
 import os
 import pandas as pd
 import matplotlib.pyplot as plt
-from utils import preprocessing, constants, general_config
-from model_config import vgg16_model
+from src.utils import preprocessing
+from src import constants
+from src.config import general_config
+from src.architecture import vgg16
 
 
 # Configuration
@@ -53,7 +55,7 @@ test_images = preprocessing.create_test_dataset(
 
 
 # Load the model
-model = vgg16_model.CustomVGG16(len(config["selected_classes"]))
+model = vgg16.CustomVGG16(len(config["selected_classes"]))
 model.load_state_dict(torch.load(os.path.join(general_config.save_path, config["save_name"])))
 model.eval()
 

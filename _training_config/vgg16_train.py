@@ -2,35 +2,28 @@ import sys
 sys.path.append('.')
 sys.path.append('..')
 
-
-import torch
 from torch import nn, optim
-from model_config import Rateke_CNN_model
-from utils import training, constants
+from src.architecture import vgg16
+from src.models import training
+from src import constants
 
-# import sys
-# sys.path.append(r'C:\Users\esthe\Documents\GitHub\classification_models')
-# import training
-
-
-# config
 config = dict(
     project = "road-surface-classification-type",
-    name = "Rateke CNN",
-    save_name = 'Simple_CNN_type',
-    architecture = "Simple CNN not pretrained",
+    name = "VGG16",
+    save_name = 'VGG16.pt',
+    architecture = "VGG16",
     dataset = 'V4', #'annotated_images',
-    #dataset_class = 'FlattenFolders', #'FlattenFolders', #'PartialImageFolder'
     label_type = 'annotated', #'predicted
-    batch_size = 16,
-    valid_batch_size = 48,
+    #dataset_class = 'PartialImageFolder', #'FlattenFolders', #'PartialImageFolder'
+    batch_size = 32,
+    valid_batch_size = 32,
     epochs = 2,
-    learning_rate = 0.0002,
+    learning_rate = 0.0001,
     seed = 42,
     validation_size = 0.2,
     image_size_h_w = (256, 256),
     crop = 'lower_middle_third',
-    normalization = 'imagenet', # None, # 'imagenet', 'from_data'
+    normalization = 'from_data', # None, # 'imagenet', 'from_data'
     # norm_mean = [0.485, 0.456, 0.406],
     # norm_std = [0.229, 0.224, 0.225],
     selected_classes=[
@@ -40,7 +33,9 @@ config = dict(
             constants.SETT,
             constants.UNPAVED,
         ]
+
 )
+
 
 augmentation = dict(
     random_horizontal_flip = True,
@@ -57,5 +52,4 @@ criterion = nn.CrossEntropyLoss()
 
 
 # train model
-training.config_and_train_model(config, Rateke_CNN_model.ConvNet, optimizer, criterion, augmentation=augmentation)
-
+training.config_and_train_model(config, vgg16.CustomVGG16, optimizer, criterion, augmentation=augmentation)

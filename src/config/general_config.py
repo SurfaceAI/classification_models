@@ -6,12 +6,14 @@ wandb_mode = constants.WANDB_MODE_ON
 ROOT_DIR = Path(__file__).parent.parent.parent
 training_data_path = ROOT_DIR / 'data' / 'training'
 save_path = ROOT_DIR / 'trained_models'
+test_data_path = ROOT_DIR / 'data' / 'testing'
+data_path = ROOT_DIR / 'data'
 
-selected_classes = [constants.ASPHALT,
-                    constants.CONCRETE,
-                    constants.PAVING_STONES,
-                    constants.SETT,
-                    constants.UNPAVED,
+selected_surface_classes = [constants.ASPHALT,
+                            constants.CONCRETE,
+                            constants.PAVING_STONES,
+                            constants.SETT,
+                            constants.UNPAVED,
 ]
 
 general_transform = dict(

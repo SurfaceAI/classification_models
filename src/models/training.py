@@ -9,7 +9,7 @@ from torch.utils.data import DataLoader, WeightedRandomSampler
 from torch import nn, optim
 from torchvision import models
 from collections import OrderedDict, Counter
-import time
+from datetime import datetime
 import os
 from src.utils import preprocessing
 from src import constants
@@ -24,27 +24,27 @@ import wandb
 
 from src.config import general_config
 
-def run_fixed_training(individual_params, model, project=None, name=None):
+def run_fixed_training(individual_params, model, project=None, name=None, level=constants.SURFACE):
 
     os.environ["WANDB_MODE"] = general_config.wandb_mode
 
     if general_config.wandb_mode == constants.WANDB_MODE_OFF:
         project = 'OFF_' + project
 
-    config = param_config.fixed_config(individual_params=individual_params, model=model)
+    config = param_config.fixed_config(individual_params=individual_params, model=model, level=level)
 
     wandb_training(project=project, name=name, config=config)
 
     # TODO: save model
 
-def run_sweep_training(individual_params, models, method, metric=None, project=None, name=None, sweep_counts=constants.WANDB_DEFAULT_SWEEP_COUNTS):
+def run_sweep_training(individual_params, models, method, metric=None, project=None, name=None, level=constants.SURFACE, sweep_counts=constants.WANDB_DEFAULT_SWEEP_COUNTS):
 
     os.environ["WANDB_MODE"] = general_config.wandb_mode
     
     if general_config.wandb_mode == constants.WANDB_MODE_OFF:
         project = 'OFF_' + project
 
-    sweep_config = param_config.sweep_config(individual_params=individual_params, models=models, method=method, metric=metric, name=name)
+    sweep_config = param_config.sweep_config(individual_params=individual_params, models=models, method=method, metric=metric, name=name, level=level)
 
     sweep_id = wandb.sweep(sweep=sweep_config, project=project)
 
@@ -66,6 +66,7 @@ def wandb_training(project=None, name=None, config=None):
     criterion = model_cfg.get('criterion')
     
     optimizer_cls = str_conv.optim_name_to_class(config.get('optimizer_cls'))
+    level = config.get('level')
     dataset = config.get('dataset')
     label_type = config.get('label_type')
     selected_classes = config.get('selected_classes')
@@ -81,11 +82,17 @@ def wandb_training(project=None, name=None, config=None):
     if config.get('augment') == constants.AUGMENT_TRUE:
         augment = general_config.augmentation
 
-    trained_model, model_path = run_training(model_name=model_name, model_cls=model_cls, optimizer_cls=optimizer_cls, criterion=criterion, dataset=dataset, label_type=label_type, validation_size=validation_size, learning_rate=learning_rate, epochs=epochs, batch_size=batch_size, valid_batch_size=valid_batch_size, general_transform=general_transform, augment=augment, selected_classes=selected_classes, seed=seed)
+    start_time = datetime.fromtimestamp(run.start_time).strftime("%Y%m%d_%H%M%S")
+    id = run.id
+    separator = '-'
+    saving_name = separator.join([level, model_name, start_time, id])
+    saving_name = saving_name + '.pt'
+
+    trained_model, model_path = run_training(saving_name=saving_name, model_cls=model_cls, optimizer_cls=optimizer_cls, criterion=criterion, dataset=dataset, label_type=label_type, level=level, validation_size=validation_size, learning_rate=learning_rate, epochs=epochs, batch_size=batch_size, valid_batch_size=valid_batch_size, general_transform=general_transform, augment=augment, selected_classes=selected_classes, seed=seed)
 
     wandb.save(model_path)
 
-def run_training(model_name, model_cls, optimizer_cls, criterion, dataset, label_type, validation_size, learning_rate, epochs, batch_size, valid_batch_size, general_transform, augment=None, selected_classes=None, seed=42):
+def run_training(saving_name, model_cls, optimizer_cls, criterion, dataset, label_type, level, validation_size, learning_rate, epochs, batch_size, valid_batch_size, general_transform, augment=None, selected_classes=None, seed=42):
     torch.manual_seed(seed)
     
     device = torch.device(
@@ -100,6 +107,7 @@ def run_training(model_name, model_cls, optimizer_cls, criterion, dataset, label
         augment=augment,
         dataset=dataset,
         label_type=label_type,
+        level=level,
         selected_classes=selected_classes,
         validation_size=validation_size,
         batch_size=batch_size,
@@ -118,10 +126,10 @@ def run_training(model_name, model_cls, optimizer_cls, criterion, dataset, label
         epochs=epochs,
     )
 
-    saving_name = save_model(trained_model, model_name)
-    print(f'Model saved locally: {saving_name}')
+    model_path = save_model(trained_model, saving_name)
+    print(f'Model saved locally: {model_path}')
 
-    return trained_model, saving_name
+    return trained_model, model_path
 
 def prepare_train(
     model_cls,
@@ -130,6 +138,7 @@ def prepare_train(
     augment,
     dataset,
     label_type,
+    level,
     selected_classes,
     validation_size,
     batch_size,
@@ -211,6 +220,8 @@ def config_and_train_model(
         random_state=config.get("seed"),
     )
 
+    torch.save(valid_data, os.path.join(general_config.save_path, "valid_data.pt"))
+
     trainloader = DataLoader(
         train_data, batch_size=config.get("batch_size"), shuffle=True
     )
@@ -267,7 +278,7 @@ def config_and_train_model(
 
     
 
-
+# TODO: OLD!
 # W&B initialisation
 def init_wandb(config_input, augment=None):
     # set augmentation
@@ -314,6 +325,7 @@ def train(
             model, validloader, criterion, device
         )
 
+        # with try? usage w/o wandb
         wandb.log(
             {
                 "epoch": epoch + 1,
@@ -451,18 +463,16 @@ def validate_epoch_test(model, dataloader, criterion, device):
 
 
 # save model locally
-def save_model(model, model_name):
+def save_model(model, saving_name):
     save_path = general_config.save_path
 
     if not os.path.exists(save_path):
         os.makedirs(save_path)
 
-    ts = round(time.time())
-    model_name += '_' + str(ts) + '.pt'
-
-    model_path = os.path.join(save_path, model_name)
+    model_path = os.path.join(save_path, saving_name)
     torch.save(model.state_dict(), model_path)
 
+    # TODO: return value saving success
     return model_path
 
 
@@ -473,3 +483,4 @@ def load_wandb_model(model_name, run_path):
     model = torch.load(best_model.name)
 
     return model
+

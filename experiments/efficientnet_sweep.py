@@ -7,7 +7,9 @@ from src.config import train_config
 
 project = constants.PROJECT_SURFACE_SWEEP
 
-name = "efficient net"
+name = "efficientnet_surface"
+
+level = constants.SURFACE
 
 # save_name = 'efficientnet_v2_s__nllloss.pt'   # which model will be saved in sweep?
 
@@ -21,4 +23,4 @@ metric = train_config.sweep_metric_acc
 
 sweep_counts = 2
 
-training.run_sweep_training(individual_params=individual_params, models=models, method=method, metric=metric, project=project, name=name, sweep_counts=sweep_counts)
+training.run_sweep_training(individual_params=individual_params, models=models, method=method, metric=metric, project=project, name=name, level=level, sweep_counts=sweep_counts)

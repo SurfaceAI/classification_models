@@ -1,6 +1,6 @@
 from src.config import general_config
 
-def sweep_config(individual_params, models, method, metric=None, name=None):
+def sweep_config(individual_params, models, method, metric=None, name=None, level=None):
 
     model = {}
     if len(models) == 1:
@@ -13,7 +13,7 @@ def sweep_config(individual_params, models, method, metric=None, name=None):
         transform[key] = {'value': value}
 
     general_params = {
-        'selected_classes': {'value': general_config.selected_classes},
+        'selected_classes': {'value': general_config.selected_surface_classes},
         'transform': {'parameters': transform},
         'dataset': {'value': general_config.dataset},
         'label_type': {'value': general_config.label_type},
@@ -25,6 +25,7 @@ def sweep_config(individual_params, models, method, metric=None, name=None):
         **model,
         **general_params,
         **individual_params,
+        'level': {'value': level},
     }
 
     sweep_config = {
@@ -36,10 +37,10 @@ def sweep_config(individual_params, models, method, metric=None, name=None):
 
     return sweep_config
 
-def fixed_config(individual_params, model):
+def fixed_config(individual_params, model, level=None):
 
     general_params = {
-        'selected_classes': general_config.selected_classes,
+        'selected_classes': general_config.selected_surface_classes,
         'transform': general_config.general_transform,
         'dataset': general_config.dataset,
         'label_type': general_config.label_type,
@@ -51,6 +52,7 @@ def fixed_config(individual_params, model):
         'model': model,
         **general_params,
         **individual_params,
+        'level': level,
     }
 
     return fixed_config
