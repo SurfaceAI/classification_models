@@ -199,7 +199,7 @@ def create_train_validation_datasets(dataset, label_type, selected_classes, vali
 #allerdings hat das übergeben aus der config nicht funktioniert, da bräuchte man nochmal eine extra Funktion für, oder? 
 # Gerade ist es etwas unpraktisch, da ich im training die Funktion ändern muss, wenn ich ein flat dataset erzeugen möchte. 
 
-def create_flat_train_validation_datasets(dataset, label_type, selected_classes, validation_size, general_transform, augmentation, random_state):
+def create_flat_train_validation_datasets(dataset, label_type, selected_classes, validation_size, general_transform, augmentation, random_state, type_class=None):
 
     # data path
     data_root = general_config.training_data_path
