@@ -16,7 +16,7 @@ import random
 import matplotlib.pyplot as plt
 import wandb
 
-from utils import general_config
+from src.config import general_config
 
 # complete training routine
 def config_and_train_model(config, load_model, optimizer_class, criterion, augment=None):

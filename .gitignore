@@ -9,6 +9,6 @@ wandb
 
 data
 
-models
+trained_models
 
 tb_log_medium_dynamic
