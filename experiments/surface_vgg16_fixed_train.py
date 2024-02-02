@@ -7,7 +7,7 @@ from src.config import train_config
 
 project = constants.PROJECT_SURFACE_FIXED
 
-name = "VGG16_surface"
+name = "VGG16"
 
 level = constants.SURFACE
 

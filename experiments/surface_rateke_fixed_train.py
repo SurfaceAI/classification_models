@@ -7,7 +7,7 @@ from src.config import train_config
 
 project = constants.PROJECT_SURFACE_FIXED
 
-name = "RatekeCNN_surface"
+name = "RatekeCNN"
 
 level = constants.SURFACE
 

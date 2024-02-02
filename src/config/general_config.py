@@ -9,12 +9,19 @@ save_path = ROOT_DIR / 'trained_models'
 test_data_path = ROOT_DIR / 'data' / 'testing'
 data_path = ROOT_DIR / 'data'
 
-selected_surface_classes = [constants.ASPHALT,
-                            constants.CONCRETE,
-                            constants.PAVING_STONES,
-                            constants.SETT,
-                            constants.UNPAVED,
-]
+# selected_surface_classes = [constants.ASPHALT,
+#                             constants.CONCRETE,
+#                             constants.PAVING_STONES,
+#                             constants.SETT,
+#                             constants.UNPAVED,
+# ]
+
+selected_classes = {constants.ASPHALT: [constants.EXCELLENT, constants.GOOD, constants.INTERMEDIATE, constants.BAD],
+                    constants.CONCRETE: [constants.EXCELLENT, constants.GOOD, constants.INTERMEDIATE, constants.BAD],
+                    constants.PAVING_STONES: [constants.EXCELLENT, constants.GOOD, constants.INTERMEDIATE, constants.BAD],
+                    constants.SETT: [constants.GOOD, constants.INTERMEDIATE, constants.BAD],
+                    constants.UNPAVED: [constants.INTERMEDIATE, constants.BAD, constants.VERY_BAD],
+}
 
 general_transform = dict(
     resize = constants.H256_W256,
@@ -34,6 +41,6 @@ augmentation = dict(
     random_rotation = 10,
 )
 
-valid_batch_size = 48
+valid_batch_size = 8 # 48
 
 

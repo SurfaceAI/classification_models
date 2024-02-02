@@ -35,8 +35,11 @@ V4 = 'V4'
 ANNOTATED = 'annotated'
 
 # project names
-PROJECT_SURFACE_FIXED = "road-surface-classification-type"
-PROJECT_SURFACE_SWEEP = "sweep-road-surface-classification-type"
+PROJECT_SURFACE_FIXED = "test_road-surface-classification-type"
+PROJECT_SURFACE_SWEEP = "test_sweep-road-surface-classification-type"
+PROJECT_SMOOTHNESS_FIXED = "test_road-surface-classification-quality"
+PROJECT_SMOOTHNESS_SWEEP = "test_sweep-road-surface-classification-quality"
+
 
 # model names
 EFFICIENTNET = "efficient_net_v2_s__logsoftmax"

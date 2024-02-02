@@ -7,7 +7,7 @@ from src.config import train_config
 
 project = constants.PROJECT_SURFACE_SWEEP
 
-name = "efficientnet_surface"
+name = "efficientnet"
 
 level = constants.SURFACE
 

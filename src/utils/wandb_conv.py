@@ -1,4 +1,5 @@
 from src.config import general_config
+from src import constants
 
 def sweep_config(individual_params, models, method, metric=None, name=None, level=None):
 
@@ -8,12 +9,14 @@ def sweep_config(individual_params, models, method, metric=None, name=None, leve
     elif len(models) > 1:
         model = {'model': {'values': models}}
 
+    level, selected_classes = level_config(level=level)
+
     transform = {}
     for key, value in general_config.general_transform.items():
         transform[key] = {'value': value}
 
     general_params = {
-        'selected_classes': {'value': general_config.selected_surface_classes},
+        'selected_classes': {'value': selected_classes},
         'transform': {'parameters': transform},
         'dataset': {'value': general_config.dataset},
         'label_type': {'value': general_config.label_type},
@@ -39,8 +42,10 @@ def sweep_config(individual_params, models, method, metric=None, name=None, leve
 
 def fixed_config(individual_params, model, level=None):
 
+    level, selected_classes = level_config(level=level)
+
     general_params = {
-        'selected_classes': general_config.selected_surface_classes,
+        'selected_classes': selected_classes,
         'transform': general_config.general_transform,
         'dataset': general_config.dataset,
         'label_type': general_config.label_type,
@@ -56,3 +61,17 @@ def fixed_config(individual_params, model, level=None):
     }
 
     return fixed_config
+
+def level_config(level=None):
+    selected_classes = general_config.selected_classes
+
+    if level is None:
+        selected_classes = list(selected_classes.keys())
+        level = constants.SURFACE  
+    elif level == constants.SURFACE:
+        selected_classes = list(selected_classes.keys())
+    else:
+        selected_classes = selected_classes[level]
+        level = constants.SMOOTHNESS + '/' + level
+
+    return level, selected_classes

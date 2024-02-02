@@ -16,7 +16,7 @@ from src import constants
 from src.utils import helper
 from src.config import general_config
 from src.utils import str_conv
-from src.utils import param_config
+from src.utils import wandb_conv
 
 import random
 
@@ -24,27 +24,27 @@ import wandb
 
 from src.config import general_config
 
-def run_fixed_training(individual_params, model, project=None, name=None, level=constants.SURFACE):
+def run_fixed_training(individual_params, model, project=None, name=None, level=None):
 
     os.environ["WANDB_MODE"] = general_config.wandb_mode
 
     if general_config.wandb_mode == constants.WANDB_MODE_OFF:
         project = 'OFF_' + project
 
-    config = param_config.fixed_config(individual_params=individual_params, model=model, level=level)
+    config = wandb_conv.fixed_config(individual_params=individual_params, model=model, level=level)
 
     wandb_training(project=project, name=name, config=config)
 
     # TODO: save model
 
-def run_sweep_training(individual_params, models, method, metric=None, project=None, name=None, level=constants.SURFACE, sweep_counts=constants.WANDB_DEFAULT_SWEEP_COUNTS):
+def run_sweep_training(individual_params, models, method, metric=None, project=None, name=None, level=None, sweep_counts=constants.WANDB_DEFAULT_SWEEP_COUNTS):
 
     os.environ["WANDB_MODE"] = general_config.wandb_mode
     
     if general_config.wandb_mode == constants.WANDB_MODE_OFF:
         project = 'OFF_' + project
 
-    sweep_config = param_config.sweep_config(individual_params=individual_params, models=models, method=method, metric=metric, name=name, level=level)
+    sweep_config = wandb_conv.sweep_config(individual_params=individual_params, models=models, method=method, metric=metric, name=name, level=level)
 
     sweep_id = wandb.sweep(sweep=sweep_config, project=project)
 
@@ -66,7 +66,6 @@ def wandb_training(project=None, name=None, config=None):
     criterion = model_cfg.get('criterion')
     
     optimizer_cls = str_conv.optim_name_to_class(config.get('optimizer_cls'))
-    level = config.get('level')
     dataset = config.get('dataset')
     label_type = config.get('label_type')
     selected_classes = config.get('selected_classes')
@@ -78,6 +77,11 @@ def wandb_training(project=None, name=None, config=None):
     seed = config.get('seed')
     general_transform = config.get("transform")
 
+    level = config.get('level').split('/',1)
+    type_class = None
+    if len(level) == 2:
+        type_class = level[-1]
+
     augment = None
     if config.get('augment') == constants.AUGMENT_TRUE:
         augment = general_config.augmentation
@@ -85,14 +89,15 @@ def wandb_training(project=None, name=None, config=None):
     start_time = datetime.fromtimestamp(run.start_time).strftime("%Y%m%d_%H%M%S")
     id = run.id
     separator = '-'
+    level = separator.join(level)
     saving_name = separator.join([level, model_name, start_time, id])
     saving_name = saving_name + '.pt'
 
-    trained_model, model_path = run_training(saving_name=saving_name, model_cls=model_cls, optimizer_cls=optimizer_cls, criterion=criterion, dataset=dataset, label_type=label_type, level=level, validation_size=validation_size, learning_rate=learning_rate, epochs=epochs, batch_size=batch_size, valid_batch_size=valid_batch_size, general_transform=general_transform, augment=augment, selected_classes=selected_classes, seed=seed)
+    trained_model, model_path = run_training(saving_name=saving_name, model_cls=model_cls, optimizer_cls=optimizer_cls, criterion=criterion, dataset=dataset, label_type=label_type, validation_size=validation_size, learning_rate=learning_rate, epochs=epochs, batch_size=batch_size, valid_batch_size=valid_batch_size, general_transform=general_transform, augment=augment, selected_classes=selected_classes, type_class=type_class, seed=seed)
 
     wandb.save(model_path)
 
-def run_training(saving_name, model_cls, optimizer_cls, criterion, dataset, label_type, level, validation_size, learning_rate, epochs, batch_size, valid_batch_size, general_transform, augment=None, selected_classes=None, seed=42):
+def run_training(saving_name, model_cls, optimizer_cls, criterion, dataset, label_type, validation_size, learning_rate, epochs, batch_size, valid_batch_size, general_transform, augment=None, selected_classes=None, type_class=None, seed=42):
     torch.manual_seed(seed)
     
     device = torch.device(
@@ -107,7 +112,7 @@ def run_training(saving_name, model_cls, optimizer_cls, criterion, dataset, labe
         augment=augment,
         dataset=dataset,
         label_type=label_type,
-        level=level,
+        type_class=type_class,
         selected_classes=selected_classes,
         validation_size=validation_size,
         batch_size=batch_size,
@@ -138,7 +143,7 @@ def prepare_train(
     augment,
     dataset,
     label_type,
-    level,
+    type_class,
     selected_classes,
     validation_size,
     batch_size,
@@ -154,7 +159,10 @@ def prepare_train(
         general_transform=transform,
         augmentation=augment,
         random_state=random_seed,
+        type_class=type_class,
     )
+
+    # torch.save(valid_data, os.path.join(general_config.save_path, "valid_data.pt"))
 
     # TODO: loader in preprocessing?
     class_counts = Counter(train_data.targets)
@@ -198,7 +206,7 @@ def prepare_train(
 # TODO: old!
 # complete training routine
 def config_and_train_model(
-    config, model_cls, optimizer_cls, criterion, augmentation=None
+    config, model_cls, optimizer_cls, criterion, type_class=None, augmentation=None
 ):
     torch.manual_seed(config.get("seed"))  # main
 
@@ -218,6 +226,7 @@ def config_and_train_model(
         general_transform,
         augmentation,
         random_state=config.get("seed"),
+        type_class=type_class,
     )
 
     torch.save(valid_data, os.path.join(general_config.save_path, "valid_data.pt"))
@@ -275,6 +284,8 @@ def config_and_train_model(
     # save_model(model, model_saving_name)
     # wandb.save(model_saving_name)
     wandb.unwatch()  # not necessary?
+
+
 
     
 
