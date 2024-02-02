@@ -1,4 +1,5 @@
 __pycache__
+.pytest_cache
 
 .vscode
 .venv
@@ -12,3 +13,6 @@ data
 trained_models
 
 tb_log_medium_dynamic
+
+Archive
+.pre-commit-config.yaml
