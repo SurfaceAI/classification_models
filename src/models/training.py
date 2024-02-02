@@ -17,6 +17,7 @@ from src.utils import helper
 from src.config import general_config
 from src.utils import str_conv
 from src.utils import wandb_conv
+from src.utils import checkpointing
 
 import random
 
@@ -94,8 +95,8 @@ def wandb_training(project=None, name=None, config=None):
     saving_name = saving_name + '.pt'
 
     trained_model, model_path = run_training(saving_name=saving_name, model_cls=model_cls, optimizer_cls=optimizer_cls, criterion=criterion, dataset=dataset, label_type=label_type, validation_size=validation_size, learning_rate=learning_rate, epochs=epochs, batch_size=batch_size, valid_batch_size=valid_batch_size, general_transform=general_transform, augment=augment, selected_classes=selected_classes, type_class=type_class, seed=seed)
-
-    wandb.save(model_path)
+    
+    # wandb.save(model_path)
 
 def run_training(saving_name, model_cls, optimizer_cls, criterion, dataset, label_type, validation_size, learning_rate, epochs, batch_size, valid_batch_size, general_transform, augment=None, selected_classes=None, type_class=None, seed=42):
     torch.manual_seed(seed)
@@ -123,6 +124,7 @@ def run_training(saving_name, model_cls, optimizer_cls, criterion, dataset, labe
 
     trained_model = train(
         model=model,
+        saving_name=saving_name,
         trainloader=trainloader,
         validloader=validloader,
         criterion=criterion,
@@ -131,6 +133,7 @@ def run_training(saving_name, model_cls, optimizer_cls, criterion, dataset, labe
         epochs=epochs,
     )
 
+    # TODO: save best instead of last model
     model_path = save_model(trained_model, saving_name)
     print(f'Model saved locally: {model_path}')
 
@@ -284,9 +287,6 @@ def config_and_train_model(
     # save_model(model, model_saving_name)
     # wandb.save(model_saving_name)
     wandb.unwatch()  # not necessary?
-
-
-
     
 
 # TODO: OLD!
@@ -320,6 +320,7 @@ def init_wandb(config_input, augment=None):
 # train the model
 def train(
     model,
+    saving_name,
     trainloader,
     validloader,
     criterion,
@@ -329,6 +330,8 @@ def train(
 ):
     model.to(device)
 
+    checkpointer = checkpointing.CheckpointSaver(dirpath=general_config.save_path, saving_name=saving_name, decreasing=False, top_n=general_config.checkpoint_top_n, early_stop_thresh=general_config.early_stop_thresh)
+
     for epoch in range(epochs):
         train_loss, train_accuracy = train_epoch_test(model, trainloader, criterion, optimizer, device)
 
@@ -336,7 +339,10 @@ def train(
             model, validloader, criterion, device
         )
 
-        # with try? usage w/o wandb
+        # checkpoint saving with early stopping
+        early_stop = checkpointer(model=model, epoch=epoch, metric_val=val_accuracy, optimizer=optimizer)
+
+        # TODO: with try? for usage w/o wandb
         wandb.log(
             {
                 "epoch": epoch + 1,
@@ -354,6 +360,10 @@ def train(
             f"Train accuracy: {train_accuracy:.3f}.. ",
             f"Test accuracy: {val_accuracy:.3f}",
         )
+
+        if early_stop:
+            print(f"Early stopped training at epoch {epoch}")
+            break
 
     print("Done.")
 
@@ -381,6 +391,7 @@ def train_epoch(model, dataloader, criterion, optimizer, device):
 
         running_loss += loss.item()
 
+        # TODO: metric as function, metric_name as input argument
         predictions = torch.argmax(outputs, dim=1)
         correct_predictions += (predictions == labels).sum().item()
 

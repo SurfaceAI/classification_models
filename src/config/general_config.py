@@ -43,4 +43,8 @@ augmentation = dict(
 
 valid_batch_size = 8 # 48
 
+checkpoint_top_n = 2
+
+early_stop_thresh = 2
+
 

@@ -19,7 +19,7 @@ sweep_params = {
 
 fixed_params = {
     'batch_size': 8, # 48
-    'epochs': 2,
+    'epochs': 5,
     'learning_rate': 0.001,
     'optimizer_cls': constants.OPTI_ADAM,
     'augment': constants.AUGMENT_TRUE,
