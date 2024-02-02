@@ -54,6 +54,9 @@ optimizer = optim.Adam
 criterion = nn.CrossEntropyLoss()
 
 
+# die Funktion create_flat_train_validation_datasets muss in training.py durch create_flat_train_validation_dataset, damit die Klassen 'flat'
+# eingelesen werden. 
+
 # train model
 training.config_and_train_model(config, Rateke_CNN_model.ConvNet, optimizer, criterion, augmentation=augmentation)
 
