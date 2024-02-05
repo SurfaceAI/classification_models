@@ -183,7 +183,8 @@ def create_train_validation_datasets(dataset, label_type, selected_classes, vali
         data_path = os.path.join(data_root, dataset, label_type)
         complete_dataset = FlattenFolders(data_path, selected_classes=selected_classes)
     # surface or smoothness for surface type if level is not flatten
-    else:   
+    else:  
+        # TODO  
         if type_class is None: 
             data_path = os.path.join(data_root, dataset, label_type)
         

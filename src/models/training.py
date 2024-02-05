@@ -58,6 +58,8 @@ def run_sweep_training(individual_params, models, method, metric=None, project=N
 # main for sweep and single training
 def wandb_training(project=None, name=None, config=None):
 
+    # TODO: config sweep ...
+    # true/false
     run = wandb.init(project=project, name=name, config=config)
     config = wandb.config
 
@@ -72,7 +74,7 @@ def wandb_training(project=None, name=None, config=None):
     selected_classes = config.get('selected_classes')
     validation_size = config.get('validation_size')
     batch_size = config.get('batch_size')
-    valid_batch_size = general_config.valid_batch_size
+    valid_batch_size = general_config.valid_batch_size # config incl.
     learning_rate = config.get('learning_rate')
     epochs = config.get('epochs')
     seed = config.get('seed')
@@ -85,10 +87,10 @@ def wandb_training(project=None, name=None, config=None):
 
     augment = None
     if config.get('augment') == constants.AUGMENT_TRUE:
-        augment = general_config.augmentation
+        augment = general_config.augmentation # config incl.
 
     start_time = datetime.fromtimestamp(run.start_time).strftime("%Y%m%d_%H%M%S")
-    id = run.id
+    id = run.id # if wandb true..
     separator = '-'
     saving_name = separator.join([separator.join(level), model_name, start_time, id])
     saving_name = saving_name + '.pt'

@@ -3,6 +3,7 @@ from torch import nn, Tensor
 from torchvision import models
 from collections import OrderedDict
 
+# TODO: architecture in class attribute
 architecture = "Efficient Net v2 s"
 
 class CustomEfficientNetV2SLogsoftmax(nn.Module):
