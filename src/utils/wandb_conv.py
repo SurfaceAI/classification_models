@@ -64,12 +64,16 @@ def fixed_config(individual_params, model, level=None):
 
 def level_config(level=None):
     selected_classes = general_config.selected_classes
+    # TODO: catch 'no selected classes' given
 
+    # exception error for level not surface/flatten/type_class
     if level is None:
         selected_classes = list(selected_classes.keys())
         level = constants.SURFACE  
     elif level == constants.SURFACE:
         selected_classes = list(selected_classes.keys())
+    elif level == constants.FLATTEN:
+        pass
     else:
         selected_classes = selected_classes[level]
         level = constants.SMOOTHNESS + '/' + level

@@ -90,15 +90,14 @@ def wandb_training(project=None, name=None, config=None):
     start_time = datetime.fromtimestamp(run.start_time).strftime("%Y%m%d_%H%M%S")
     id = run.id
     separator = '-'
-    level = separator.join(level)
-    saving_name = separator.join([level, model_name, start_time, id])
+    saving_name = separator.join([separator.join(level), model_name, start_time, id])
     saving_name = saving_name + '.pt'
 
-    trained_model, model_path = run_training(saving_name=saving_name, model_cls=model_cls, optimizer_cls=optimizer_cls, criterion=criterion, dataset=dataset, label_type=label_type, validation_size=validation_size, learning_rate=learning_rate, epochs=epochs, batch_size=batch_size, valid_batch_size=valid_batch_size, general_transform=general_transform, augment=augment, selected_classes=selected_classes, type_class=type_class, seed=seed)
+    trained_model, model_path = run_training(saving_name=saving_name, model_cls=model_cls, optimizer_cls=optimizer_cls, criterion=criterion, dataset=dataset, label_type=label_type, validation_size=validation_size, learning_rate=learning_rate, epochs=epochs, batch_size=batch_size, valid_batch_size=valid_batch_size, general_transform=general_transform, augment=augment, selected_classes=selected_classes, level=level[0], type_class=type_class, seed=seed)
     
     # wandb.save(model_path)
 
-def run_training(saving_name, model_cls, optimizer_cls, criterion, dataset, label_type, validation_size, learning_rate, epochs, batch_size, valid_batch_size, general_transform, augment=None, selected_classes=None, type_class=None, seed=42):
+def run_training(saving_name, model_cls, optimizer_cls, criterion, dataset, label_type, validation_size, learning_rate, epochs, batch_size, valid_batch_size, general_transform, augment=None, selected_classes=None, level=None, type_class=None, seed=42):
     torch.manual_seed(seed)
     
     device = torch.device(
@@ -113,6 +112,7 @@ def run_training(saving_name, model_cls, optimizer_cls, criterion, dataset, labe
         augment=augment,
         dataset=dataset,
         label_type=label_type,
+        level=level,
         type_class=type_class,
         selected_classes=selected_classes,
         validation_size=validation_size,
@@ -146,6 +146,7 @@ def prepare_train(
     augment,
     dataset,
     label_type,
+    level,
     type_class,
     selected_classes,
     validation_size,
@@ -162,10 +163,12 @@ def prepare_train(
         general_transform=transform,
         augmentation=augment,
         random_state=random_seed,
+        level=level,
         type_class=type_class,
     )
 
     # torch.save(valid_data, os.path.join(general_config.save_path, "valid_data.pt"))
+    print(f'classes: {train_data.class_to_idx}')
 
     # TODO: loader in preprocessing?
     class_counts = Counter(train_data.targets)

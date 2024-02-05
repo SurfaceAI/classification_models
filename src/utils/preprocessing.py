@@ -12,6 +12,7 @@ from sklearn.model_selection import train_test_split
 import copy
 import os
 from src.config import general_config
+from src import constants
 from tqdm import tqdm
 from pathlib import Path
 from PIL import Image
@@ -70,7 +71,7 @@ class FlattenFolders(datasets.ImageFolder):
 
         # only take the ones that are in selected_classes
         if self.selected_classes is not None:
-            type_classes = [c for c in type_classes if c in self.selected_classes]
+            type_classes = [c for c in type_classes if c in self.selected_classes.keys()]
         if not type_classes:
             raise FileNotFoundError(f"Couldn't find any class folder in {directory}.")
 
@@ -79,7 +80,7 @@ class FlattenFolders(datasets.ImageFolder):
         for type_class in type_classes:
             type_directory = os.path.join(directory, type_class)
             quality_classes = sorted(entry.name for entry in os.scandir(type_directory) if entry.is_dir())
-            quality_classes = [(type_class + '__' + c) for c in quality_classes]
+            quality_classes = [(type_class + '__' + c) for c in quality_classes if c in self.selected_classes[type_class]]
             flattened_classes.extend(quality_classes)
             
         flattened_class_to_idx = {cls_name: i for i, cls_name in enumerate(flattened_classes)}
@@ -170,19 +171,27 @@ class TestImages(Dataset):
         return image
 
 
-def create_train_validation_datasets(dataset, label_type, selected_classes, validation_size, general_transform, augmentation, random_state, type_class=None):
+def create_train_validation_datasets(dataset, label_type, selected_classes, validation_size, general_transform, augmentation, random_state, level=None, type_class=None):
+
+    # TODO: only a single argument instead of level + type_class?
 
     # data path
     data_root = general_config.training_data_path
-    
-    if type_class is None: 
-        data_path = os.path.join(data_root, dataset, label_type)
-    
-    if type_class is not None:
-        data_path = os.path.join(data_root, dataset, label_type, type_class)
 
-    # create complete dataset
-    complete_dataset = PartialImageFolder(data_path, selected_classes=selected_classes)
+    # flatten if level is flatten
+    if level == constants.FLATTEN:
+        data_path = os.path.join(data_root, dataset, label_type)
+        complete_dataset = FlattenFolders(data_path, selected_classes=selected_classes)
+    # surface or smoothness for surface type if level is not flatten
+    else:   
+        if type_class is None: 
+            data_path = os.path.join(data_root, dataset, label_type)
+        
+        if type_class is not None:
+            data_path = os.path.join(data_root, dataset, label_type, type_class)
+
+        # create complete dataset
+        complete_dataset = PartialImageFolder(data_path, selected_classes=selected_classes)
 
     if general_transform.get('normalize') is not None:
         general_transform['normalize'] = load_normalization(general_transform.get('normalize'), dataset, label_type)

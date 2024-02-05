@@ -23,6 +23,7 @@ HORRIBLE = "horrible"
 # classification level
 SURFACE = "surface"
 SMOOTHNESS = "smoothness"
+FLATTEN = "flatten"
 
 # dataset
 V0 = 'V0'
@@ -39,6 +40,8 @@ PROJECT_SURFACE_FIXED = "test_road-surface-classification-type"
 PROJECT_SURFACE_SWEEP = "test_sweep-road-surface-classification-type"
 PROJECT_SMOOTHNESS_FIXED = "test_road-surface-classification-quality"
 PROJECT_SMOOTHNESS_SWEEP = "test_sweep-road-surface-classification-quality"
+PROJECT_FLATTEN_FIXED = "test_road-surface-classification-flatten"
+PROJECT_FLATTEN_SWEEP = "test_sweep-road-surface-classification-flatten"
 
 
 # model names
