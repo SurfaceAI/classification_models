@@ -14,7 +14,6 @@ sweep_params = {
                       'min': 1e-05,
                       'max': 0.001},
     'optimizer_cls': {'value': constants.OPTI_ADAM},
-    'augment': {'value': constants.AUGMENT_TRUE},
 }
 
 fixed_params = {
@@ -22,5 +21,4 @@ fixed_params = {
     'epochs': 5,
     'learning_rate': 0.001,
     'optimizer_cls': constants.OPTI_ADAM,
-    'augment': constants.AUGMENT_TRUE,
 }

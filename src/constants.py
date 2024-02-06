@@ -1,5 +1,7 @@
 ### hint: last part should be 'normalization values', this is extended by calculation of new dataset normalization
 
+import numpy as np
+
 # weights and biases
 WANDB_MODE_ON = 'online'
 WANDB_MODE_OFF = 'offline'
@@ -55,16 +57,16 @@ EFFICIENTNET_V2_S = "Efficient Net v2 s"
 # optimizer
 OPTI_ADAM = 'adam'
 
+# checkpoint & early stopping
+CHECKPOINT_DEFAULT_TOP_N = 1
+EARLY_STOPPING_DEFAULT = np.Inf
+
 ### preprocessing
 # image size
 H256_W256 = (256, 256)
 
 # crop
 CROP_LOWER_MIDDLE_THIRD = 'lower_middle_third'
-
-# augmentation
-AUGMENT_TRUE = 'yes'
-AUGMENT_FALSE = 'no'
 
 # normalization
 NORM_IMAGENET = 'imagenet'

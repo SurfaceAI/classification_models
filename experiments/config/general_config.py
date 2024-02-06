@@ -4,9 +4,9 @@ gpu_kernel = 1
 wandb_mode = constants.WANDB_MODE_ON
 
 ROOT_DIR = Path(__file__).parent.parent.parent
-training_data_path = ROOT_DIR / 'data' / 'training'
-save_path = ROOT_DIR / 'trained_models'
-test_data_path = ROOT_DIR / 'data' / 'testing'
+data_training_path = ROOT_DIR / 'data' / 'training'
+trained_model_path = ROOT_DIR / 'trained_models'
+data_testing_path = ROOT_DIR / 'data' / 'testing'
 data_path = ROOT_DIR / 'data'
 
 # selected_surface_classes = [constants.ASPHALT,
@@ -16,6 +16,7 @@ data_path = ROOT_DIR / 'data'
 #                             constants.UNPAVED,
 # ]
 
+# TODO: infinite depth: list of dict of list of dict // dict of dict of dict ...?
 selected_classes = {constants.ASPHALT: [constants.EXCELLENT, constants.GOOD, constants.INTERMEDIATE, constants.BAD],
                     constants.CONCRETE: [constants.EXCELLENT, constants.GOOD, constants.INTERMEDIATE, constants.BAD],
                     constants.PAVING_STONES: [constants.EXCELLENT, constants.GOOD, constants.INTERMEDIATE, constants.BAD],
@@ -29,22 +30,25 @@ general_transform = dict(
     normalize = constants.NORM_DATA,
 )
 
-dataset = constants.V4
-label_type = constants.ANNOTATED
-
-seed = 42
-
-validation_size = 0.2
-    
 augmentation = dict(
     random_horizontal_flip = True,
     random_rotation = 10,
 )
 
+# dataset = constants.V4
+# label_type = constants.ANNOTATED
+dataset = 'V4/annotated'
+
+seed = 42
+
+validation_size = 0.2
+    
 valid_batch_size = 8 # 48
 
 checkpoint_top_n = 2
 
 early_stop_thresh = 2
+
+save_state = False
 
 

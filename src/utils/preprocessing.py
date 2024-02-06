@@ -11,7 +11,7 @@ from sklearn.model_selection import StratifiedShuffleSplit
 from sklearn.model_selection import train_test_split
 import copy
 import os
-from src.config import general_config
+from experiments.config import general_config
 from src import constants
 from tqdm import tqdm
 from pathlib import Path
@@ -171,31 +171,26 @@ class TestImages(Dataset):
         return image
 
 
-def create_train_validation_datasets(dataset, label_type, selected_classes, validation_size, general_transform, augmentation, random_state, level=None, type_class=None):
+def create_train_validation_datasets(data_root, dataset, selected_classes, validation_size, general_transform, augmentation, random_state, level=None, type_class=None):
 
     # TODO: only a single argument instead of level + type_class?
 
     # data path
-    data_root = general_config.training_data_path
+    data_path = os.path.join(data_root, dataset)
 
     # flatten if level is flatten
     if level == constants.FLATTEN:
-        data_path = os.path.join(data_root, dataset, label_type)
+        
         complete_dataset = FlattenFolders(data_path, selected_classes=selected_classes)
     # surface or smoothness for surface type if level is not flatten
-    else:  
-        # TODO  
-        if type_class is None: 
-            data_path = os.path.join(data_root, dataset, label_type)
-        
-        if type_class is not None:
-            data_path = os.path.join(data_root, dataset, label_type, type_class)
+    elif type_class is not None:
+        data_path = os.path.join(data_path, type_class)
 
         # create complete dataset
         complete_dataset = PartialImageFolder(data_path, selected_classes=selected_classes)
 
     if general_transform.get('normalize') is not None:
-        general_transform['normalize'] = load_normalization(general_transform.get('normalize'), dataset, label_type)
+        general_transform['normalize'] = load_normalization(general_transform.get('normalize'), data_root, dataset)
     
     train_transform = transform(**general_transform, **augmentation)
     valid_transform = transform(**general_transform)
@@ -209,10 +204,10 @@ def create_train_validation_datasets(dataset, label_type, selected_classes, vali
 #allerdings hat das übergeben aus der config nicht funktioniert, da bräuchte man nochmal eine extra Funktion für, oder? 
 # Gerade ist es etwas unpraktisch, da ich im training die Funktion ändern muss, wenn ich ein flat dataset erzeugen möchte. 
 
-def create_flat_train_validation_datasets(dataset, label_type, selected_classes, validation_size, general_transform, augmentation, random_state, type_class=None):
+# def create_flat_train_validation_datasets(dataset, label_type, selected_classes, validation_size, general_transform, augmentation, random_state, type_class=None):
 
     # data path
-    data_root = general_config.training_data_path
+    data_root = general_config.data_training_path
     data_path = os.path.join(data_root, dataset, label_type)
 
     # create complete dataset
@@ -229,14 +224,13 @@ def create_flat_train_validation_datasets(dataset, label_type, selected_classes,
     return train_dataset, valid_dataset
 
 
-def create_test_dataset(dataset, label_type, general_transform, random_state):
+def create_test_dataset(data_root, dataset, general_transform, random_state):
     
     # Data path
-    data_root = general_config.test_data_path
-    data_path = os.path.join(data_root, dataset, label_type)
+    data_path = os.path.join(data_root, dataset)
         
     if general_transform.get('normalize') is not None:
-        general_transform['normalize'] = load_normalization(general_transform.get('normalize'), dataset, label_type)
+        general_transform['normalize'] = load_normalization(general_transform.get('normalize'), dataset)
     
     test_transform = transform(**general_transform)
     
@@ -248,29 +242,30 @@ def create_test_dataset(dataset, label_type, general_transform, random_state):
 
 
 
-def load_normalization(normalization_type, dataset, label_type):
+def load_normalization(normalization_type, data_root, dataset):
 
     tuple_mean_sd = None
     if normalization_type == 'imagenet':
         tuple_mean_sd = (constants.IMAGNET_MEAN, constants.IMAGNET_SD)
     elif normalization_type == 'from_data':
-        mean_name = f'{dataset}_{label_type}_mean'.upper()
+        dataset_name = dataset
+        dataset_name.replace('/', '_')
+        mean_name = f'{dataset_name.upper()}_MEAN'
         mean_value = getattr(constants, mean_name, None)
-        sd_name = f'{dataset}_{label_type}_sd'.upper()
+        sd_name = f'{dataset_name.upper()}_SD'
         sd_value = getattr(constants, sd_name, None)
         if mean_value is None or sd_value is None:
-            mean_value, sd_value = calculate_dataset_normalization(dataset, label_type)
+            mean_value, sd_value = calculate_dataset_normalization(data_root, dataset)
         tuple_mean_sd =(mean_value, sd_value)
 
     return tuple_mean_sd
     
 
 # TODO: more efficient method?
-def calculate_dataset_normalization(dataset, label_type):
+def calculate_dataset_normalization(data_root, dataset):
 
     # calculate normalization parameters
-    data_root = general_config.training_data_path
-    data_path = os.path.join(data_root, dataset, label_type)
+    data_path = os.path.join(data_root, dataset)
 
     image_size = constants.H256_W256
 
@@ -286,7 +281,7 @@ def calculate_dataset_normalization(dataset, label_type):
     std_sum = torch.zeros(3)
     mean_sum = torch.zeros(3)
 
-    for input, _ in tqdm(image_loader, desc=f'{dataset}_{label_type} normalization'):
+    for input, _ in tqdm(image_loader, desc=f'{dataset} normalization'):
         std_image, mean_image = torch.std_mean(input, dim=[0, 2, 3])
         std_sum += std_image
         mean_sum += mean_image
@@ -296,10 +291,11 @@ def calculate_dataset_normalization(dataset, label_type):
     
     # write values to constants file
     folder = Path(__file__).parent
-    
+
     with open(os.path.join(folder, 'constants.py'), 'a') as f:
-        f.write(f'\n{f"{dataset}_{label_type}_mean".upper()} = {total_mean}\n')
-        f.write(f'{f"{dataset}_{label_type}_sd".upper()} = {total_std}\n')
+        dataset.replace('/', '_')
+        f.write(f'\n{f"{dataset.upper()}_MEAN"} = {total_mean}\n')
+        f.write(f'{f"{dataset.upper()}_SD"} = {total_std}\n')
     
     return total_mean, total_std
 

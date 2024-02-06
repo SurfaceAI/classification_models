@@ -10,100 +10,127 @@ from torch import nn, optim
 from torchvision import models
 from collections import OrderedDict, Counter
 from datetime import datetime
+import time
 import os
 from src.utils import preprocessing
 from src import constants
 from src.utils import helper
-from src.config import general_config
-from src.utils import str_conv
-from src.utils import wandb_conv
+from src.utils import parser
 from src.utils import checkpointing
 
 import random
 
 import wandb
 
-from src.config import general_config
+# TODO: what is the difference to run_training?
+def run_fixed_training(config, project=None, name=None, level=None, wandb_mode=constants.WANDB_MODE_OFF, wandb_on=True):
+    # TODO: doc config
 
-def run_fixed_training(individual_params, model, project=None, name=None, level=None):
+    os.environ["WANDB_MODE"] = wandb_mode
 
-    os.environ["WANDB_MODE"] = general_config.wandb_mode
-
-    if general_config.wandb_mode == constants.WANDB_MODE_OFF:
+    if wandb_mode == constants.WANDB_MODE_OFF:
         project = 'OFF_' + project
 
-    config = wandb_conv.fixed_config(individual_params=individual_params, model=model, level=level)
-
-    wandb_training(project=project, name=name, config=config)
+    selected_classes = config.get['selected_classes']
+    level_list = extract_levels(level=level, selected_classes=selected_classes)
+    
+    for level in level_list:
+        config = {
+            **config,
+            **level,
+        }
+        run_training(project=project, name=name, config=config, wandb_on=wandb_on)
+        print(f'Level {level} trained.')
 
     # TODO: save model
+    print('Done.')
 
-def run_sweep_training(individual_params, models, method, metric=None, project=None, name=None, level=None, sweep_counts=constants.WANDB_DEFAULT_SWEEP_COUNTS):
+def run_sweep_training(config_params, method, metric=None, project=None, name=None, level=None, sweep_counts=constants.WANDB_DEFAULT_SWEEP_COUNTS, wandb_mode=constants.WANDB_MODE_OFF):
+    # TODO: doc config_params
 
-    os.environ["WANDB_MODE"] = general_config.wandb_mode
-    
-    if general_config.wandb_mode == constants.WANDB_MODE_OFF:
+    os.environ["WANDB_MODE"] = wandb_mode
+
+    if wandb_mode == constants.WANDB_MODE_OFF:
         project = 'OFF_' + project
 
-    sweep_config = wandb_conv.sweep_config(individual_params=individual_params, models=models, method=method, metric=metric, name=name, level=level)
+    selected_classes = config_params.get['selected_classes']['value']
+    level_list = extract_levels(level=level, selected_classes=selected_classes)
 
-    sweep_id = wandb.sweep(sweep=sweep_config, project=project)
+    for level in level_list:
+        for key, value in level.items():
+            level[key] = {'value': value}
 
-    wandb.agent(sweep_id=sweep_id, function=wandb_training, count=sweep_counts)
+        sweep_params = {
+            **config_params,
+            **level,
+        }
 
-    # TODO: save best model
+        sweep_config = {
+            'name': name,
+            **method,
+            **metric,
+            'parameters': sweep_params,
+        }
+        
+        sweep_id = wandb.sweep(sweep=sweep_config, project=project)
 
-    print('Sweep done.')
+        wandb.agent(sweep_id=sweep_id, function=run_training, count=sweep_counts)
+        # TODO: save/print best model
+        print(f'Level {level} trained.')
+
+    
+
+    print('Done.')
 
 # main for sweep and single training
-def wandb_training(project=None, name=None, config=None):
+def run_training(project=None, name=None, config=None, wandb_on=True):
 
     # TODO: config sweep ...
-    # true/false
-    run = wandb.init(project=project, name=name, config=config)
-    config = wandb.config
+    if wandb_on:
+        run = wandb.init(project=project, name=name, config=config)
+        config = wandb.config
+        # best instead of last value for metric
+        wandb.define_metric("eval/acc", summary="max")
 
     model_name = config.get('model')
-    model_cfg = str_conv.model_name_to_config(model_name)
+    model_cfg = parser.model_name_to_config(model_name)
     model_cls = model_cfg.get('model_cls')
     criterion = model_cfg.get('criterion')
     
-    optimizer_cls = str_conv.optim_name_to_class(config.get('optimizer_cls'))
+    optimizer_cls = parser.optim_name_to_class(config.get('optimizer_cls'))
     dataset = config.get('dataset')
-    label_type = config.get('label_type')
     selected_classes = config.get('selected_classes')
     validation_size = config.get('validation_size')
     batch_size = config.get('batch_size')
-    valid_batch_size = general_config.valid_batch_size # config incl.
+    valid_batch_size = config.get('valid_batch_size')
     learning_rate = config.get('learning_rate')
     epochs = config.get('epochs')
     seed = config.get('seed')
     general_transform = config.get("transform")
+    augment = config.get("augment")
+    gpu_kernel = config.get("gpu_kernel")
+    
+    checkpoint_top_n = config.get("checkpoint_top_n", default=constants.CHECKPOINT_DEFAULT_TOP_N)
+    early_stop_thresh = config.get("early_stop_thresh", default=constants.EARLY_STOPPING_DEFAULT)
+    save_state = config.get("save_state", default=True)
 
     level = config.get('level').split('/',1)
     type_class = None
     if len(level) == 2:
         type_class = level[-1]
 
-    augment = None
-    if config.get('augment') == constants.AUGMENT_TRUE:
-        augment = general_config.augmentation # config incl.
+    data_root = config.get('root/data')
+    model_root = config.get('root/model')
 
-    start_time = datetime.fromtimestamp(run.start_time).strftime("%Y%m%d_%H%M%S")
-    id = run.id # if wandb true..
-    separator = '-'
-    saving_name = separator.join([separator.join(level), model_name, start_time, id])
-    saving_name = saving_name + '.pt'
+    start_time = datetime.fromtimestamp(time.time() if not wandb_on else run.start_time).strftime("%Y%m%d_%H%M%S")
+    id = '' if not wandb_on else '-' + run.id
+    saving_name = '-'.join(level) + '-' + model_name + '-' + start_time + id + '.pt'
 
-    trained_model, model_path = run_training(saving_name=saving_name, model_cls=model_cls, optimizer_cls=optimizer_cls, criterion=criterion, dataset=dataset, label_type=label_type, validation_size=validation_size, learning_rate=learning_rate, epochs=epochs, batch_size=batch_size, valid_batch_size=valid_batch_size, general_transform=general_transform, augment=augment, selected_classes=selected_classes, level=level[0], type_class=type_class, seed=seed)
-    
-    # wandb.save(model_path)
-
-def run_training(saving_name, model_cls, optimizer_cls, criterion, dataset, label_type, validation_size, learning_rate, epochs, batch_size, valid_batch_size, general_transform, augment=None, selected_classes=None, level=None, type_class=None, seed=42):
     torch.manual_seed(seed)
     
+    # TODO: testing gpu_kernel = None
     device = torch.device(
-        f"cuda:{general_config.gpu_kernel}" if torch.cuda.is_available() else "cpu"
+        f"cuda:{gpu_kernel}" if torch.cuda.is_available() else "cpu"
     )
     print(device)
 
@@ -113,7 +140,7 @@ def run_training(saving_name, model_cls, optimizer_cls, criterion, dataset, labe
         transform=general_transform,
         augment=augment,
         dataset=dataset,
-        label_type=label_type,
+        data_root=data_root,
         level=level,
         type_class=type_class,
         selected_classes=selected_classes,
@@ -126,20 +153,31 @@ def run_training(saving_name, model_cls, optimizer_cls, criterion, dataset, labe
 
     trained_model = train(
         model=model,
-        saving_name=saving_name,
+        model_saving_path=model_root,
+        model_saving_name=saving_name,
         trainloader=trainloader,
         validloader=validloader,
         criterion=criterion,
         optimizer=optimizer,
         device=device,
         epochs=epochs,
+        wandb_on=wandb_on,
+        checkpoint_top_n=checkpoint_top_n,
+        early_stop_thresh=early_stop_thresh,
+        save_state=save_state,
+        config=config,
+
     )
 
-    # TODO: save best instead of last model
-    model_path = save_model(trained_model, saving_name)
-    print(f'Model saved locally: {model_path}')
+    # TODO: save best instead of last model (if checkpoint used)
+    # TODO: save dict incl. config .. + model param (compare checkpoints)
+    # model_path = save_model(trained_model, saving_name)
+    # print(f'Model saved locally: {model_path}')
 
-    return trained_model, model_path
+    return trained_model #, model_path
+
+    # wandb.save(model_path)
+
 
 def prepare_train(
     model_cls,
@@ -147,7 +185,7 @@ def prepare_train(
     transform,
     augment,
     dataset,
-    label_type,
+    data_root,
     level,
     type_class,
     selected_classes,
@@ -158,8 +196,8 @@ def prepare_train(
     random_seed,
 ):
     train_data, valid_data = preprocessing.create_train_validation_datasets(
+        data_root=data_root,
         dataset=dataset,
-        label_type=label_type,
         selected_classes=selected_classes,
         validation_size=validation_size,
         general_transform=transform,
@@ -173,6 +211,7 @@ def prepare_train(
     print(f'classes: {train_data.class_to_idx}')
 
     # TODO: loader in preprocessing?
+    # TODO: weighted sampling on/off?
     class_counts = Counter(train_data.targets)
     sample_weights = [1/class_counts[i] for i in train_data.targets]
     sampler = WeightedRandomSampler(weights=sample_weights, num_samples=len(train_data))
@@ -211,131 +250,27 @@ def prepare_train(
 
     return trainloader, validloader, model, optimizer
 
-# TODO: old!
-# complete training routine
-def config_and_train_model(
-    config, model_cls, optimizer_cls, criterion, type_class=None, augmentation=None
-):
-    torch.manual_seed(config.get("seed"))  # main
-
-    _ = init_wandb(config, augmentation) # main
-
-    general_transform = {   # nested params
-        "resize": config.get("image_size_h_w"),
-        "crop": config.get("crop"),
-        "normalize": config.get("normalization"),
-    }
-
-    train_data, valid_data = preprocessing.create_train_validation_datasets(
-        config.get("dataset"),
-        config.get("label_type"),
-        config.get("selected_classes"),
-        config.get("validation_size"),
-        general_transform,
-        augmentation,
-        random_state=config.get("seed"),
-        type_class=type_class,
-    )
-
-    torch.save(valid_data, os.path.join(general_config.save_path, "valid_data.pt"))
-
-    trainloader = DataLoader(
-        train_data, batch_size=config.get("batch_size"), shuffle=True
-    )
-    validloader = DataLoader(
-        valid_data, batch_size=config.get("valid_batch_size")
-    )
-
-    # load model
-    num_classes = len(train_data.classes)
-
-    # TODO: instanciate model!
-    model = model_cls(num_classes)
-
-    optimizer_layers = None
-    if hasattr(model, "get_optimizer_layers") and callable(model.get_optimizer_layers):
-        optimizer_layers = model.get_optimizer_layers()
-
-    # Unfreeze parameters
-    for param in model.parameters():
-        param.requires_grad = True
-
-    # setup optimizer
-    if optimizer_layers is None:
-        optimizer_params = model.parameters()
-    else:
-        optimizer_params = []
-        for layer in optimizer_layers:
-            optimizer_params += [p for p in layer.parameters()]
-
-    # set parameters to optimize
-    optimizer = optimizer_cls(optimizer_params, lr=config.get("learning_rate"))
-
-    # Use GPU if it's available
-    # device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    device = torch.device(
-        f"cuda:{general_config.gpu_kernel}" if torch.cuda.is_available() else "cpu"
-    )
-    print(device)  # main
-
-    trained_model = train(
-        model,
-        config.get("save_name"),
-        trainloader,
-        validloader,
-        criterion,
-        optimizer,
-        device,
-        config.get("epochs"),
-    )
-
-    # save_model(model, model_saving_name)
-    # wandb.save(model_saving_name)
-    wandb.unwatch()  # not necessary?
-    
-
-# TODO: OLD!
-# W&B initialisation
-def init_wandb(config_input, augment=None):
-    # set augmentation
-    if augment is not None:
-        augmented = "Yes"
-    else:
-        augmented = "No"
-    wandb.login()
-    wandb.init(
-        # set project and tags
-        project=config_input.get("project"),
-        name=config_input.get("name"),
-        # track hyperparameters and run metadata
-        # TODO: config=config???
-        config={
-            "architecture": config_input.get("architecture"),
-            "dataset": config_input.get("dataset"),
-            "learning_rate": config_input.get("learning_rate"),
-            "batch_size": config_input.get("batch_size"),
-            "seed": config_input.get("seed"),
-            "augmented": augmented,
-            "crop": config_input.get("crop"),
-            "selected_classes": config_input.get("selected_classes"),
-        },
-    )
-
-
 # train the model
 def train(
     model,
-    saving_name,
+    model_saving_path,
+    model_saving_name,
     trainloader,
     validloader,
     criterion,
     optimizer,
     device,
     epochs,
+    wandb_on,
+    checkpoint_top_n=constants.CHECKPOINT_DEFAULT_TOP_N,
+    early_stop_thresh=constants.EARLY_STOPPING_DEFAULT,
+    save_state=True,
+    config=None,
 ):
     model.to(device)
 
-    checkpointer = checkpointing.CheckpointSaver(dirpath=general_config.save_path, saving_name=saving_name, decreasing=False, top_n=general_config.checkpoint_top_n, early_stop_thresh=general_config.early_stop_thresh)
+    # TODO: decresing depending on metric
+    checkpointer = checkpointing.CheckpointSaver(dirpath=model_saving_path, saving_name=model_saving_name, decreasing=False, config=config, top_n=checkpoint_top_n, early_stop_thresh=early_stop_thresh, save_state=save_state)
 
     for epoch in range(epochs):
         train_loss, train_accuracy = train_epoch_test(model, trainloader, criterion, optimizer, device)
@@ -347,16 +282,16 @@ def train(
         # checkpoint saving with early stopping
         early_stop = checkpointer(model=model, epoch=epoch, metric_val=val_accuracy, optimizer=optimizer)
 
-        # TODO: with try? for usage w/o wandb
-        wandb.log(
-            {
-                "epoch": epoch + 1,
-                "train/loss": train_loss,
-                "train/acc": train_accuracy,
-                "eval/loss": val_loss,
-                "eval/acc": val_accuracy,
-            }
-        )
+        if wandb_on:
+            wandb.log(
+                {
+                    "epoch": epoch + 1,
+                    "train/loss": train_loss,
+                    "train/acc": train_accuracy,
+                    "eval/loss": val_loss,
+                    "eval/acc": val_accuracy,
+                }
+            )
 
         print(
             f"Epoch {epoch+1}/{epochs}.. ",
@@ -490,13 +425,12 @@ def validate_epoch_test(model, dataloader, criterion, device):
 
 
 # save model locally
-def save_model(model, saving_name):
-    save_path = general_config.save_path
+def save_model(model,saving_path, saving_name):
+    
+    if not os.path.exists(saving_path):
+        os.makedirs(saving_path)
 
-    if not os.path.exists(save_path):
-        os.makedirs(save_path)
-
-    model_path = os.path.join(save_path, saving_name)
+    model_path = os.path.join(saving_path, saving_name)
     torch.save(model.state_dict(), model_path)
 
     # TODO: return value saving success
@@ -511,3 +445,17 @@ def load_wandb_model(model_name, run_path):
 
     return model
 
+def extract_levels(level, selected_classes):
+    # TODO: selected_classes must not be None (for surface/smoothness), but None should be possible (=all classes)
+    level_list = []
+    if level == constants.FLATTEN:
+        level_list.append({'level': level, 'selected_classes': selected_classes})
+    elif level == constants.SURFACE:
+        level_list.append({'level': level, 'selected_classes': list(selected_classes.keys())})     
+    elif level == constants.SMOOTHNESS:
+        for type_class in selected_classes.keys():
+            level_list.append({'level': level + '/' + type_class, 'selected_classes': selected_classes[type_class]}) 
+    else:
+        level_list.append({'level': level, 'selected_classes': selected_classes})
+    
+    return level_list
