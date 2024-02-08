@@ -39,4 +39,4 @@ gpu_kernel = 1
 
 batch_size = 8
 
-prediction.run_dataset_prediction(name, data_root, dataset, transform, model_root, model_dict, predict_dir, gpu_kernel, batch_size)
+prediction.run_dataset_prediction_csv(name, data_root, dataset, transform, model_root, model_dict, predict_dir, gpu_kernel, batch_size)
