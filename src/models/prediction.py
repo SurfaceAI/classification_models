@@ -48,9 +48,8 @@ def recursive_predict(model_dict, model_root, data, batch_size, device):
     if model_dict is None:
         predictions = None
     else:
-        model_name = model_dict['name']
         model_path = os.path.join(model_root, model_dict['trained_model'])
-        model, classes = load_model(model_name=model_name, model_path=model_path)
+        model, classes = load_model(model_path=model_path)
         
         prediction_outputs, image_ids = predict(model, data, batch_size, device)
         # TODO: output/logits to prob function based on model last layer/parser?
@@ -105,12 +104,14 @@ def predict(model, data, batch_size, device):
 
     return predictions, ids
 
-def load_model(model_name, model_path):
-    model_cfg = parser.model_name_to_config(model_name)
-    model_cls = model_cfg.get('model_cls')
+def load_model(model_path):
     model_state = torch.load(model_path)
+    model_name = model_state['config']['model']
     classes = model_state['dataset'].classes
 
+    model_cfg = parser.model_name_to_config(model_name)
+    model_cls = model_cfg.get('model_cls')
+    
     model = model_cls(len(classes))
     model.load_state_dict(model_state['model_state_dict'])
 
