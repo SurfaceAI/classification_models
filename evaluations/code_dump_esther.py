@@ -1,5 +1,6 @@
 import os
 import matplotlib.pyplot as plt
+import pandas as pd
 from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay, classification_report
 
 file_path = r"C:\Users\esthe\Documents\GitHub\classification_models\data\v4_labels.csv"

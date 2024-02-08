@@ -6,7 +6,7 @@ from src.models import training
 from experiments.config import train_config
 from experiments.config import config_helper
 
-project = constants.PROJECT_SURFACE_FIXED
+project = constants.PROJECT_SMOOTHNESS_FIXED
 
 name = "VGG16"
 

@@ -31,7 +31,7 @@ def run_fixed_training(config, project=None, name=None, level=None, wandb_mode=c
     if wandb_mode == constants.WANDB_MODE_OFF:
         project = 'OFF_' + project
 
-    selected_classes = config.get['selected_classes']
+    selected_classes = config.get('selected_classes')
     level_list = extract_levels(level=level, selected_classes=selected_classes)
     
     for level in level_list:
@@ -53,7 +53,7 @@ def run_sweep_training(config_params, method, metric=None, project=None, name=No
     if wandb_mode == constants.WANDB_MODE_OFF:
         project = 'OFF_' + project
 
-    selected_classes = config_params.get['selected_classes']['value']
+    selected_classes = config_params.get('selected_classes')['value']
     level_list = extract_levels(level=level, selected_classes=selected_classes)
 
     for level in level_list:
@@ -110,9 +110,9 @@ def run_training(project=None, name=None, config=None, wandb_on=True):
     augment = config.get("augment")
     gpu_kernel = config.get("gpu_kernel")
     
-    checkpoint_top_n = config.get("checkpoint_top_n", default=constants.CHECKPOINT_DEFAULT_TOP_N)
-    early_stop_thresh = config.get("early_stop_thresh", default=constants.EARLY_STOPPING_DEFAULT)
-    save_state = config.get("save_state", default=True)
+    checkpoint_top_n = config.get("checkpoint_top_n", constants.CHECKPOINT_DEFAULT_TOP_N)
+    early_stop_thresh = config.get("early_stop_thresh", constants.EARLY_STOPPING_DEFAULT)
+    save_state = config.get("save_state", True)
 
     level = config.get('level').split('/',1)
     type_class = None
@@ -174,7 +174,11 @@ def run_training(project=None, name=None, config=None, wandb_on=True):
     # model_path = save_model(trained_model, saving_name)
     # print(f'Model saved locally: {model_path}')
 
+    if wandb_on:
+        wandb.finish()
+        
     return trained_model #, model_path
+    
 
     # wandb.save(model_path)
 
@@ -270,7 +274,7 @@ def train(
     model.to(device)
 
     # TODO: decresing depending on metric
-    checkpointer = checkpointing.CheckpointSaver(dirpath=model_saving_path, saving_name=model_saving_name, decreasing=False, config=config, top_n=checkpoint_top_n, early_stop_thresh=early_stop_thresh, save_state=save_state)
+    checkpointer = checkpointing.CheckpointSaver(dirpath=model_saving_path, saving_name=model_saving_name, decreasing=False, config=config, dataset=validloader.dataset, top_n=checkpoint_top_n, early_stop_thresh=early_stop_thresh, save_state=save_state)
 
     for epoch in range(epochs):
         train_loss, train_accuracy = train_epoch_test(model, trainloader, criterion, optimizer, device)
@@ -425,7 +429,7 @@ def validate_epoch_test(model, dataloader, criterion, device):
 
 
 # save model locally
-def save_model(model,saving_path, saving_name):
+def save_model(model, saving_path, saving_name):
     
     if not os.path.exists(saving_path):
         os.makedirs(saving_path)

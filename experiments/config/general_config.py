@@ -49,6 +49,6 @@ checkpoint_top_n = 2
 
 early_stop_thresh = 2
 
-save_state = False
+save_state = True
 
 

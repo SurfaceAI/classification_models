@@ -11,6 +11,7 @@ from sklearn.model_selection import StratifiedShuffleSplit
 from sklearn.model_selection import train_test_split
 import copy
 import os
+from typing import Any, Callable, cast, Dict, List, Optional, Tuple, Union
 from experiments.config import general_config
 from src import constants
 from tqdm import tqdm
@@ -87,8 +88,8 @@ class FlattenFolders(datasets.ImageFolder):
 
         return flattened_classes, flattened_class_to_idx
     
+    @staticmethod
     def make_dataset(
-        self,
         directory,
         flattened_class_to_idx = None,
         extensions = None,
@@ -147,6 +148,73 @@ class FlattenFolders(datasets.ImageFolder):
 
         return instances
 
+# VisionDataset instead of Dataset only used due to __repr__
+class PredictImageFolder(datasets.VisionDataset):
+    def __init__(
+        self,
+        root: str,
+        loader: Callable[[str], Any] = datasets.folder.default_loader,
+        transform: Optional[Callable] = None,
+        is_valid_file: Optional[Callable[[str], bool]] = None,
+    ) -> None:
+        super().__init__(root, transform=transform)
+        extensions = datasets.folder.IMG_EXTENSIONS if is_valid_file is None else None
+        samples = self.make_dataset(self.root, extensions, is_valid_file)
+
+        self.loader = loader
+        self.extensions = extensions
+        self.samples = samples
+
+    @staticmethod
+    def make_dataset(
+        directory: str,
+        extensions: Optional[Union[str, Tuple[str, ...]]] = None,
+        is_valid_file: Optional[Callable[[str], bool]] = None,
+    ) -> List[str]:
+        """Generates a list of samples of a form "path_to_sample"
+        """
+        directory = os.path.expanduser(directory)
+
+        both_none = extensions is None and is_valid_file is None
+        both_something = extensions is not None and is_valid_file is not None
+        if both_none or both_something:
+            raise ValueError("Both extensions and is_valid_file cannot be None or not None at the same time")
+
+        if extensions is not None:
+
+            def is_valid_file(x: str) -> bool:
+                return datasets.folder.has_file_allowed_extension(x, extensions)  # type: ignore[arg-type]
+
+        is_valid_file = cast(Callable[[str], bool], is_valid_file)
+
+        instances = []
+        for root, _, fnames in sorted(os.walk(directory, followlinks=True)):
+            for fname in sorted(fnames):
+                path = os.path.join(root, fname)
+                if is_valid_file(path):
+                    instances.append(path)
+
+        return instances
+    
+    def __getitem__(self, index: int) -> Tuple[Any, Any]:
+        """
+        Args:
+            index (int): Index
+
+        Returns:
+            tuple: (sample, id) where id is file name w/o extension.
+        """
+        path = self.samples[index]
+        sample = self.loader(path)
+        if self.transform is not None:
+            sample = self.transform(sample)
+        id = os.path.splitext(os.path.split(path)[-1])[0]
+        
+        return sample, id
+
+    def __len__(self) -> int:
+        return len(self.samples)
+
 
 #Here we read images that are not sorted in subfolders
 class TestImages(Dataset):
@@ -183,8 +251,9 @@ def create_train_validation_datasets(data_root, dataset, selected_classes, valid
         
         complete_dataset = FlattenFolders(data_path, selected_classes=selected_classes)
     # surface or smoothness for surface type if level is not flatten
-    elif type_class is not None:
-        data_path = os.path.join(data_path, type_class)
+    else:
+        if type_class is not None:
+            data_path = os.path.join(data_path, type_class)
 
         # create complete dataset
         complete_dataset = PartialImageFolder(data_path, selected_classes=selected_classes)
@@ -242,21 +311,23 @@ def create_test_dataset(data_root, dataset, general_transform, random_state):
 
 
 
-def load_normalization(normalization_type, data_root, dataset):
+def load_normalization(normalization, data_root, dataset):
 
-    tuple_mean_sd = None
-    if normalization_type == 'imagenet':
+    if isinstance(normalization, tuple):
+        tuple_mean_sd = normalization
+    elif normalization == 'imagenet':
         tuple_mean_sd = (constants.IMAGNET_MEAN, constants.IMAGNET_SD)
-    elif normalization_type == 'from_data':
-        dataset_name = dataset
-        dataset_name.replace('/', '_')
+    elif normalization == 'from_data':
+        dataset_name = dataset.replace('/', '_')
         mean_name = f'{dataset_name.upper()}_MEAN'
         mean_value = getattr(constants, mean_name, None)
         sd_name = f'{dataset_name.upper()}_SD'
         sd_value = getattr(constants, sd_name, None)
         if mean_value is None or sd_value is None:
             mean_value, sd_value = calculate_dataset_normalization(data_root, dataset)
-        tuple_mean_sd =(mean_value, sd_value)
+        tuple_mean_sd = (mean_value, sd_value)
+    else:
+        tuple_mean_sd = None
 
     return tuple_mean_sd
     
@@ -293,9 +364,9 @@ def calculate_dataset_normalization(data_root, dataset):
     folder = Path(__file__).parent
 
     with open(os.path.join(folder, 'constants.py'), 'a') as f:
-        dataset.replace('/', '_')
-        f.write(f'\n{f"{dataset.upper()}_MEAN"} = {total_mean}\n')
-        f.write(f'{f"{dataset.upper()}_SD"} = {total_std}\n')
+        dataset_name = dataset.replace('/', '_')
+        f.write(f'\n{f"{dataset_name.upper()}_MEAN"} = {total_mean}\n')
+        f.write(f'{f"{dataset_name.upper()}_SD"} = {total_std}\n')
     
     return total_mean, total_std
 

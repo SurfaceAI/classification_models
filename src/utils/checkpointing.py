@@ -6,7 +6,7 @@ from src import constants
 # from https://gist.github.com/amaarora/a2d88bfa971ce89aa5a13e006a7c94e5
 
 class CheckpointSaver:
-    def __init__(self, dirpath, saving_name, decreasing=True, config=None, top_n=constants.CHECKPOINT_DEFAULT_TOP_N, early_stop_thresh=constants.EARLY_STOPPING_DEFAULT, save_state=True):
+    def __init__(self, dirpath, saving_name, decreasing=True, config=None, dataset=None, top_n=constants.CHECKPOINT_DEFAULT_TOP_N, early_stop_thresh=constants.EARLY_STOPPING_DEFAULT, save_state=True):
         """
         dirpath: Directory path where to store all checkpoints
         saving_name: base name to store all checkpoints
@@ -23,7 +23,8 @@ class CheckpointSaver:
         self.saving_name = saving_name
         self.top_n = top_n 
         self.decreasing = decreasing
-        self.config = config
+        self.config = dict(config)
+        self.dataset = dataset
         self.early_stop_thresh = early_stop_thresh
         self.early_stop = False
         self.top_model_paths = []
@@ -41,6 +42,7 @@ class CheckpointSaver:
                 'epoch': epoch,
                 'metric_val': metric_val,
                 'config': self.config,
+                'dataset': self.dataset,
             }
             if self.save_state:
                 data['model_state_dict'] = model.state_dict()
