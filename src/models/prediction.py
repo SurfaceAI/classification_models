@@ -37,7 +37,7 @@ def run_dataset_prediction(name, data_root, dataset, transform, model_root, mode
     start_time = datetime.fromtimestamp(time.time()).strftime("%Y%m%d_%H%M%S")
     saving_name = name + '-' + dataset.replace('/', '_') + '-' + start_time + '.json'
 
-    saving_path = save_predictions(predictions=predictions, saving_dir=predict_dir, saving_name=saving_name)
+    saving_path = save_predictions_json(predictions=predictions, saving_dir=predict_dir, saving_name=saving_name)
 
     print(f'Images {dataset} predicted and saved: {saving_path}')
 
@@ -49,9 +49,9 @@ def recursive_predict(model_dict, model_root, data, batch_size, device):
         predictions = None
     else:
         model_path = os.path.join(model_root, model_dict['trained_model'])
-        model, classes = load_model(model_path=model_path)
+        model, classes, logits_to_prob = load_model(model_path=model_path)
         
-        prediction_outputs, image_ids = predict(model, data, batch_size, device)
+        prediction_outputs, image_ids = predict(model, data, batch_size, logits_to_prob, device)
         # TODO: output/logits to prob function based on model last layer/parser?
         # prediction_props = 
         pred_classes = [classes[idx.item()] for idx in torch.argmax(prediction_outputs, dim=1)]
@@ -81,7 +81,7 @@ def recursive_predict(model_dict, model_root, data, batch_size, device):
     return predictions
 
 
-def predict(model, data, batch_size, device):
+def predict(model, data, batch_size, logits_to_prob, device):
     model.to(device)
     model.eval()
 
@@ -89,7 +89,7 @@ def predict(model, data, batch_size, device):
         data, batch_size=batch_size
     )
     
-    batch_predictions = []
+    batch_pred_probs = []
     ids = []
     with torch.no_grad():
         
@@ -97,12 +97,14 @@ def predict(model, data, batch_size, device):
             inputs = inputs.to(device)
     
             outputs = model(inputs)
-            batch_predictions.append(outputs)
+            probs = logits_to_prob(outputs)
+
+            batch_pred_probs.append(probs)
             ids.extend(id_s)
 
-    predictions = torch.cat(batch_predictions, dim=0)
+    pred_probs = torch.cat(batch_pred_probs, dim=0)
 
-    return predictions, ids
+    return pred_probs, ids
 
 def load_model(model_path):
     model_state = torch.load(model_path)
@@ -111,13 +113,14 @@ def load_model(model_path):
 
     model_cfg = parser.model_name_to_config(model_name)
     model_cls = model_cfg.get('model_cls')
+    logits_to_prob = model_cfg.get('logits_to_prob')
     
     model = model_cls(len(classes))
     model.load_state_dict(model_state['model_state_dict'])
 
-    return model, classes
+    return model, classes, logits_to_prob
 
-def save_predictions(predictions, saving_dir, saving_name):
+def save_predictions_json(predictions, saving_dir, saving_name):
     
     if not os.path.exists(saving_dir):
         os.makedirs(saving_dir)
@@ -127,5 +130,17 @@ def save_predictions(predictions, saving_dir, saving_name):
         json.dump(predictions, f)
 
     return saving_path
+
+def save_predictions_csv(predictions, saving_dir, saving_name):
+    
+    # if not os.path.exists(saving_dir):
+    #     os.makedirs(saving_dir)
+
+    # saving_path = os.path.join(saving_dir, saving_name)
+    # with open(saving_path, "w") as f:
+    #     json.dump(predictions, f)
+
+    # return saving_path
+    pass
 
 

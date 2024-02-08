@@ -96,6 +96,7 @@ def run_training(project=None, name=None, config=None, wandb_on=True):
     model_cfg = parser.model_name_to_config(model_name)
     model_cls = model_cfg.get('model_cls')
     criterion = model_cfg.get('criterion')
+    logits_to_prob = model_cfg.get('logits_to_prob')
     
     optimizer_cls = parser.optim_name_to_class(config.get('optimizer_cls'))
     dataset = config.get('dataset')
@@ -159,6 +160,7 @@ def run_training(project=None, name=None, config=None, wandb_on=True):
         validloader=validloader,
         criterion=criterion,
         optimizer=optimizer,
+        logits_to_prob=logits_to_prob,
         device=device,
         epochs=epochs,
         wandb_on=wandb_on,
@@ -263,6 +265,7 @@ def train(
     validloader,
     criterion,
     optimizer,
+    logits_to_prob,
     device,
     epochs,
     wandb_on,
@@ -277,10 +280,10 @@ def train(
     checkpointer = checkpointing.CheckpointSaver(dirpath=model_saving_path, saving_name=model_saving_name, decreasing=False, config=config, dataset=validloader.dataset, top_n=checkpoint_top_n, early_stop_thresh=early_stop_thresh, save_state=save_state)
 
     for epoch in range(epochs):
-        train_loss, train_accuracy = train_epoch_test(model, trainloader, criterion, optimizer, device)
+        train_loss, train_accuracy = train_epoch_test(model, trainloader, criterion, optimizer, logits_to_prob, device)
 
         val_loss, val_accuracy = validate_epoch_test(
-            model, validloader, criterion, device
+            model, validloader, criterion, logits_to_prob, device
         )
 
         # checkpoint saving with early stopping
@@ -315,7 +318,7 @@ def train(
 
 
 # train a single epoch
-def train_epoch(model, dataloader, criterion, optimizer, device):
+def train_epoch(model, dataloader, criterion, optimizer, logits_to_prob, device):
     model.train()
     criterion.reduction = "sum"
     running_loss = 0.0
@@ -336,7 +339,10 @@ def train_epoch(model, dataloader, criterion, optimizer, device):
         running_loss += loss.item()
 
         # TODO: metric as function, metric_name as input argument
-        predictions = torch.argmax(outputs, dim=1)
+        # TODO: calculation prob from logit based on model
+        probs = logits_to_prob(outputs)
+
+        predictions = torch.argmax(probs, dim=1)
         correct_predictions += (predictions == labels).sum().item()
 
     return running_loss / len(dataloader.sampler), correct_predictions / len(
@@ -345,7 +351,7 @@ def train_epoch(model, dataloader, criterion, optimizer, device):
 
 
 # train a single epoch
-def train_epoch_test(model, dataloader, criterion, optimizer, device):
+def train_epoch_test(model, dataloader, criterion, optimizer, logits_to_prob, device):
     model.train()
     criterion.reduction = "sum"
     running_loss = 0.0
@@ -369,7 +375,9 @@ def train_epoch_test(model, dataloader, criterion, optimizer, device):
 
         running_loss += loss.item()
 
-        predictions = torch.argmax(outputs, dim=1)
+        probs = logits_to_prob(outputs)
+
+        predictions = torch.argmax(probs, dim=1)
         correct_predictions += (predictions == labels).sum().item()
         break
 
@@ -379,7 +387,7 @@ def train_epoch_test(model, dataloader, criterion, optimizer, device):
 
 
 # validate a single epoch
-def validate_epoch(model, dataloader, criterion, device):
+def validate_epoch(model, dataloader, criterion, logits_to_prob, device):
     model.eval()
     criterion.reduction = "sum"
     running_loss = 0.0
@@ -394,7 +402,9 @@ def validate_epoch(model, dataloader, criterion, device):
 
             running_loss += loss.item()
 
-            predictions = torch.argmax(outputs, dim=1)
+            probs = logits_to_prob(outputs)
+
+            predictions = torch.argmax(probs, dim=1)
             correct_predictions += (predictions == labels).sum().item()
 
     return running_loss / len(dataloader.sampler), correct_predictions / len(
@@ -403,7 +413,7 @@ def validate_epoch(model, dataloader, criterion, device):
 
 
 # validate a single epoch
-def validate_epoch_test(model, dataloader, criterion, device):
+def validate_epoch_test(model, dataloader, criterion, logits_to_prob, device):
     model.eval()
     criterion.reduction = "sum"
     running_loss = 0.0
@@ -418,7 +428,9 @@ def validate_epoch_test(model, dataloader, criterion, device):
 
             running_loss += loss.item()
 
-            predictions = torch.argmax(outputs, dim=1)
+            probs = logits_to_prob(outputs)
+
+            predictions = torch.argmax(probs, dim=1)
             correct_predictions += (predictions == labels).sum().item()
 
             break
