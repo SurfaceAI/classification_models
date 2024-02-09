@@ -6,3 +6,5 @@ __pycache__
 wandb
 
 data
+
+trained_models
