@@ -12,7 +12,7 @@ name = "RatekeCNN"
 
 level = constants.SURFACE
 
-model = "rateke" # constants.RATEKE?
+model = constants.RATEKE
 
 individual_params = train_config.fixed_params
 

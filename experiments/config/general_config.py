@@ -37,18 +37,18 @@ augmentation = dict(
 
 # dataset = constants.V4
 # label_type = constants.ANNOTATED
-dataset = 'V4/annotated'
+dataset = 'V6/annotated'
 
 seed = 42
 
 validation_size = 0.2
     
-valid_batch_size = 8 # 48
+valid_batch_size = 48
 
-checkpoint_top_n = 2
+checkpoint_top_n = 1
 
-early_stop_thresh = 2
+early_stop_thresh = 5
 
-save_state = True
+save_state = False
 
 
