@@ -8,13 +8,13 @@ from experiments.config import config_helper
 
 project = constants.PROJECT_SURFACE_SWEEP
 
-name = "efficientnet"
+name = "rateke"
 
 level = constants.SURFACE
 
 # save_name = 'efficientnet_v2_s__nllloss.pt'   # which model will be saved in sweep?
 
-models = [constants.EFFICIENTNET]
+models = [constants.RATEKE]
 
 individual_params = train_config.sweep_params
 

@@ -120,8 +120,8 @@ def run_training(project=None, name=None, config=None, wandb_on=True):
     if len(level) == 2:
         type_class = level[-1]
 
-    data_root = config.get('root/data')
-    model_root = config.get('root/model')
+    data_root = config.get('root_data')
+    model_root = config.get('root_model')
 
     start_time = datetime.fromtimestamp(time.time() if not wandb_on else run.start_time).strftime("%Y%m%d_%H%M%S")
     id = '' if not wandb_on else '-' + run.id
@@ -280,9 +280,9 @@ def train(
     checkpointer = checkpointing.CheckpointSaver(dirpath=model_saving_path, saving_name=model_saving_name, decreasing=False, config=config, dataset=validloader.dataset, top_n=checkpoint_top_n, early_stop_thresh=early_stop_thresh, save_state=save_state)
 
     for epoch in range(epochs):
-        train_loss, train_accuracy = train_epoch_test(model, trainloader, criterion, optimizer, logits_to_prob, device)
+        train_loss, train_accuracy = train_epoch(model, trainloader, criterion, optimizer, logits_to_prob, device)
 
-        val_loss, val_accuracy = validate_epoch_test(
+        val_loss, val_accuracy = validate_epoch(
             model, validloader, criterion, logits_to_prob, device
         )
 

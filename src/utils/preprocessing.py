@@ -361,7 +361,7 @@ def calculate_dataset_normalization(data_root, dataset):
     total_mean = (mean_sum / len(image_loader.sampler)).tolist()
     
     # write values to constants file
-    folder = Path(__file__).parent
+    folder = Path(__file__).parent.parent
 
     with open(os.path.join(folder, 'constants.py'), 'a') as f:
         dataset_name = dataset.replace('/', '_')
