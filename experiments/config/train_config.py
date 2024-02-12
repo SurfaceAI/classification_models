@@ -17,8 +17,8 @@ sweep_params = {
 }
 
 fixed_params = {
-    'batch_size': 8, # 48
-    'epochs': 2,
-    'learning_rate': 0.001,
+    'batch_size': 16,
+    'epochs': 10,
+    'learning_rate': 0.0001,
     'optimizer_cls': constants.OPTI_ADAM,
 }
