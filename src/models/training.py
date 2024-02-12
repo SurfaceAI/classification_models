@@ -301,7 +301,7 @@ def train(
     )
 
     for epoch in range(epochs):
-        train_loss, train_accuracy = train_epoch_test(
+        train_loss, train_accuracy = train_epoch(
             model,
             trainloader,
             criterion,
@@ -310,7 +310,7 @@ def train(
             eval_metric=config.get("eval_metric"),
         )
 
-        val_loss, val_accuracy = validate_epoch_test(
+        val_loss, val_accuracy = validate_epoch(
             model, validloader, criterion, device, config.get("eval_metric")
         )
 
