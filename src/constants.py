@@ -47,21 +47,23 @@ V4 = "V4"
 ANNOTATED = "annotated"
 
 # project names
-PROJECT_SURFACE_FIXED = "test_road-surface-classification-type"
-PROJECT_SURFACE_SWEEP = "test_sweep-road-surface-classification-type"
-PROJECT_SMOOTHNESS_FIXED = "test_road-surface-classification-quality"
-PROJECT_SMOOTHNESS_SWEEP = "test_sweep-road-surface-classification-quality"
-PROJECT_FLATTEN_FIXED = "test_road-surface-classification-flatten"
-PROJECT_FLATTEN_SWEEP = "test_sweep-road-surface-classification-flatten"
+PROJECT_SURFACE_FIXED = "road-surface-classification-type"
+PROJECT_SURFACE_SWEEP = "sweep-road-surface-classification-type"
+PROJECT_SMOOTHNESS_FIXED = "road-surface-classification-quality"
+PROJECT_SMOOTHNESS_SWEEP = "sweep-road-surface-classification-quality"
+PROJECT_FLATTEN_FIXED = "road-surface-classification-flatten"
+PROJECT_FLATTEN_SWEEP = "sweep-road-surface-classification-flatten"
 
 
 # model names
-EFFICIENTNET = "efficient_net_v2_s__logsoftmax"
+EFFICIENTNET = "efficientNetV2SLogsoftmax"
+VGG16 = "vgg16"
+RATEKE = "rateke"
 
 # sweep names
 
 # architecture
-EFFICIENTNET_V2_S = "Efficient Net v2 s"
+# EFFICIENTNET_V2_S = "Efficient Net v2 s"
 
 # optimizer
 OPTI_ADAM = "adam"
@@ -91,3 +93,6 @@ IMAGNET_SD = [0.229, 0.224, 0.225]
 
 V4_ANNOTATED_MEAN = [0.4205051362514496, 0.439302921295166, 0.42983368039131165]
 V4_ANNOTATED_SD = [0.23013851046562195, 0.23709532618522644, 0.2626153826713562]
+
+V6_ANNOTATED_MEAN = [0.4241970479488373, 0.4434114694595337, 0.4307621419429779]
+V6_ANNOTATED_SD = [0.22932860255241394, 0.23517057299613953, 0.26160895824432373]

@@ -109,6 +109,7 @@ def run_training(project=None, name=None, config=None, wandb_on=True):
     model_cfg = parser.model_name_to_config(model_name)
     model_cls = model_cfg.get("model_cls")
     criterion = model_cfg.get("criterion")
+    logits_to_prob = model_cfg.get("logits_to_prob")
 
     optimizer_cls = parser.optim_name_to_class(config.get("optimizer_cls"))
     dataset = config.get("dataset")
@@ -132,8 +133,8 @@ def run_training(project=None, name=None, config=None, wandb_on=True):
     if len(level) == 2:
         type_class = level[-1]
 
-    data_root = config.get("root/data")
-    model_root = config.get("root/model")
+    data_root = config.get("root_data")
+    model_root = config.get("root_model")
 
     start_time = datetime.fromtimestamp(
         time.time() if not wandb_on else run.start_time
@@ -173,6 +174,7 @@ def run_training(project=None, name=None, config=None, wandb_on=True):
         validloader=validloader,
         criterion=criterion,
         optimizer=optimizer,
+        logits_to_prob=logits_to_prob,
         device=device,
         epochs=epochs,
         wandb_on=wandb_on,
@@ -278,6 +280,7 @@ def train(
     validloader,
     criterion,
     optimizer,
+    logits_to_prob,
     device,
     epochs,
     wandb_on,
@@ -306,12 +309,18 @@ def train(
             trainloader,
             criterion,
             optimizer,
+            logits_to_prob,
             device,
             eval_metric=config.get("eval_metric"),
         )
 
         val_loss, val_accuracy = validate_epoch(
-            model, validloader, criterion, device, config.get("eval_metric")
+            model,
+            validloader,
+            criterion,
+            logits_to_prob,
+            evice,
+            config.get("eval_metric"),
         )
 
         # checkpoint saving with early stopping
@@ -348,7 +357,9 @@ def train(
 
 
 # train a single epoch
-def train_epoch(model, dataloader, criterion, optimizer, device, eval_metric):
+def train_epoch(
+    model, dataloader, criterion, optimizer, logits_to_prob, device, eval_metric
+):
     model.train()
     criterion.reduction = "sum"
     running_loss = 0.0
@@ -375,7 +386,8 @@ def train_epoch(model, dataloader, criterion, optimizer, device, eval_metric):
         if isinstance(criterion, nn.MSELoss):
             predictions = outputs
         else:
-            predictions = torch.argmax(outputs, dim=1)
+            probs = logits_to_prob(outputs)
+            predictions = torch.argmax(probs, dim=1)
 
     if eval_metric == const.EVAL_METRIC_ACCURACY:
         eval_metric_value += (predictions == labels).sum().item()
@@ -392,7 +404,9 @@ def train_epoch(model, dataloader, criterion, optimizer, device, eval_metric):
 
 
 # train a single epoch
-def train_epoch_test(model, dataloader, criterion, optimizer, device, eval_metric):
+def train_epoch_test(
+    model, dataloader, criterion, optimizer, logits_to_prob, device, eval_metric
+):
     model.train()
     criterion.reduction = "sum"
     running_loss = 0.0
@@ -423,6 +437,7 @@ def train_epoch_test(model, dataloader, criterion, optimizer, device, eval_metri
         if isinstance(criterion, nn.MSELoss):
             predictions = outputs
         else:
+            probs = logits_to_prob(outputs)
             predictions = torch.argmax(outputs, dim=1)
         break
 
@@ -441,7 +456,7 @@ def train_epoch_test(model, dataloader, criterion, optimizer, device, eval_metri
 
 
 # validate a single epoch
-def validate_epoch(model, dataloader, criterion, device, eval_metric):
+def validate_epoch(model, dataloader, criterion, logits_to_prob, device, eval_metric):
     model.eval()
     criterion.reduction = "sum"
     running_loss = 0.0
@@ -463,7 +478,8 @@ def validate_epoch(model, dataloader, criterion, device, eval_metric):
             if isinstance(criterion, nn.MSELoss):
                 predictions = outputs
             else:
-                predictions = torch.argmax(outputs, dim=1)
+                probs = logits_to_prob(outputs)
+                predictions = torch.argmax(probs, dim=1)
 
             if eval_metric == const.EVAL_METRIC_ACCURACY:
                 eval_metric_value += (predictions == labels).sum().item()
@@ -482,7 +498,9 @@ def validate_epoch(model, dataloader, criterion, device, eval_metric):
 
 
 # validate a single epoch
-def validate_epoch_test(model, dataloader, criterion, device, eval_metric):
+def validate_epoch_test(
+    model, dataloader, criterion, logits_to_prob, device, eval_metric
+):
     model.eval()
     criterion.reduction = "sum"
     running_loss = 0.0
@@ -504,7 +522,8 @@ def validate_epoch_test(model, dataloader, criterion, device, eval_metric):
             if isinstance(criterion, nn.MSELoss):
                 predictions = outputs
             else:
-                predictions = torch.argmax(outputs, dim=1)
+                probs = logits_to_prob(outputs)
+                predictions = torch.argmax(probs, dim=1)
 
             if eval_metric == const.EVAL_METRIC_ACCURACY:
                 eval_metric_value += (predictions == labels).sum().item()

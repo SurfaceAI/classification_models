@@ -14,7 +14,7 @@ class CustomEfficientNetV2SLogsoftmax(nn.Module):
         in_features = model.classifier[-1].in_features
         fc = nn.Sequential(OrderedDict([
             ('fc1', nn.Linear(in_features, num_classes, bias=True)),
-            ('output', nn.LogSoftmax(dim=1))   # criterion = nn.NLLLoss()
+            ('output', nn.LogSoftmax(dim=1))   # criterion = nn.NLLLoss(), logits_to_prob = torch.exp()
             ]))
         model.classifier[-1] = fc
         

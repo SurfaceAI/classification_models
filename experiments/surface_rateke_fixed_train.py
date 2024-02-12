@@ -12,10 +12,10 @@ name = "RatekeCNN"
 
 level = constants.SURFACE
 
-model = "rateke" # constants.RATEKE?
+model = constants.RATEKE
 
 individual_params = train_config.fixed_params
 
 config = config_helper.fixed_config(individual_params=individual_params, model=model)
 
-training.run_fixed_training(config=config, project=project, name=name, level=level, wandb_mode=constants.WANDB_MODE_ON)
+training.run_fixed_training(config=config, project=project, name=name, level=level, wandb_mode=constants.WANDB_MODE_ON, wandb_on=False)

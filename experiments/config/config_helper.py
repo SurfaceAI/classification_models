@@ -28,9 +28,9 @@ def sweep_config(individual_params, models):
         'checkpoint_top_n': {'value': general_config.checkpoint_top_n},
         'early_stop_thresh': {'value': general_config.early_stop_thresh},
         'save_state': {'value': general_config.save_state},
-        'root/data': {'value': general_config.data_training_path},
+        'root_data': {'value': str(general_config.data_training_path)},
         'dataset': {'value': general_config.dataset},
-        'root/model': {'value': general_config.trained_model_path},
+        'root_model': {'value': str(general_config.trained_model_path)},
     }
 
     sweep_params = {
@@ -54,9 +54,9 @@ def fixed_config(individual_params, model):
         'checkpoint_top_n': general_config.checkpoint_top_n,
         'early_stop_thresh': general_config.early_stop_thresh,
         'save_state': general_config.save_state,
-        'root/data': general_config.data_training_path,
+        'root_data': str(general_config.data_training_path),
         'dataset': general_config.dataset,
-        'root/model': general_config.trained_model_path,
+        'root_model': str(general_config.trained_model_path),
     }
 
     fixed_config = {
