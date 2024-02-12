@@ -20,7 +20,13 @@ model_names = {
     const.UNPAVED: "smoothness-unpaved-vgg16Regression-20240212_165445-j0veqa9u_epoch0.pt",
 }
 
-for surface in const.SURFACES:
+for surface in [
+    const.ASPHALT,
+    const.CONCRETE,
+    const.PAVING_STONES,
+    const.SETT,
+    const.UNPAVED,
+]:
     dataset = f"V6/annotated/{surface}"
     name = f"{surface}_prediction"
 
