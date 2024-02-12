@@ -12,6 +12,8 @@ from collections import OrderedDict, Counter
 from datetime import datetime
 import time
 import os
+import argparse
+import json
 from src.utils import preprocessing
 from src import constants
 from src.utils import helper
@@ -301,7 +303,7 @@ def train(
             )
 
         print(
-            f"Epoch {epoch+1}/{epochs}.. ",
+            f"Epoch {epoch+1:>{len(str(epochs))}}/{epochs}.. ",
             f"Train loss: {train_loss:.3f}.. ",
             f"Test loss: {val_loss:.3f}.. ",
             f"Train accuracy: {train_accuracy:.3f}.. ",
@@ -475,3 +477,40 @@ def extract_levels(level, selected_classes):
         level_list.append({'level': level, 'selected_classes': selected_classes})
     
     return level_list
+
+# def main():
+#     # command line args
+#     # name, data_root, dataset, transform, model_root, model_dict, predict_dir, gpu_kernel, batch_size
+#     arg_parser = argparse.ArgumentParser(description='Model Prediction')
+#     arg_parser.add_argument('run_type', type=str, help='Required: run fixed training or sweep: fix or sweep')
+#     arg_parser.add_argument('config', type=str, help='Required: config for training')
+#     arg_parser.add_argument('sweep_counts_tmp', type=int, help='Optional, used for sweep only: max number of runs in sweep')
+#     arg_parser.add_argument('--method', type=str, help='Required, used for sweep only: method for sweep hyperparameter creation')
+#     arg_parser.add_argument('--metric', type=str, help='Optional, used for sweep only: metric for sweep if method is bayes')
+#     arg_parser.add_argument('--project', type=str, help='Optional: wandb project name')
+#     arg_parser.add_argument('--name', type=str, help='Optional: wandb name')
+#     arg_parser.add_argument('--level', type=str, help='Optional: flatten, surface or smoothness')
+#     arg_parser.add_argument('--wandb_mode', type=str, help='Optional: wandb mode (syncing to wandb), default: offline')
+#     arg_parser.add_argument('--wandb_on', type=str, help='Optional, used for fixed training only: initializing wandb, default: on')
+#     arg_parser.add_argument('--sweep_counts', type=int, help='Optional, used for sweep only: max number of runs in sweep')
+    
+#     args = arg_parser.parse_args()
+
+#     config = json.loads(args.config)
+#     if args.method is not None:
+#         method = json.loads(args.method)
+#     if args.metric is not None:
+#         metric = json.loads(args.metric)
+
+#     print(args.sweep_counts_tmp*2)
+
+#     # csv or json
+#     if args.run_type == 'fix':
+#         run_fixed_training(config, args.project, args.name, args.level, args.wandb_mode, args.wandb_on)
+#     elif args.run_type == 'sweep':
+#         run_sweep_training(config, method, metric, args.project, args.name, args.level, args.sweep_counts, args.wandb_mode)
+#     else:
+#         print('no valid run type')
+
+# if __name__ == "__main__":
+#     main()
