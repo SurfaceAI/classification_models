@@ -387,7 +387,7 @@ def train_epoch(
 
         if eval_metric == const.EVAL_METRIC_ACCURACY:
             if isinstance(criterion, nn.MSELoss):
-                predictions = outputs.int()
+                predictions = outputs.round()
             else:
                 probs = logits_to_prob(outputs)
                 predictions = torch.argmax(probs, dim=1)
@@ -429,7 +429,7 @@ def validate_epoch(model, dataloader, criterion, logits_to_prob, device, eval_me
 
             if eval_metric == const.EVAL_METRIC_ACCURACY:
                 if isinstance(criterion, nn.MSELoss):
-                    predictions = outputs.int()
+                    predictions = outputs.round()
                 else:
                     probs = logits_to_prob(outputs)
                     predictions = torch.argmax(probs, dim=1)
