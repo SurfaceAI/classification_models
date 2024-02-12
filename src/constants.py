@@ -3,8 +3,8 @@
 import numpy as np
 
 # weights and biases
-WANDB_MODE_ON = 'online'
-WANDB_MODE_OFF = 'offline'
+WANDB_MODE_ON = "online"
+WANDB_MODE_OFF = "offline"
 WANDB_DEFAULT_SWEEP_COUNTS = 10
 
 # surface types
@@ -22,20 +22,29 @@ BAD = "bad"
 VERY_BAD = "very_bad"
 HORRIBLE = "horrible"
 
+SMOOTHNESS_INT = {
+    EXCELLENT: 1,
+    GOOD: 2,
+    INTERMEDIATE: 3,
+    BAD: 4,
+    VERY_BAD: 5,
+    HORRIBLE: 6,
+}
+
 # classification level
 SURFACE = "surface"
 SMOOTHNESS = "smoothness"
 FLATTEN = "flatten"
 
 # dataset
-V0 = 'V0'
-V1 = 'V1'
-V2 = 'V2'
-V3 = 'V3'
-V4 = 'V4'
+V0 = "V0"
+V1 = "V1"
+V2 = "V2"
+V3 = "V3"
+V4 = "V4"
 
 # label type
-ANNOTATED = 'annotated'
+ANNOTATED = "annotated"
 
 # project names
 PROJECT_SURFACE_FIXED = "road-surface-classification-type"
@@ -57,7 +66,11 @@ RATEKE = "rateke"
 # EFFICIENTNET_V2_S = "Efficient Net v2 s"
 
 # optimizer
-OPTI_ADAM = 'adam'
+OPTI_ADAM = "adam"
+
+# evaluation metrics
+EVAL_METRIC_ACCURACY = "accuracy"
+EVAL_METRIC_MSE = "MSE"
 
 # checkpoint & early stopping
 CHECKPOINT_DEFAULT_TOP_N = 1
@@ -68,11 +81,11 @@ EARLY_STOPPING_DEFAULT = np.Inf
 H256_W256 = (256, 256)
 
 # crop
-CROP_LOWER_MIDDLE_THIRD = 'lower_middle_third'
+CROP_LOWER_MIDDLE_THIRD = "lower_middle_third"
 
 # normalization
-NORM_IMAGENET = 'imagenet'
-NORM_DATA = 'from_data'
+NORM_IMAGENET = "imagenet"
+NORM_DATA = "from_data"
 
 # normalization values
 IMAGNET_MEAN = [0.485, 0.456, 0.406]
