@@ -17,8 +17,10 @@ model = "vgg16Regression"  # TODO: constants.VGG16 ?
 individual_params = train_config.fixed_params
 
 # overwrite custom values
-individual_params["eval_metric"] = constants.EVAL_METRIC_MSE
+individual_params["eval_metric"] = constants.EVAL_METRIC_ACCURACY
 individual_params["epochs"] = 5
+# individual_params["batch_size"] = 8
+# individual_params["valid_batch_size"] = 8
 individual_params["is_regression"] = True
 
 config = config_helper.fixed_config(individual_params=individual_params, model=model)

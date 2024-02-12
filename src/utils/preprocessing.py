@@ -29,8 +29,10 @@ class PartialImageFolder(datasets.ImageFolder):
         loader=datasets.folder.default_loader,
         is_valid_file=None,
         selected_classes=None,
+        is_regression=False,
     ):
         self.selected_classes = selected_classes
+        self.is_regression = is_regression
         super(PartialImageFolder, self).__init__(
             root,
             transform=transform,
@@ -49,10 +51,12 @@ class PartialImageFolder(datasets.ImageFolder):
         if not classes:
             raise FileNotFoundError(f"Couldn't find any class folder in {directory}.")
 
-        class_to_idx = {
-            cls_name: const.SMOOTHNESS_INT[cls_name] for cls_name in classes
-        }
-        # class_to_idx = {cls_name: i for i, cls_name in enumerate(classes)}
+        if self.is_regression:
+            class_to_idx = {
+                cls_name: const.SMOOTHNESS_INT[cls_name] for cls_name in classes
+            }
+        else:
+            class_to_idx = {cls_name: i for i, cls_name in enumerate(classes)}
 
         return classes, class_to_idx
 
@@ -274,6 +278,7 @@ def create_train_validation_datasets(
     general_transform,
     augmentation,
     random_state,
+    is_regression,
     level=None,
     type_class=None,
 ):
@@ -292,43 +297,14 @@ def create_train_validation_datasets(
 
         # create complete dataset
         complete_dataset = PartialImageFolder(
-            data_path, selected_classes=selected_classes
+            data_path,
+            selected_classes=selected_classes,
+            is_regression=is_regression,
         )
 
     if general_transform.get("normalize") is not None:
         general_transform["normalize"] = load_normalization(
             general_transform.get("normalize"), data_root, dataset
-        )
-
-    train_transform = transform(**general_transform, **augmentation)
-    valid_transform = transform(**general_transform)
-
-    train_dataset, valid_dataset = train_validation_split_datasets(
-        complete_dataset,
-        validation_size,
-        train_transform,
-        valid_transform,
-        random_state,
-    )
-
-    return train_dataset, valid_dataset
-
-    # das ist eigentlich die gleiche Funktion wie create_train_validation_datasets bis auf das Aufrufen der Dataset Class mit Flatten Folders. Daher hatte ich mal in der config eine dataset_class eingeführt.
-    # allerdings hat das übergeben aus der config nicht funktioniert, da bräuchte man nochmal eine extra Funktion für, oder?
-    # Gerade ist es etwas unpraktisch, da ich im training die Funktion ändern muss, wenn ich ein flat dataset erzeugen möchte.
-
-    # def create_flat_train_validation_datasets(dataset, label_type, selected_classes, validation_size, general_transform, augmentation, random_state, type_class=None):
-
-    # data path
-    data_root = general_config.data_training_path
-    data_path = os.path.join(data_root, dataset, label_type)
-
-    # create complete dataset
-    complete_dataset = FlattenFolders(data_path, selected_classes=selected_classes)
-
-    if general_transform.get("normalize") is not None:
-        general_transform["normalize"] = load_normalization(
-            general_transform.get("normalize"), dataset, label_type
         )
 
     train_transform = transform(**general_transform, **augmentation)

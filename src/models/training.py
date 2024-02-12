@@ -222,6 +222,7 @@ def prepare_train(
         general_transform=transform,
         augmentation=augment,
         random_state=random_seed,
+        is_regression=config.get("is_regression"),
         level=level,
         type_class=type_class,
     )
@@ -319,7 +320,7 @@ def train(
             validloader,
             criterion,
             logits_to_prob,
-            evice,
+            device,
             config.get("eval_metric"),
         )
 
@@ -383,72 +384,23 @@ def train_epoch(
         running_loss += loss.item()
 
         # TODO: metric as function, metric_name as input argument
-        if isinstance(criterion, nn.MSELoss):
-            predictions = outputs
+
+        if eval_metric == const.EVAL_METRIC_ACCURACY:
+            if isinstance(criterion, nn.MSELoss):
+                predictions = outputs.int()
+            else:
+                probs = logits_to_prob(outputs)
+                predictions = torch.argmax(probs, dim=1)
+            eval_metric_value += (predictions == labels).sum().item()
+
+        elif eval_metric == const.EVAL_METRIC_MSE:
+            if not isinstance(criterion, nn.MSELoss):
+                raise ValueError(
+                    f"Criterion must be nn.MSELoss for eval_metric {eval_metric}"
+                )
+            eval_metric_value = running_loss
         else:
-            probs = logits_to_prob(outputs)
-            predictions = torch.argmax(probs, dim=1)
-
-    if eval_metric == const.EVAL_METRIC_ACCURACY:
-        eval_metric_value += (predictions == labels).sum().item()
-    elif eval_metric == const.EVAL_METRIC_MSE:
-        eval_metric_value += float(
-            loss if isinstance(criterion, nn.MSELoss) else nn.MSELoss()(outputs, labels)
-        )
-    else:
-        raise ValueError(f"Unknown eval_metric: {eval_metric}")
-
-    return running_loss / len(dataloader.sampler), eval_metric_value / len(
-        dataloader.sampler
-    )
-
-
-# train a single epoch
-def train_epoch_test(
-    model, dataloader, criterion, optimizer, logits_to_prob, device, eval_metric
-):
-    model.train()
-    criterion.reduction = "sum"
-    running_loss = 0.0
-    eval_metric_value = 0
-
-    targets = []
-    for _, labels in dataloader:
-        targets.extend(labels.numpy())
-
-    for inputs, labels in dataloader:
-        # helper.multi_imshow(inputs, labels)
-
-        inputs, labels = inputs.to(device), labels.to(device)
-
-        optimizer.zero_grad()
-
-        outputs = model.forward(inputs)
-        # TODO: geht das noch schöner?
-        if isinstance(criterion, nn.MSELoss):
-            outputs = outputs.flatten()
-            labels = labels.float()
-        loss = criterion(outputs, labels)
-        loss.backward()
-        optimizer.step()
-
-        running_loss += loss.item()
-
-        if isinstance(criterion, nn.MSELoss):
-            predictions = outputs
-        else:
-            probs = logits_to_prob(outputs)
-            predictions = torch.argmax(outputs, dim=1)
-        break
-
-    if eval_metric == const.EVAL_METRIC_ACCURACY:
-        eval_metric_value += (predictions == labels).sum().item()
-    elif eval_metric == const.EVAL_METRIC_MSE:
-        eval_metric_value += float(
-            loss if isinstance(criterion, nn.MSELoss) else nn.MSELoss()(outputs, labels)
-        )
-    else:
-        raise ValueError(f"Unknown eval_metric: {eval_metric}")
+            raise ValueError(f"Unknown eval_metric: {eval_metric}")
 
     return running_loss / len(dataloader.sampler), eval_metric_value / len(
         dataloader.sampler
@@ -475,68 +427,22 @@ def validate_epoch(model, dataloader, criterion, logits_to_prob, device, eval_me
 
             running_loss += loss.item()
 
-            if isinstance(criterion, nn.MSELoss):
-                predictions = outputs
-            else:
-                probs = logits_to_prob(outputs)
-                predictions = torch.argmax(probs, dim=1)
-
             if eval_metric == const.EVAL_METRIC_ACCURACY:
+                if isinstance(criterion, nn.MSELoss):
+                    predictions = outputs.int()
+                else:
+                    probs = logits_to_prob(outputs)
+                    predictions = torch.argmax(probs, dim=1)
                 eval_metric_value += (predictions == labels).sum().item()
+
             elif eval_metric == const.EVAL_METRIC_MSE:
-                eval_metric_value += float(
-                    loss
-                    if isinstance(criterion, nn.MSELoss)
-                    else nn.MSELoss()(outputs, labels)
-                )
+                if not isinstance(criterion, nn.MSELoss):
+                    raise ValueError(
+                        f"Criterion must be nn.MSELoss for eval_metric {eval_metric}"
+                    )
+                eval_metric_value = running_loss
             else:
                 raise ValueError(f"Unknown eval_metric: {eval_metric}")
-
-    return running_loss / len(dataloader.sampler), eval_metric_value / len(
-        dataloader.sampler
-    )
-
-
-# validate a single epoch
-def validate_epoch_test(
-    model, dataloader, criterion, logits_to_prob, device, eval_metric
-):
-    model.eval()
-    criterion.reduction = "sum"
-    running_loss = 0.0
-    eval_metric_value = 0
-
-    with torch.no_grad():
-        for inputs, labels in dataloader:
-            inputs, labels = inputs.to(device), labels.to(device)
-
-            outputs = model.forward(inputs)
-
-            if isinstance(criterion, nn.MSELoss):
-                outputs = outputs.flatten()
-                labels = labels.float()
-            loss = criterion(outputs, labels)
-
-            running_loss += loss.item()
-
-            if isinstance(criterion, nn.MSELoss):
-                predictions = outputs
-            else:
-                probs = logits_to_prob(outputs)
-                predictions = torch.argmax(probs, dim=1)
-
-            if eval_metric == const.EVAL_METRIC_ACCURACY:
-                eval_metric_value += (predictions == labels).sum().item()
-            elif eval_metric == const.EVAL_METRIC_MSE:
-                eval_metric_value += float(
-                    loss
-                    if isinstance(criterion, nn.MSELoss)
-                    else nn.MSELoss()(outputs, labels)
-                )
-            else:
-                raise ValueError(f"Unknown eval_metric: {eval_metric}")
-
-            break
 
     return running_loss / len(dataloader.sampler), eval_metric_value / len(
         dataloader.sampler
