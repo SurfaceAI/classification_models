@@ -145,7 +145,6 @@ def run_training(project=None, name=None, config=None, wandb_on=True):
 
     # TODO: testing gpu_kernel = None
     device = torch.device(f"cuda:{gpu_kernel}" if torch.cuda.is_available() else "cpu")
-    device = torch.device("cpu")
     print(device)
 
     trainloader, validloader, model, optimizer = prepare_train(
