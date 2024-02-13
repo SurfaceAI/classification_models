@@ -10,9 +10,9 @@ from src.utils import preprocessing
 from torch.utils.data import DataLoader, Subset
 from datetime import datetime
 import time
-from src.utils import parser
+from src.utils import helper
 from src import constants
-from experiments.config import general_config
+from experiments.config import global_config
 from src.architecture import Rateke_CNN
 from PIL import Image
 import pandas as pd
@@ -79,9 +79,9 @@ def recursive_predict_json(model_dict, model_root, data, batch_size, device):
         predictions = None
     else:
         model_path = os.path.join(model_root, model_dict['trained_model'])
-        model, classes, logits_to_prob = load_model(model_path=model_path)
+        model, classes = load_model(model_path=model_path)
         
-        pred_probs, image_ids = predict(model, data, batch_size, logits_to_prob, device)
+        pred_probs, image_ids = predict(model, data, batch_size, device)
         # TODO: output/logits to prob function based on model last layer/parser?
         # prediction_props = 
         pred_classes = [classes[idx.item()] for idx in torch.argmax(pred_probs, dim=1)]
@@ -118,9 +118,9 @@ def recursive_predict_csv(model_dict, model_root, data, batch_size, device, df, 
         pass
     else:
         model_path = os.path.join(model_root, model_dict['trained_model'])
-        model, classes, logits_to_prob = load_model(model_path=model_path)
+        model, classes = load_model(model_path=model_path)
         
-        pred_probs, image_ids = predict(model, data, batch_size, logits_to_prob, device)
+        pred_probs, image_ids = predict(model, data, batch_size, device)
         # TODO: output/logits to prob function based on model last layer/parser?
         # prediction_props = 
         pred_classes = [classes[idx.item()] for idx in torch.argmax(pred_probs, dim=1)]
@@ -146,7 +146,7 @@ def recursive_predict_csv(model_dict, model_root, data, batch_size, device, df, 
 
 
 
-def predict(model, data, batch_size, logits_to_prob, device):
+def predict(model, data, batch_size, device):
     model.to(device)
     model.eval()
 
@@ -162,7 +162,7 @@ def predict(model, data, batch_size, logits_to_prob, device):
             inputs = inputs.to(device)
     
             outputs = model(inputs)
-            probs = logits_to_prob(outputs)
+            probs = model.get_class_probabilies(outputs)
 
             batch_pred_probs.append(probs)
             ids.extend(id_s)
@@ -177,14 +177,13 @@ def load_model(model_path):
     model_name = model_state['config']['model']
     classes = model_state['dataset'].classes
 
-    model_cfg = parser.model_name_to_config(model_name)
+    model_cfg = helper.model_name_to_config(model_name)
     model_cls = model_cfg.get('model_cls')
-    logits_to_prob = model_cfg.get('logits_to_prob')
     
     model = model_cls(len(classes))
     model.load_state_dict(model_state['model_state_dict'])
 
-    return model, classes, logits_to_prob
+    return model, classes
 
 def save_predictions_json(predictions, saving_dir, saving_name):
     

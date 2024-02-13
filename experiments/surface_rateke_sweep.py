@@ -26,4 +26,4 @@ metric = train_config.sweep_metric_acc
 
 sweep_counts = 10
 
-training.run_sweep_training(config_params=config_params, method=method, metric=metric, project=project, name=name, level=level, sweep_counts=sweep_counts, wandb_mode=constants.WANDB_MODE_ON)
+training.run_training(config=config_params, method=method, metric=metric, project=project, name=name, level=level, sweep_counts=sweep_counts, wandb_mode=constants.WANDB_MODE_ON)

@@ -32,7 +32,15 @@ class ConvNet(nn.Module):
             nn.ReLU()) 
         
         self.fc2 = nn.Linear(256, num_classes, bias=True)
+        if num_classes == 1:
+            self.criterion = nn.MSELoss
+        else:
+            self.criterion = nn.CrossEntropyLoss
       
+    @ staticmethod
+    def get_class_probabilies(x):
+        return nn.functional.softmax(x, dim=1)
+
     def forward(self, x):
         out = self.conv1(x)
         out = self.conv2(out)

@@ -4,7 +4,7 @@ sys.path.append(".")
 
 import os
 
-from experiments.config import general_config
+from experiments.config import global_config
 from src import constants as const
 from src.models import prediction
 from src.utils import preprocessing
@@ -30,13 +30,13 @@ for surface in [
     dataset = f"V6/annotated/{surface}"
     name = f"{surface}_prediction"
 
-    data_root = general_config.data_training_path
+    data_root = global_config.data_training_path
 
     model_dict = {"trained_model": model_names[surface]}
 
-    model_root = general_config.trained_model_path
+    model_root = global_config.trained_model_path
 
-    predict_dir = os.path.join(general_config.data_training_path, "prediction")
+    predict_dir = os.path.join(global_config.data_training_path, "prediction")
 
     # TODO: predefine transformation for inference
     transform = {
@@ -46,7 +46,7 @@ for surface in [
     }
     transform = preprocessing.transform(**transform)
 
-    gpu_kernel = general_config.gpu_kernel
+    gpu_kernel = global_config.gpu_kernel
 
     batch_size = 8
 

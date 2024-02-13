@@ -14,7 +14,7 @@ level = constants.SMOOTHNESS
 
 model = "vgg16" # TODO: constants.VGG16 ?
 
-individual_params = train_config.fixed_params
+individual_params = train_config.default_params
 
 config = config_helper.fixed_config(individual_params=individual_params, model=model)
 
