@@ -59,6 +59,8 @@ PROJECT_FLATTEN_SWEEP = "sweep-road-surface-classification-flatten"
 EFFICIENTNET = "efficientNetV2SLogsoftmax"
 VGG16 = "vgg16"
 RATEKE = "rateke"
+# temporay onla
+VGG16REGRESSION = "vgg16Regression"
 
 # sweep names
 

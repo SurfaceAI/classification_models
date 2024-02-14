@@ -11,6 +11,23 @@ from src.utils import preprocessing
 
 # level or defined by input trained_models?
 # level = constants.FLATTEN # constants.SMOOTHNESS (= CC?) # constants.SURFACE
+data_root = global_config.global_config.get("root_data")
+model_root = global_config.global_config.get("root_model")
+predict_dir = os.path.join(
+    global_config.global_config.get("root_data"), "prediction"
+)
+
+gpu_kernel = global_config.global_config.get("gpu_kernel")
+
+batch_size = 48
+
+# TODO: predefine transformation for inference
+transform = {
+    "resize": const.H256_W256,
+    # "crop": constants.CROP_LOWER_MIDDLE_THIRD,
+    "normalize": (const.V6_ANNOTATED_MEAN, const.V6_ANNOTATED_SD),
+}
+transform = preprocessing.transform(**transform)
 
 model_names = {
     const.ASPHALT: "smoothness-asphalt-vgg16Regression-20240212_165011-ekutirv5_epoch3.pt",
@@ -30,25 +47,7 @@ for surface in [
     dataset = f"V6/annotated/{surface}"
     name = f"{surface}_prediction"
 
-    data_root = global_config.data_training_path
-
     model_dict = {"trained_model": model_names[surface]}
-
-    model_root = global_config.trained_model_path
-
-    predict_dir = os.path.join(global_config.data_training_path, "prediction")
-
-    # TODO: predefine transformation for inference
-    transform = {
-        "resize": const.H256_W256,
-        # "crop": constants.CROP_LOWER_MIDDLE_THIRD,
-        "normalize": (const.V6_ANNOTATED_MEAN, const.V6_ANNOTATED_SD),
-    }
-    transform = preprocessing.transform(**transform)
-
-    gpu_kernel = global_config.gpu_kernel
-
-    batch_size = 8
 
     prediction.run_dataset_prediction_csv(
         name,
