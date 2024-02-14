@@ -60,6 +60,101 @@ class PartialImageFolder(datasets.ImageFolder):
 
         return classes, class_to_idx
 
+def find_flatten_classes(directory, selected_classes):
+    type_classes = sorted(
+        entry.name for entry in os.scandir(directory) if entry.is_dir()
+    )
+
+    # only take the ones that are in selected_classes
+    if selected_classes is not None:
+        type_classes = [
+            c for c in type_classes if c in selected_classes.keys()
+        ]
+    if not type_classes:
+        raise FileNotFoundError(f"Couldn't find any class folder in {directory}.")
+
+    flattened_classes = []
+    # for each type class, we find all the sub-classes and store them separately
+    for type_class in type_classes:
+        type_directory = os.path.join(directory, type_class)
+        quality_classes = sorted(
+            entry.name for entry in os.scandir(type_directory) if entry.is_dir()
+        )
+        quality_classes = [
+            (type_class + "__" + c)
+            for c in quality_classes
+            if c in selected_classes[type_class]
+        ]
+        flattened_classes.extend(quality_classes)
+
+    flattened_class_to_idx = {
+        cls_name: i for i, cls_name in enumerate(flattened_classes)
+    }
+
+    return flattened_classes, flattened_class_to_idx
+
+
+def make_flatten_dataset(
+    directory: str,
+    class_to_idx: Optional[Dict[str, int]] = None,
+    extensions: Optional[Union[str, Tuple[str, ...]]] = None,
+    is_valid_file: Optional[Callable[[str], bool]] = None,
+) -> List[Tuple[str, int]]:
+    
+    directory = os.path.expanduser(directory)
+
+    if class_to_idx is None:
+        _, class_to_idx = find_flatten_classes(directory)
+    elif not class_to_idx:
+        raise ValueError(
+            "'class_to_index' must have at least one entry to collect any samples."
+        )
+
+    both_none = extensions is None and is_valid_file is None
+    both_something = extensions is not None and is_valid_file is not None
+    if both_none or both_something:
+        raise ValueError(
+            "Both extensions and is_valid_file cannot be None or not None at the same time"
+        )
+
+    if extensions is not None:
+
+        def is_valid_file(x: str) -> bool:
+            return has_file_allowed_extension(x, extensions)  # type: ignore[arg-type]
+
+    is_valid_file = cast(Callable[[str], bool], is_valid_file)
+
+    instances = []
+    available_classes = set()
+
+    for target_class in sorted(class_to_idx.keys()):
+        class_index = class_to_idx[target_class]
+
+        t_q_split = target_class.split("__", 1)
+        type_class, quality_class = t_q_split[0], t_q_split[1]
+
+        target_dir = os.path.join(directory, type_class, quality_class)
+
+        if not os.path.isdir(target_dir):
+            continue
+        for root, _, fnames in sorted(os.walk(target_dir, followlinks=True)):
+            for fname in sorted(fnames):
+                path = os.path.join(root, fname)
+                # if is_valid_file(path):
+                item = path, class_index
+                instances.append(item)
+
+                if target_class not in available_classes:
+                    available_classes.add(target_class)
+
+    empty_classes = set(class_to_idx.keys()) - available_classes
+    if empty_classes:
+        msg = f"Found no valid file for the classes {', '.join(sorted(empty_classes))}. "
+        if extensions is not None:
+            msg += f"Supported extensions are: {extensions if isinstance(extensions, str) else ', '.join(extensions)}"
+        raise FileNotFoundError(msg)
+
+    return instances
 
 class FlattenFolders(datasets.ImageFolder):
     def __init__(
@@ -83,99 +178,22 @@ class FlattenFolders(datasets.ImageFolder):
 
     def find_classes(self, directory):
         # find type classes
-        type_classes = sorted(
-            entry.name for entry in os.scandir(directory) if entry.is_dir()
-        )
-
-        # only take the ones that are in selected_classes
-        if self.selected_classes is not None:
-            type_classes = [
-                c for c in type_classes if c in self.selected_classes.keys()
-            ]
-        if not type_classes:
-            raise FileNotFoundError(f"Couldn't find any class folder in {directory}.")
-
-        flattened_classes = []
-        # for each type class, we find all the sub-classes and store them separately
-        for type_class in type_classes:
-            type_directory = os.path.join(directory, type_class)
-            quality_classes = sorted(
-                entry.name for entry in os.scandir(type_directory) if entry.is_dir()
-            )
-            quality_classes = [
-                (type_class + "__" + c)
-                for c in quality_classes
-                if c in self.selected_classes[type_class]
-            ]
-            flattened_classes.extend(quality_classes)
-
-        flattened_class_to_idx = {
-            cls_name: i for i, cls_name in enumerate(flattened_classes)
-        }
-
-        return flattened_classes, flattened_class_to_idx
+        return find_flatten_classes(directory, self.selected_classes)
 
     @staticmethod
     def make_dataset(
         directory,
-        flattened_class_to_idx=None,
+        class_to_idx=None,
         extensions=None,
         is_valid_file=None,
     ):
-        directory = os.path.expanduser(directory)
+        if class_to_idx is None:
+            # prevent potential bug since make_dataset() would use the class_to_idx logic of the
+            # find_classes() function, instead of using that of the find_classes() method, which
+            # is potentially overridden and thus could have a different logic.
+            raise ValueError("The class_to_idx parameter cannot be None.")
+        return make_flatten_dataset(directory, class_to_idx, extensions=extensions, is_valid_file=is_valid_file)
 
-        if flattened_class_to_idx is None:
-            _, flattened_class_to_idx = find_classes(directory)
-        elif not flattened_class_to_idx:
-            raise ValueError(
-                "'class_to_index' must have at least one entry to collect any samples."
-            )
-
-        both_none = extensions is None and is_valid_file is None
-        both_something = extensions is not None and is_valid_file is not None
-        if both_none or both_something:
-            raise ValueError(
-                "Both extensions and is_valid_file cannot be None or not None at the same time"
-            )
-
-        # if extensions is not None:
-
-        #     def is_valid_file(x: str) -> bool:
-        #         return has_file_allowed_extension(x, extensions)  # type: ignore[arg-type]
-
-        # is_valid_file = cast(Callable[[str], bool], is_valid_file)
-
-        instances = []
-        available_classes = set()
-
-        for target_class in sorted(flattened_class_to_idx.keys()):
-            class_index = flattened_class_to_idx[target_class]
-
-            t_q_split = target_class.split("__", 1)
-            type_class, quality_class = t_q_split[0], t_q_split[1]
-
-            target_dir = os.path.join(directory, type_class, quality_class)
-
-            if not os.path.isdir(target_dir):
-                continue
-            for root, _, fnames in sorted(os.walk(target_dir, followlinks=True)):
-                for fname in sorted(fnames):
-                    path = os.path.join(root, fname)
-                    # if is_valid_file(path):
-                    item = path, class_index
-                    instances.append(item)
-
-                    if target_class not in available_classes:
-                        available_classes.add(target_class)
-
-        empty_classes = set(flattened_class_to_idx.keys()) - available_classes
-        if empty_classes:
-            msg = f"Found no valid file for the classes {', '.join(sorted(empty_classes))}. "
-            if extensions is not None:
-                msg += f"Supported extensions are: {extensions if isinstance(extensions, str) else ', '.join(extensions)}"
-            raise FileNotFoundError(msg)
-
-        return instances
 
 
 # VisionDataset instead of Dataset only used due to __repr__
