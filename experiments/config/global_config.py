@@ -49,5 +49,5 @@ global_config = dict(
     valid_batch_size = 48,
     checkpoint_top_n = 1,
     early_stop_thresh = 5,
-    save_state = True,
+    save_state = False,
 )

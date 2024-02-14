@@ -92,7 +92,8 @@ sweep_params = {
     "project": const.PROJECT_SURFACE_SWEEP,
     "name": "VGG16-efficientnet",
     "level": const.SURFACE,
-    "sweep_counts": 10,
+    "sweep_counts": 30,
+    "save_state": False,
 }
 
 vgg16_sweep_params = {
