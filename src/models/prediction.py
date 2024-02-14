@@ -9,7 +9,11 @@ from src.utils import preprocessing
 from torch.utils.data import DataLoader, Subset
 from datetime import datetime
 import time
-from src.utils import parser
+from src.utils import helper
+from src import constants
+from experiments.config import global_config
+from src.architecture import Rateke_CNN
+from PIL import Image
 import pandas as pd
 import argparse
 
@@ -39,35 +43,6 @@ def run_dataset_prediction_json(name, data_root, dataset, transform, model_root,
     print(f'Images {dataset} predicted and saved: {saving_path}')
 
 def run_dataset_prediction_csv(name, data_root, dataset, transform, model_root, model_dict, predict_dir, gpu_kernel, batch_size):
-    # TODO: config instead of data_root etc.?
-
-    # decide flatten or surface or CC based on model_dict input!
-
-    # load device
-    device = torch.device(
-        f"cuda:{gpu_kernel}" if torch.cuda.is_available() else "cpu"
-    )
-
-    # prepare data
-    data_path = os.path.join(data_root, dataset)
-    predict_data = preprocessing.PredictImageFolder(root=data_path, transform=transform)
-
-    level = 0
-    columns = ['Image', 'Probability', f'Level_{level}']
-    df = pd.DataFrame(columns=columns)
-
-    recursive_predict_csv(model_dict=model_dict, model_root=model_root, data=predict_data, batch_size=batch_size, device=device, df=df, level=level)
-
-    # save predictions
-    start_time = datetime.fromtimestamp(time.time()).strftime("%Y%m%d_%H%M%S")
-    saving_name = name + '-' + dataset.replace('/', '_') + '-' + start_time + '.csv'
-
-    saving_path = save_predictions_csv(df=df, saving_dir=predict_dir, saving_name=saving_name)
-
-    print(f'Images {dataset} predicted and saved: {saving_path}')
-
-
-def run_labeled_dataset_prediction_csv(name, data_root, dataset, transform, model_root, model_dict, predict_dir, gpu_kernel, batch_size):
     # TODO: config instead of data_root etc.?
 
     # decide flatten or surface or CC based on model_dict input!
@@ -140,29 +115,31 @@ def recursive_predict_csv(model_dict, model_root, data, batch_size, device, df, 
         pass
     else:
         model_path = os.path.join(model_root, model_dict['trained_model'])
-        model, classes, logits_to_prob, is_regression = load_model(model_path=model_path)
+        model, classes, is_regression, valid_dataset = load_model(model_path=model_path)
         
-        pred_outputs, image_ids = predict(model, data, batch_size, logits_to_prob, is_regression, device)
+        pred_outputs, image_ids = predict(model, data, batch_size, is_regression, device)
 
         # compare valid dataset 
-        [image_id in valid_dataset ]
+        # [image_id in valid_dataset ]
+        valid_dataset_ids = [os.path.splitext(os.path.split(id[0])[-1])[0] for id in valid_dataset.samples]
+        is_valid_data = [1 if image_id in valid_dataset_ids else 0]
         
-        columns = ['Image', 'Prediction', f'Level_{level}'] # is_in_valid_dataset / join
+        columns = ['Image', 'Prediction', 'is_in_validation', f'Level_{level}'] # is_in_valid_dataset / join
         pre_cls_entry = []
         if pre_cls is not None:
             columns = columns + [f'Level_{level-1}']
             pre_cls_entry = [pre_cls]
         if is_regression:
             pred_classes = ["outside" if str(pred.item()) not in classes.keyes else classes[str(pred.item())] for pred in pred_outputs.round()]
-            for image_id, pred, cls in zip(image_ids, pred_outputs, pred_classes):
+            for image_id, pred, is_vd, cls in zip(image_ids, pred_outputs, is_valid_data, pred_classes):
                 i = df.shape[0]
-                df.loc[i, columns] = [image_id, pred.item(), cls] + pre_cls_entry
+                df.loc[i, columns] = [image_id, pred.item(), is_vd, cls] + pre_cls_entry
         else:
             pred_classes = [classes[idx.item()] for idx in torch.argmax(pred_outputs, dim=1)]
-            for image_id, pred in zip(image_ids, pred_outputs):
+            for image_id, pred, is_vd in zip(image_ids, pred_outputs, is_valid_data):
                 for cls, prob in zip(classes, pred.tolist()):
                     i = df.shape[0]
-                    df.loc[i, columns] = [image_id, prob, cls] + pre_cls_entry
+                    df.loc[i, columns] = [image_id, prob, is_vd, cls] + pre_cls_entry
             # subclasses not for regression implemented
             for cls in classes:
                 sub_indices = [idx for idx, pred_cls in enumerate(pred_classes) if pred_cls == cls]
@@ -174,7 +151,7 @@ def recursive_predict_csv(model_dict, model_root, data, batch_size, device, df, 
 
 
 
-def predict(model, data, batch_size, logits_to_prob, is_regression, device):
+def predict(model, data, batch_size, is_regression, device):
     model.to(device)
     model.eval()
 
@@ -193,7 +170,7 @@ def predict(model, data, batch_size, logits_to_prob, is_regression, device):
             if is_regression:
                 outputs = outputs.flatten()
             else:
-                outputs = logits_to_prob(outputs)
+                outputs = model.get_class_probabilies(outputs)
 
             outputs.append(outputs)
             ids.extend(batch_ids)
@@ -205,14 +182,10 @@ def predict(model, data, batch_size, logits_to_prob, is_regression, device):
 
 def load_model(model_path):
     model_state = torch.load(model_path)
-    model_name = model_state['config']['model']
+    model_cls = helper.string_to_object(model_state['config']['model'])
     is_regression = model_state['config']["is_regression"]
-    
+    valid_dataset = model_state['dataset']
 
-    model_cfg = parser.model_name_to_config(model_name)
-    model_cls = model_cfg.get('model_cls')
-    logits_to_prob = model_cfg.get('logits_to_prob')
-    
     if is_regression:
         idx_to_classes = model_state['dataset'].idx_to_classes
         classes = {str(i): cls for cls, i in idx_to_classes.items()}
@@ -223,7 +196,7 @@ def load_model(model_path):
     model = model_cls(num_classes)
     model.load_state_dict(model_state['model_state_dict'])
 
-    return model, classes, logits_to_prob, is_regression
+    return model, classes, is_regression, valid_dataset
 
 def save_predictions_json(predictions, saving_dir, saving_name):
     

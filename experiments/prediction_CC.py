@@ -5,7 +5,7 @@ import os
 from src.utils import preprocessing
 from src import constants
 from src.models import prediction
-from experiments.config import general_config
+from experiments.config import global_config
 
 
 name = "test_RatekeCNN_VGG16_prediction"
@@ -19,13 +19,13 @@ model_dict = {'trained_model': 'surface-rateke-20240207_202104-gnzhpn11_epoch0.p
                             },}
 
 
-data_root = general_config.data_training_path
+data_root = global_config.data_training_path
 
 dataset = 'V0/predicted'
 
-model_root = general_config.trained_model_path
+model_root = global_config.trained_model_path
 
-predict_dir = os.path.join(general_config.data_training_path, 'prediction')
+predict_dir = os.path.join(global_config.data_training_path, 'prediction')
 
 # TODO: predefine transformation for inference
 transform = {

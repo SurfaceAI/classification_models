@@ -14,7 +14,7 @@ level = constants.SMOOTHNESS
 
 model = "vgg16Regression"  # TODO: constants.VGG16 ?
 
-individual_params = train_config.fixed_params
+individual_params = train_config.default_params
 
 # overwrite custom values
 individual_params["eval_metric"] = constants.EVAL_METRIC_ACCURACY

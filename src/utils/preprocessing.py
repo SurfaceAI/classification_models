@@ -16,7 +16,7 @@ from torchvision import datasets, transforms
 from torchvision.io import read_image
 from tqdm import tqdm
 
-from experiments.config import general_config
+from experiments.config import global_config
 from src import constants as const
 
 
@@ -24,12 +24,12 @@ class PartialImageFolder(datasets.ImageFolder):
     def __init__(
         self,
         root,
+        is_regression,
+        selected_classes=None,
         transform=None,
         target_transform=None,
         loader=datasets.folder.default_loader,
         is_valid_file=None,
-        selected_classes=None,
-        is_regression=False,
     ):
         self.selected_classes = selected_classes
         self.is_regression = is_regression
@@ -298,8 +298,8 @@ def create_train_validation_datasets(
         # create complete dataset
         complete_dataset = PartialImageFolder(
             data_path,
-            selected_classes=selected_classes,
             is_regression=is_regression,
+            selected_classes=selected_classes,
         )
 
     if general_transform.get("normalize") is not None:
