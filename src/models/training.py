@@ -100,7 +100,7 @@ def _run_training(project=None, name=None, config=None, wandb_on=True):
         augment=config.get("augment"),
         dataset=config.get("dataset"),
         data_root=config.get("root_data"),
-        level=level,
+        level=level[0],
         type_class=type_class,
         selected_classes=config.get("selected_classes"),
         validation_size=config.get("validation_size"),

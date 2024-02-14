@@ -69,7 +69,7 @@ RATEKE = "rateke"
 OPTI_ADAM = "adam"
 
 # evaluation metrics
-EVAL_METRIC_ACCURACY = "accuracy"
+EVAL_METRIC_ACCURACY = "acc"
 EVAL_METRIC_MSE = "MSE"
 
 # checkpoint & early stopping
