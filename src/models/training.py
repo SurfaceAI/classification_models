@@ -1,90 +1,67 @@
 import sys
 
 sys.path.append(".")
-# sys.path.append('..')
 
-import numpy as np
-import torch
-from torch.utils.data import DataLoader, WeightedRandomSampler
-from torch import nn, optim
-from torchvision import models
-from collections import OrderedDict, Counter
-from datetime import datetime
-import time
 import os
-from src.utils import preprocessing
-from src import constants
-from src.utils import helper
-from src.utils import parser
-from src.utils import checkpointing
+import time
+from collections import Counter
+from datetime import datetime
 
-import random
+import torch
+from torch import nn
+from torch.utils.data import DataLoader, WeightedRandomSampler
 
 import wandb
+from src import constants as const
+from src.utils import checkpointing, helper, preprocessing
 
-# TODO: what is the difference to run_training?
-def run_fixed_training(config, project=None, name=None, level=None, wandb_mode=constants.WANDB_MODE_OFF, wandb_on=True):
-    # TODO: doc config
 
-    os.environ["WANDB_MODE"] = wandb_mode
 
-    if wandb_mode == constants.WANDB_MODE_OFF:
-        project = 'OFF_' + project
+def run_training(
+    config,
+    is_sweep=False,
+):
+    os.environ["WANDB_MODE"] = config.get("wandb_mode", const.WANDB_MODE_OFF)
 
-    selected_classes = config.get('selected_classes')
-    level_list = extract_levels(level=level, selected_classes=selected_classes)
-    
-    for level in level_list:
+    project = config.get("project")
+    if os.environ["WANDB_MODE"] == const.WANDB_MODE_OFF:
+        project = "OFF_" + project
+
+    # extract all levels that need training, only multi elements if smoothness is trained
+    # each surface has to be trained seperately
+    to_train_list = extract_levels(
+        level=config.get("level"), selected_classes=config.get("selected_classes")
+    )
+
+    for t in to_train_list:
         config = {
             **config,
-            **level,
-        }
-        run_training(project=project, name=name, config=config, wandb_on=wandb_on)
-        print(f'Level {level} trained.')
-
-    # TODO: save model
-    print('Done.')
-
-def run_sweep_training(config_params, method, metric=None, project=None, name=None, level=None, sweep_counts=constants.WANDB_DEFAULT_SWEEP_COUNTS, wandb_mode=constants.WANDB_MODE_OFF):
-    # TODO: doc config_params
-
-    os.environ["WANDB_MODE"] = wandb_mode
-
-    if wandb_mode == constants.WANDB_MODE_OFF:
-        project = 'OFF_' + project
-
-    selected_classes = config_params.get('selected_classes')['value']
-    level_list = extract_levels(level=level, selected_classes=selected_classes)
-
-    for level in level_list:
-        for key, value in level.items():
-            level[key] = {'value': value}
-
-        sweep_params = {
-            **config_params,
-            **level,
+            **t,
         }
 
-        sweep_config = {
-            'name': name,
-            **method,
-            **metric,
-            'parameters': sweep_params,
-        }
-        
-        sweep_id = wandb.sweep(sweep=sweep_config, project=project)
+        if is_sweep:
+            sweep_id = wandb.sweep(
+                sweep=helper.format_sweep_config(config), project=config.get("project")
+            )
 
-        wandb.agent(sweep_id=sweep_id, function=run_training, count=sweep_counts)
-        # TODO: save/print best model
-        print(f'Level {level} trained.')
+            wandb.agent(
+                sweep_id=sweep_id, function=_run_training, count=config.get("sweep_counts")
+            )
+        else:
+            _run_training(
+            project=project,
+            name=config.get("name"),
+            config=helper.format_config(config),
+            wandb_on=config.get("wandb_on"),
+        )
+            
+        print(f"Level {t} trained.")
 
-    
+    print("Done.")
 
-    print('Done.')
 
 # main for sweep and single training
-def run_training(project=None, name=None, config=None, wandb_on=True):
-
+def _run_training(project=None, name=None, config=None, wandb_on=True):
     # TODO: config sweep ...
     if wandb_on:
         run = wandb.init(project=project, name=name, config=config)
@@ -92,83 +69,63 @@ def run_training(project=None, name=None, config=None, wandb_on=True):
         # best instead of last value for metric
         wandb.define_metric("eval/acc", summary="max")
 
-    model_name = config.get('model')
-    model_cfg = parser.model_name_to_config(model_name)
-    model_cls = model_cfg.get('model_cls')
-    criterion = model_cfg.get('criterion')
-    logits_to_prob = model_cfg.get('logits_to_prob')
-    
-    optimizer_cls = parser.optim_name_to_class(config.get('optimizer_cls'))
-    dataset = config.get('dataset')
-    selected_classes = config.get('selected_classes')
-    validation_size = config.get('validation_size')
-    batch_size = config.get('batch_size')
-    valid_batch_size = config.get('valid_batch_size')
-    learning_rate = config.get('learning_rate')
-    epochs = config.get('epochs')
-    seed = config.get('seed')
-    general_transform = config.get("transform")
-    augment = config.get("augment")
-    gpu_kernel = config.get("gpu_kernel")
-    
-    checkpoint_top_n = config.get("checkpoint_top_n", constants.CHECKPOINT_DEFAULT_TOP_N)
-    early_stop_thresh = config.get("early_stop_thresh", constants.EARLY_STOPPING_DEFAULT)
-    save_state = config.get("save_state", True)
+    model_cls = helper.string_to_object(config.get("model"))
+    optimizer_cls = helper.string_to_object(config.get("optimizer"))
 
-    level = config.get('level').split('/',1)
+    level = config.get("level").split("/", 1)
     type_class = None
     if len(level) == 2:
         type_class = level[-1]
 
-    data_root = config.get('root_data')
-    model_root = config.get('root_model')
+    start_time = datetime.fromtimestamp(
+        time.time() if not wandb_on else run.start_time
+    ).strftime("%Y%m%d_%H%M%S")
+    id = "" if not wandb_on else "-" + run.id
+    saving_name = (
+        "-".join(level) + "-" + config.get("model") + "-" + start_time + id + ".pt"
+    )
 
-    start_time = datetime.fromtimestamp(time.time() if not wandb_on else run.start_time).strftime("%Y%m%d_%H%M%S")
-    id = '' if not wandb_on else '-' + run.id
-    saving_name = '-'.join(level) + '-' + model_name + '-' + start_time + id + '.pt'
+    torch.manual_seed(config.get("seed"))
 
-    torch.manual_seed(seed)
-    
     # TODO: testing gpu_kernel = None
     device = torch.device(
-        f"cuda:{gpu_kernel}" if torch.cuda.is_available() else "cpu"
+        f"cuda:{config.get('gpu_kernel')}" if torch.cuda.is_available() else "cpu"
     )
     print(device)
 
     trainloader, validloader, model, optimizer = prepare_train(
         model_cls=model_cls,
         optimizer_cls=optimizer_cls,
-        transform=general_transform,
-        augment=augment,
-        dataset=dataset,
-        data_root=data_root,
-        level=level,
+        transform=config.get("transform"),
+        augment=config.get("augment"),
+        dataset=config.get("dataset"),
+        data_root=config.get("root_data"),
+        level=level[0],
         type_class=type_class,
-        selected_classes=selected_classes,
-        validation_size=validation_size,
-        batch_size=batch_size,
-        valid_batch_size=valid_batch_size,
-        learning_rate=learning_rate,
-        random_seed=seed
+        selected_classes=config.get("selected_classes"),
+        validation_size=config.get("validation_size"),
+        batch_size=config.get("batch_size"),
+        valid_batch_size=config.get("valid_batch_size"),
+        learning_rate=config.get("learning_rate"),
+        random_seed=config.get("seed"),
+        is_regression=config.get("is_regression"),
     )
 
     trained_model = train(
         model=model,
-        model_saving_path=model_root,
+        model_saving_path=config.get("root_model"),
         model_saving_name=saving_name,
         trainloader=trainloader,
         validloader=validloader,
-        criterion=criterion,
         optimizer=optimizer,
-        logits_to_prob=logits_to_prob,
+        eval_metric=config.get("eval_metric"),
         device=device,
-        epochs=epochs,
+        epochs=config.get("epochs"),
         wandb_on=wandb_on,
-        checkpoint_top_n=checkpoint_top_n,
-        early_stop_thresh=early_stop_thresh,
-        save_state=save_state,
+        checkpoint_top_n=config.get("checkpoint_top_n", const.CHECKPOINT_DEFAULT_TOP_N),
+        early_stop_thresh=config.get("early_stop_thresh", const.EARLY_STOPPING_DEFAULT),
+        save_state=config.get("save_state", True),
         config=config,
-
     )
 
     # TODO: save best instead of last model (if checkpoint used)
@@ -178,9 +135,8 @@ def run_training(project=None, name=None, config=None, wandb_on=True):
 
     if wandb_on:
         wandb.finish()
-        
-    return trained_model #, model_path
-    
+
+    return trained_model  # , model_path
 
     # wandb.save(model_path)
 
@@ -200,6 +156,7 @@ def prepare_train(
     valid_batch_size,
     learning_rate,
     random_seed,
+    is_regression,
 ):
     train_data, valid_data = preprocessing.create_train_validation_datasets(
         data_root=data_root,
@@ -209,28 +166,30 @@ def prepare_train(
         general_transform=transform,
         augmentation=augment,
         random_state=random_seed,
+        is_regression=is_regression,
         level=level,
         type_class=type_class,
     )
 
     # torch.save(valid_data, os.path.join(general_config.save_path, "valid_data.pt"))
-    print(f'classes: {train_data.class_to_idx}')
+    print(f"classes: {train_data.class_to_idx}")
 
     # TODO: loader in preprocessing?
     # TODO: weighted sampling on/off?
     class_counts = Counter(train_data.targets)
-    sample_weights = [1/class_counts[i] for i in train_data.targets]
+    sample_weights = [1 / class_counts[i] for i in train_data.targets]
     sampler = WeightedRandomSampler(weights=sample_weights, num_samples=len(train_data))
 
     trainloader = DataLoader(
         train_data, batch_size=batch_size, sampler=sampler
-    )    # shuffle=True only if no sampler defined
-    validloader = DataLoader(
-        valid_data, batch_size=valid_batch_size
-    )
+    )  # shuffle=True only if no sampler defined
+    validloader = DataLoader(valid_data, batch_size=valid_batch_size)
 
     # load model
-    num_classes = len(train_data.classes)
+    if is_regression:
+        num_classes = 1
+    else:
+        num_classes = len(train_data.classes)
 
     # instanciate model with number of classes
     model = model_cls(num_classes)
@@ -256,6 +215,7 @@ def prepare_train(
 
     return trainloader, validloader, model, optimizer
 
+
 # train the model
 def train(
     model,
@@ -263,49 +223,68 @@ def train(
     model_saving_name,
     trainloader,
     validloader,
-    criterion,
     optimizer,
-    logits_to_prob,
+    eval_metric,
     device,
     epochs,
     wandb_on,
-    checkpoint_top_n=constants.CHECKPOINT_DEFAULT_TOP_N,
-    early_stop_thresh=constants.EARLY_STOPPING_DEFAULT,
+    checkpoint_top_n=const.CHECKPOINT_DEFAULT_TOP_N,
+    early_stop_thresh=const.EARLY_STOPPING_DEFAULT,
     save_state=True,
     config=None,
 ):
     model.to(device)
 
     # TODO: decresing depending on metric
-    checkpointer = checkpointing.CheckpointSaver(dirpath=model_saving_path, saving_name=model_saving_name, decreasing=False, config=config, dataset=validloader.dataset, top_n=checkpoint_top_n, early_stop_thresh=early_stop_thresh, save_state=save_state)
+    checkpointer = checkpointing.CheckpointSaver(
+        dirpath=model_saving_path,
+        saving_name=model_saving_name,
+        decreasing=False,
+        config=config,
+        dataset=validloader.dataset,
+        top_n=checkpoint_top_n,
+        early_stop_thresh=early_stop_thresh,
+        save_state=save_state,
+    )
 
     for epoch in range(epochs):
-        train_loss, train_accuracy = train_epoch(model, trainloader, criterion, optimizer, logits_to_prob, device)
+        train_loss, train_accuracy = train_epoch(
+            model,
+            trainloader,
+            optimizer,
+            device,
+            eval_metric=eval_metric,
+        )
 
         val_loss, val_accuracy = validate_epoch(
-            model, validloader, criterion, logits_to_prob, device
+            model,
+            validloader,
+            device,
+            eval_metric,
         )
 
         # checkpoint saving with early stopping
-        early_stop = checkpointer(model=model, epoch=epoch, metric_val=val_accuracy, optimizer=optimizer)
+        early_stop = checkpointer(
+            model=model, epoch=epoch, metric_val=val_accuracy, optimizer=optimizer
+        )
 
         if wandb_on:
             wandb.log(
                 {
                     "epoch": epoch + 1,
                     "train/loss": train_loss,
-                    "train/acc": train_accuracy,
+                    "train/acc": train_accuracy,  # TODO: metric not necessarily accuracy
                     "eval/loss": val_loss,
-                    "eval/acc": val_accuracy,
+                    "eval/acc": val_accuracy,  # TODO: metric not necessarily accuracy
                 }
             )
 
         print(
-            f"Epoch {epoch+1}/{epochs}.. ",
+            f"Epoch {epoch+1:>{len(str(epochs))}}/{epochs}.. ",
             f"Train loss: {train_loss:.3f}.. ",
             f"Test loss: {val_loss:.3f}.. ",
-            f"Train accuracy: {train_accuracy:.3f}.. ",
-            f"Test accuracy: {val_accuracy:.3f}",
+            f"Train {eval_metric}: {train_accuracy:.3f}.. ",
+            f"Test {eval_metric}: {val_accuracy:.3f}",
         )
 
         if early_stop:
@@ -318,11 +297,11 @@ def train(
 
 
 # train a single epoch
-def train_epoch(model, dataloader, criterion, optimizer, logits_to_prob, device):
+def train_epoch(model, dataloader, optimizer, device, eval_metric):
     model.train()
-    criterion.reduction = "sum"
+    criterion = model.criterion(reduction="sum")
     running_loss = 0.0
-    correct_predictions = 0
+    eval_metric_value = 0
 
     for inputs, labels in dataloader:
         # helper.multi_imshow(inputs, labels)
@@ -332,6 +311,9 @@ def train_epoch(model, dataloader, criterion, optimizer, logits_to_prob, device)
         optimizer.zero_grad()
 
         outputs = model.forward(inputs)
+        if isinstance(criterion, nn.MSELoss):
+            outputs = outputs.flatten()
+            labels = labels.float()
         loss = criterion(outputs, labels)
         loss.backward()
         optimizer.step()
@@ -339,110 +321,73 @@ def train_epoch(model, dataloader, criterion, optimizer, logits_to_prob, device)
         running_loss += loss.item()
 
         # TODO: metric as function, metric_name as input argument
-        # TODO: calculation prob from logit based on model
-        probs = logits_to_prob(outputs)
 
-        predictions = torch.argmax(probs, dim=1)
-        correct_predictions += (predictions == labels).sum().item()
+        if eval_metric == const.EVAL_METRIC_ACCURACY:
+            if isinstance(criterion, nn.MSELoss):
+                predictions = outputs.round()
+            else:
+                probs = model.get_class_probabilies(outputs)
+                predictions = torch.argmax(probs, dim=1)
+            eval_metric_value += (predictions == labels).sum().item()
 
-    return running_loss / len(dataloader.sampler), correct_predictions / len(
-        dataloader.sampler
-    )
+        elif eval_metric == const.EVAL_METRIC_MSE:
+            if not isinstance(criterion, nn.MSELoss):
+                raise ValueError(
+                    f"Criterion must be nn.MSELoss for eval_metric {eval_metric}"
+                )
+            eval_metric_value = running_loss
+        else:
+            raise ValueError(f"Unknown eval_metric: {eval_metric}")
 
-
-# train a single epoch
-def train_epoch_test(model, dataloader, criterion, optimizer, logits_to_prob, device):
-    model.train()
-    criterion.reduction = "sum"
-    running_loss = 0.0
-    correct_predictions = 0
-    
-    targets = []
-    for _, labels in dataloader:
-        targets.extend(labels.numpy())
-
-    for inputs, labels in dataloader:
-        # helper.multi_imshow(inputs, labels)
-
-        inputs, labels = inputs.to(device), labels.to(device)
-
-        optimizer.zero_grad()
-
-        outputs = model.forward(inputs)
-        loss = criterion(outputs, labels)
-        loss.backward()
-        optimizer.step()
-
-        running_loss += loss.item()
-
-        probs = logits_to_prob(outputs)
-
-        predictions = torch.argmax(probs, dim=1)
-        correct_predictions += (predictions == labels).sum().item()
-        break
-
-    return running_loss / len(dataloader.sampler), correct_predictions / len(
+    return running_loss / len(dataloader.sampler), eval_metric_value / len(
         dataloader.sampler
     )
 
 
 # validate a single epoch
-def validate_epoch(model, dataloader, criterion, logits_to_prob, device):
+def validate_epoch(model, dataloader, device, eval_metric):
     model.eval()
-    criterion.reduction = "sum"
+    criterion = model.criterion(reduction="sum")
     running_loss = 0.0
-    correct_predictions = 0
+    eval_metric_value = 0
 
     with torch.no_grad():
         for inputs, labels in dataloader:
             inputs, labels = inputs.to(device), labels.to(device)
 
             outputs = model.forward(inputs)
+
+            if isinstance(criterion, nn.MSELoss):
+                outputs = outputs.flatten()
+                labels = labels.float()
             loss = criterion(outputs, labels)
 
             running_loss += loss.item()
 
-            probs = logits_to_prob(outputs)
+            if eval_metric == const.EVAL_METRIC_ACCURACY:
+                if isinstance(criterion, nn.MSELoss):
+                    predictions = outputs.round()
+                else:
+                    probs = model.get_class_probabilies(outputs)
+                    predictions = torch.argmax(probs, dim=1)
+                eval_metric_value += (predictions == labels).sum().item()
 
-            predictions = torch.argmax(probs, dim=1)
-            correct_predictions += (predictions == labels).sum().item()
+            elif eval_metric == const.EVAL_METRIC_MSE:
+                if not isinstance(criterion, nn.MSELoss):
+                    raise ValueError(
+                        f"Criterion must be nn.MSELoss for eval_metric {eval_metric}"
+                    )
+                eval_metric_value = running_loss
+            else:
+                raise ValueError(f"Unknown eval_metric: {eval_metric}")
 
-    return running_loss / len(dataloader.sampler), correct_predictions / len(
-        dataloader.sampler
-    )
-
-
-# validate a single epoch
-def validate_epoch_test(model, dataloader, criterion, logits_to_prob, device):
-    model.eval()
-    criterion.reduction = "sum"
-    running_loss = 0.0
-    correct_predictions = 0
-
-    with torch.no_grad():
-        for inputs, labels in dataloader:
-            inputs, labels = inputs.to(device), labels.to(device)
-
-            outputs = model.forward(inputs)
-            loss = criterion(outputs, labels)
-
-            running_loss += loss.item()
-
-            probs = logits_to_prob(outputs)
-
-            predictions = torch.argmax(probs, dim=1)
-            correct_predictions += (predictions == labels).sum().item()
-
-            break
-
-    return running_loss / len(dataloader.sampler), correct_predictions / len(
+    return running_loss / len(dataloader.sampler), eval_metric_value / len(
         dataloader.sampler
     )
 
 
 # save model locally
 def save_model(model, saving_path, saving_name):
-    
     if not os.path.exists(saving_path):
         os.makedirs(saving_path)
 
@@ -461,17 +406,63 @@ def load_wandb_model(model_name, run_path):
 
     return model
 
+
 def extract_levels(level, selected_classes):
     # TODO: selected_classes must not be None (for surface/smoothness), but None should be possible (=all classes)
-    level_list = []
-    if level == constants.FLATTEN:
-        level_list.append({'level': level, 'selected_classes': selected_classes})
-    elif level == constants.SURFACE:
-        level_list.append({'level': level, 'selected_classes': list(selected_classes.keys())})     
-    elif level == constants.SMOOTHNESS:
+    to_train_list = []
+    if level == const.FLATTEN:
+        to_train_list.append({"level": level, "selected_classes": selected_classes})
+    elif level == const.SURFACE:
+        to_train_list.append(
+            {"level": level, "selected_classes": list(selected_classes.keys())}
+        )
+    elif level == const.SMOOTHNESS:
         for type_class in selected_classes.keys():
-            level_list.append({'level': level + '/' + type_class, 'selected_classes': selected_classes[type_class]}) 
+            to_train_list.append(
+                {
+                    "level": level + "/" + type_class,
+                    "selected_classes": selected_classes[type_class],
+                }
+            )
     else:
-        level_list.append({'level': level, 'selected_classes': selected_classes})
-    
-    return level_list
+        to_train_list.append({"level": level, "selected_classes": selected_classes})
+
+    return to_train_list
+
+
+# def main():
+#     # command line args
+#     # name, data_root, dataset, transform, model_root, model_dict, predict_dir, gpu_kernel, batch_size
+#     arg_parser = argparse.ArgumentParser(description='Model Prediction')
+#     arg_parser.add_argument('run_type', type=str, help='Required: run fixed training or sweep: fix or sweep')
+#     arg_parser.add_argument('config', type=str, help='Required: config for training')
+#     arg_parser.add_argument('sweep_counts_tmp', type=int, help='Optional, used for sweep only: max number of runs in sweep')
+#     arg_parser.add_argument('--method', type=str, help='Required, used for sweep only: method for sweep hyperparameter creation')
+#     arg_parser.add_argument('--metric', type=str, help='Optional, used for sweep only: metric for sweep if method is bayes')
+#     arg_parser.add_argument('--project', type=str, help='Optional: wandb project name')
+#     arg_parser.add_argument('--name', type=str, help='Optional: wandb name')
+#     arg_parser.add_argument('--level', type=str, help='Optional: flatten, surface or smoothness')
+#     arg_parser.add_argument('--wandb_mode', type=str, help='Optional: wandb mode (syncing to wandb), default: offline')
+#     arg_parser.add_argument('--wandb_on', type=str, help='Optional, used for fixed training only: initializing wandb, default: on')
+#     arg_parser.add_argument('--sweep_counts', type=int, help='Optional, used for sweep only: max number of runs in sweep')
+
+#     args = arg_parser.parse_args()
+
+#     config = json.loads(args.config)
+#     if args.method is not None:
+#         method = json.loads(args.method)
+#     if args.metric is not None:
+#         metric = json.loads(args.metric)
+
+#     print(args.sweep_counts_tmp*2)
+
+#     # csv or json
+#     if args.run_type == 'fix':
+#         run_fixed_training(config, args.project, args.name, args.level, args.wandb_mode, args.wandb_on)
+#     elif args.run_type == 'sweep':
+#         run_sweep_training(config, method, metric, args.project, args.name, args.level, args.sweep_counts, args.wandb_mode)
+#     else:
+#         print('no valid run type')
+
+# if __name__ == "__main__":
+#     main()

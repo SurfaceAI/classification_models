@@ -26,6 +26,14 @@ class CustomVGG16(nn.Module):
         self.features = model.features
         self.avgpool = model.avgpool
         self.classifier = model.classifier
+        if num_classes == 1:
+            self.criterion = nn.MSELoss
+        else:
+            self.criterion = nn.CrossEntropyLoss
+
+    @ staticmethod
+    def get_class_probabilies(x):
+        return nn.functional.softmax(x, dim=1)
 
     def forward(self, x):
         x = self.features(x)

@@ -3,6 +3,72 @@ sys.path.append('.')
 
 import numpy as np
 import matplotlib.pyplot as plt
+from torch import optim
+from src import constants as const
+from src.architecture import Rateke_CNN, efficientnet, vgg16
+
+def string_to_object(string):
+
+    string_dict = {
+        const.RATEKE: Rateke_CNN.ConvNet,
+        const.VGG16: vgg16.CustomVGG16,
+        const.VGG16REGRESSION: vgg16.CustomVGG16,
+        const.EFFICIENTNET: efficientnet.CustomEfficientNetV2SLogsoftmax,
+        const.OPTI_ADAM: optim.Adam,
+    }
+
+    return string_dict.get(string)
+
+def format_sweep_config(config):
+    p = {
+        key: value
+        for key, value in config.items()
+        if key in ["name", "method", "metric"]
+    }
+
+    sweep_params = {
+        **{
+            key: {"value": value}
+            for key, value in config.items()
+            if key
+            not in [
+                "transform",
+                "augment",
+                "search_params",
+                "name",
+                "method",
+                "metric",
+                "wandb_mode",
+                "project",
+                "sweep_counts",
+                "wandb_on"
+            ]
+        },
+        "transform": {
+            "parameters": {
+                key: {"value": value} for key, value in config.get("transform").items()
+            }
+        },
+        "augment": {
+            "parameters": {
+                key: {"value": value} for key, value in config.get("augment").items()
+            }
+        },
+        **config.get("search_params"),
+    }
+
+    return {
+        **p,
+        "parameters": sweep_params,
+    }
+
+def format_config(config):
+    return {
+                key: value
+                for key, value in config.items()
+                if key not in ["wandb_mode", "wandb_on", "project", "name"]
+            }
+
 
 # auxiliary visualization function
 
