@@ -161,50 +161,6 @@ def save_predictions_csv(df, saving_dir, saving_name):
     return saving_path
 
 
-# def main():
-#     # command line args
-#     # name, data_root, dataset, transform, model_root, model_dict, predict_dir, gpu_kernel, batch_size
-#     arg_parser = argparse.ArgumentParser(description='Model Prediction')
-#     arg_parser.add_argument('saving_type', type=str, help='Required: saving type of predictions: csv or json')
-#     arg_parser.add_argument('name', type=str, help='Required: name used for saving file name')
-#     arg_parser.add_argument('data_root', type=str, help='Required: root to dataset folder')
-#     arg_parser.add_argument('dataset', type=str, help='Required: dataset folder')
-#     arg_parser.add_argument('transform', type=dict, help='Required: transformation dictionary for dataset')
-#     arg_parser.add_argument('model_root', type=str, help='Required: root where to find the trained models')
-#     arg_parser.add_argument('model_dict', type=dict, help='Required: dictionary defining trained models to use for prediction')
-#     arg_parser.add_argument('predict_dir', type=str, help='Required: directory to save prediction')
-#     arg_parser.add_argument('gpu_kernel', type=int, help='Required: gpu kernel')
-#     arg_parser.add_argument('batch_size', type=int, help='Required: batch size used for prediction')
-    
-#     args = arg_parser.parse_args()
-
-#     # csv or json
-#     if args.saving_type == 'csv':
-#         run_dataset_prediction_csv(args.name,
-#                                    args.data_root,
-#                                    args.dataset,
-#                                    args.transform,
-#                                    args.model_root,
-#                                    args.model_dict,
-#                                    args.predict_dir,
-#                                    args.gpu_kernel,
-#                                    args.batch_size)
-#     elif args.saving_type == 'json':
-#         run_dataset_prediction_json(args.name,
-#                                    args.data_root,
-#                                    args.dataset,
-#                                    args.transform,
-#                                    args.model_root,
-#                                    args.model_dict,
-#                                    args.predict_dir,
-#                                    args.gpu_kernel,
-#                                    args.batch_size)
-#     else:
-#         print('no valid saving format')
-
-# if __name__ == "__main__":
-#     main()
-
 # def run_dataset_prediction_json(name, data_root, dataset, transform, model_root, model_dict, predict_dir, gpu_kernel, batch_size):
 #     # TODO: config instead of data_root etc.?
 
@@ -266,3 +222,35 @@ def save_predictions_csv(df, saving_dir, saving_name):
     
 #     return predictions
 
+def main():
+    '''predict images in folder
+    
+    command line args:
+    - config: with
+        - name
+        - data_root
+        - dataset
+        - transform
+        - model_root
+        - model_dict
+        - predict_dir
+        - gpu_kernel
+        - batch_size
+    - saving_type: (Optional) csv (dafault) or json
+    '''
+    arg_parser = argparse.ArgumentParser(description='Model Prediction')
+    arg_parser.add_argument('config', type=helper.dict_type, help='Required: configuration for prediction')
+    arg_parser.add_argument('--type', type=str, default='csv', help='Optinal: saving type of predictions: csv (default) or json')
+    
+    args = arg_parser.parse_args()
+
+    # csv or json
+    if args.type == 'csv':
+        run_dataset_predict_csv(args.config)
+    # elif args.saving_type == 'json':
+    #     run_dataset_predict_json(args.config)
+    else:
+        print('no valid saving format')
+
+if __name__ == "__main__":
+    main()

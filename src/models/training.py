@@ -14,6 +14,7 @@ from torch.utils.data import DataLoader, WeightedRandomSampler
 import wandb
 from src import constants as const
 from src.utils import checkpointing, helper, preprocessing
+import argparse
 
 
 
@@ -26,7 +27,7 @@ def run_training(
     project = config.get("project")
     if os.environ["WANDB_MODE"] == const.WANDB_MODE_OFF:
         project = "OFF_" + project
-
+    
     # extract all levels that need training, only multi elements if smoothness is trained
     # each surface has to be trained seperately
     to_train_list = extract_levels(
@@ -430,39 +431,25 @@ def extract_levels(level, selected_classes):
     return to_train_list
 
 
-# def main():
-#     # command line args
-#     # name, data_root, dataset, transform, model_root, model_dict, predict_dir, gpu_kernel, batch_size
-#     arg_parser = argparse.ArgumentParser(description='Model Prediction')
-#     arg_parser.add_argument('run_type', type=str, help='Required: run fixed training or sweep: fix or sweep')
-#     arg_parser.add_argument('config', type=str, help='Required: config for training')
-#     arg_parser.add_argument('sweep_counts_tmp', type=int, help='Optional, used for sweep only: max number of runs in sweep')
-#     arg_parser.add_argument('--method', type=str, help='Required, used for sweep only: method for sweep hyperparameter creation')
-#     arg_parser.add_argument('--metric', type=str, help='Optional, used for sweep only: metric for sweep if method is bayes')
-#     arg_parser.add_argument('--project', type=str, help='Optional: wandb project name')
-#     arg_parser.add_argument('--name', type=str, help='Optional: wandb name')
-#     arg_parser.add_argument('--level', type=str, help='Optional: flatten, surface or smoothness')
-#     arg_parser.add_argument('--wandb_mode', type=str, help='Optional: wandb mode (syncing to wandb), default: offline')
-#     arg_parser.add_argument('--wandb_on', type=str, help='Optional, used for fixed training only: initializing wandb, default: on')
-#     arg_parser.add_argument('--sweep_counts', type=int, help='Optional, used for sweep only: max number of runs in sweep')
+def main():
+    '''train image classifier
+    
+    command line args:
+    - config: with
+        - project
+        - name
+        - wandb_mode
+        - config
+        ...
+    - sweep: (Optional) False (dafault) or True
+    '''
+    arg_parser = argparse.ArgumentParser(description='Model Training')
+    arg_parser.add_argument('config', type=helper.dict_type, help='Required: configuration for training')
+    arg_parser.add_argument('--sweep', type=bool, default=False, help='Optinal: Running a sweep or no sweep (default=False)')
+    
+    args = arg_parser.parse_args()
 
-#     args = arg_parser.parse_args()
+    run_training(args.config, args.sweep)
 
-#     config = json.loads(args.config)
-#     if args.method is not None:
-#         method = json.loads(args.method)
-#     if args.metric is not None:
-#         metric = json.loads(args.metric)
-
-#     print(args.sweep_counts_tmp*2)
-
-#     # csv or json
-#     if args.run_type == 'fix':
-#         run_fixed_training(config, args.project, args.name, args.level, args.wandb_mode, args.wandb_on)
-#     elif args.run_type == 'sweep':
-#         run_sweep_training(config, method, metric, args.project, args.name, args.level, args.sweep_counts, args.wandb_mode)
-#     else:
-#         print('no valid run type')
-
-# if __name__ == "__main__":
-#     main()
+if __name__ == "__main__":
+    main()

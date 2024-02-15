@@ -6,6 +6,8 @@ import matplotlib.pyplot as plt
 from torch import optim
 from src import constants as const
 from src.architecture import Rateke_CNN, efficientnet, vgg16
+import json
+import argparse
 
 def string_to_object(string):
 
@@ -68,6 +70,12 @@ def format_config(config):
                 for key, value in config.items()
                 if key not in ["wandb_mode", "wandb_on", "project", "name"]
             }
+
+def dict_type(arg):
+    try:
+        return json.loads(arg)
+    except json.JSONDecodeError:
+        raise argparse.ArgumentTypeError("The argument is no valid dict type.")
 
 
 # auxiliary visualization function
