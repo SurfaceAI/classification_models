@@ -21,6 +21,9 @@ default_search_params = {
 vgg16_params = {
     **global_config.global_config,
     **default_params,
+    "batch_size": 96,
+    "epochs": 20,
+    "learning_rate": 0.00003,
     "project": const.PROJECT_SURFACE_FIXED,
     "name": "VGG16",
     "level": const.SURFACE,
