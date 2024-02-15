@@ -84,6 +84,7 @@ H256_W256 = (256, 256)
 
 # crop
 CROP_LOWER_MIDDLE_THIRD = "lower_middle_third"
+CROP_LOWER_MIDDLE_HALF = "lower_middle_half"
 
 # normalization
 NORM_IMAGENET = "imagenet"
