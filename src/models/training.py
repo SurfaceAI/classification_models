@@ -249,7 +249,7 @@ def train(
     )
 
     for epoch in range(epochs):
-        train_loss, train_accuracy = train_epoch(
+        train_loss, train_metric_value = train_epoch(
             model,
             trainloader,
             optimizer,
@@ -257,7 +257,7 @@ def train(
             eval_metric=eval_metric,
         )
 
-        val_loss, val_accuracy = validate_epoch(
+        val_loss, val_metric_value = validate_epoch(
             model,
             validloader,
             device,
@@ -274,9 +274,9 @@ def train(
                 {
                     "epoch": epoch + 1,
                     "train/loss": train_loss,
-                    "train/acc": train_accuracy,  # TODO: metric not necessarily accuracy
+                    f"train/{eval_metric}": train_metric_value,
                     "eval/loss": val_loss,
-                    "eval/acc": val_accuracy,  # TODO: metric not necessarily accuracy
+                    f"eval/{eval_metric}": val_metric_value,
                 }
             )
 
@@ -284,8 +284,8 @@ def train(
             f"Epoch {epoch+1:>{len(str(epochs))}}/{epochs}.. ",
             f"Train loss: {train_loss:.3f}.. ",
             f"Test loss: {val_loss:.3f}.. ",
-            f"Train {eval_metric}: {train_accuracy:.3f}.. ",
-            f"Test {eval_metric}: {val_accuracy:.3f}",
+            f"Train {eval_metric}: {train_metric_value:.3f}.. ",
+            f"Test {eval_metric}: {val_metric_value:.3f}",
         )
 
         if early_stop:
@@ -324,7 +324,7 @@ def train_epoch(model, dataloader, optimizer, device, eval_metric):
         # TODO: metric as function, metric_name as input argument
 
         if eval_metric == const.EVAL_METRIC_ACCURACY:
-            if isinstance(criterion, nn.MSELoss):
+            if isinstance(criterion, nn.MSELoss): # compare with is_regression for generalization?
                 predictions = outputs.round()
             else:
                 probs = model.get_class_probabilies(outputs)
@@ -332,7 +332,7 @@ def train_epoch(model, dataloader, optimizer, device, eval_metric):
             eval_metric_value += (predictions == labels).sum().item()
 
         elif eval_metric == const.EVAL_METRIC_MSE:
-            if not isinstance(criterion, nn.MSELoss):
+            if not isinstance(criterion, nn.MSELoss): # compare with is_regression for generalization?
                 raise ValueError(
                     f"Criterion must be nn.MSELoss for eval_metric {eval_metric}"
                 )
