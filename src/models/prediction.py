@@ -53,8 +53,7 @@ def run_dataset_prediction_csv(name, data_root, dataset, transform, model_root, 
     )
 
     # prepare data
-    data_path = os.path.join(data_root, dataset)
-    predict_data = preprocessing.PredictImageFolder(root=data_path, transform=transform)
+    predict_data = prepare_data(data_root, dataset, transform)
 
     level = 0
     columns = ['Image', 'Prediction', f'Level_{level}']
@@ -178,6 +177,14 @@ def predict(model, data, batch_size, is_regression, device):
     pred_outputs = torch.cat(outputs, dim=0)
 
     return pred_outputs, ids
+
+def prepare_data(data_root, dataset, transform):
+
+    data_path = os.path.join(data_root, dataset)
+    transform = preprocessing.transform(**transform)
+    predict_data = preprocessing.PredictImageFolder(root=data_path, transform=transform)
+
+    return predict_data
 
 def load_model(model_path, device):
     model_state = torch.load(model_path, map_location=device)

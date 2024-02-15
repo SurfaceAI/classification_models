@@ -33,8 +33,6 @@ transform = {
     # "crop": constants.CROP_LOWER_MIDDLE_THIRD,
     "normalize": (constants.V4_ANNOTATED_MEAN, constants.V4_ANNOTATED_SD),
 }
-transform = preprocessing.transform(**transform)
-
 gpu_kernel = 1
 
 batch_size = 8

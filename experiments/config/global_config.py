@@ -10,6 +10,7 @@ global_config = dict(
     wandb_on=True,
     root_data = str(ROOT_DIR / "data" / "training"),
     root_model = str(ROOT_DIR / "trained_models"),
+    root_predict = str(ROOT_DIR / "data" / "training" / "prediction"),
     data_testing_path = str(ROOT_DIR / "data" / "testing"),
     data_path = str(ROOT_DIR / "data"),
     selected_classes = {

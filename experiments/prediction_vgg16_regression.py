@@ -27,7 +27,6 @@ transform = {
     # "crop": constants.CROP_LOWER_MIDDLE_THIRD,
     "normalize": (const.V6_ANNOTATED_MEAN, const.V6_ANNOTATED_SD),
 }
-transform = preprocessing.transform(**transform)
 
 model_names = {
     const.ASPHALT: "smoothness-asphalt-vgg16Regression-20240212_165011-ekutirv5_epoch3.pt",
