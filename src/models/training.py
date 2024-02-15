@@ -240,7 +240,7 @@ def train(
     checkpointer = checkpointing.CheckpointSaver(
         dirpath=model_saving_path,
         saving_name=model_saving_name,
-        decreasing=False,
+        decreasing=True,
         config=config,
         dataset=validloader.dataset,
         top_n=checkpoint_top_n,
@@ -266,7 +266,7 @@ def train(
 
         # checkpoint saving with early stopping
         early_stop = checkpointer(
-            model=model, epoch=epoch, metric_val=val_accuracy, optimizer=optimizer
+            model=model, epoch=epoch, metric_val=val_loss, optimizer=optimizer
         )
 
         if wandb_on:
