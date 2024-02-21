@@ -9,7 +9,8 @@ from datetime import datetime
 
 import torch
 from torch import nn
-from torch.utils.data import DataLoader, WeightedRandomSampler
+from torch.utils.data import DataLoader, WeightedRandomSampler, Subset
+import random
 
 import wandb
 from src import constants as const
@@ -110,6 +111,7 @@ def _run_training(project=None, name=None, config=None, wandb_on=True):
         learning_rate=config.get("learning_rate"),
         random_seed=config.get("seed"),
         is_regression=config.get("is_regression"),
+        max_class_size=config.get("max_class_size")
     )
 
     trained_model = train(
@@ -158,6 +160,7 @@ def prepare_train(
     learning_rate,
     random_seed,
     is_regression,
+    max_class_size,
 ):
     train_data, valid_data = preprocessing.create_train_validation_datasets(
         data_root=data_root,
@@ -173,18 +176,7 @@ def prepare_train(
     )
 
     # torch.save(valid_data, os.path.join(general_config.save_path, "valid_data.pt"))
-    print(f"classes: {train_data.class_to_idx}")
-
-    # TODO: loader in preprocessing?
-    # TODO: weighted sampling on/off?
-    class_counts = Counter(train_data.targets)
-    sample_weights = [1 / class_counts[i] for i in train_data.targets]
-    sampler = WeightedRandomSampler(weights=sample_weights, num_samples=len(train_data))
-
-    trainloader = DataLoader(
-        train_data, batch_size=batch_size, sampler=sampler
-    )  # shuffle=True only if no sampler defined
-    validloader = DataLoader(valid_data, batch_size=valid_batch_size)
+    # print(f"classes: {train_data.class_to_idx}")
 
     # load model
     if is_regression:
@@ -213,6 +205,42 @@ def prepare_train(
 
     # set parameters to optimize
     optimizer = optimizer_cls(optimizer_params, lr=learning_rate)
+
+    # limit max class size
+    if max_class_size is not None:
+        # define indices with max number of class size
+        indices = []
+        class_counts = {}
+        # TODO: randomize sample picking?
+        for i, label in enumerate(train_data.targets):
+            if label not in class_counts:
+                class_counts[label] = 0
+            if class_counts[label] < max_class_size:
+                indices.append(i)
+                class_counts[label] += 1
+            # stop if all classes are filled
+            if all(count >= max_class_size for count in class_counts.values()):
+                break
+
+        # create a) (Subset with indices + WeightedRandomSampler) or b) (SubsetRandomSampler) (no weighting, if max class size larger than smallest class size!)
+        # b) SubsetRandomSampler ? 
+        #    Samples elements randomly from a given list of indices, without replacement.
+        # a):
+        train_data = Subset(train_data, indices)
+
+        sample_weights = [1.0 / class_counts[label] for _, label in train_data]
+    else:
+        # TODO: loader in preprocessing?
+        # TODO: weighted sampling on/off?
+        class_counts = Counter(train_data.targets)
+        sample_weights = [1.0 / class_counts[label] for label in train_data.targets]
+
+    sampler = WeightedRandomSampler(weights=sample_weights, num_samples=len(train_data))        
+
+    trainloader = DataLoader(
+        train_data, batch_size=batch_size, sampler=sampler
+    )  # shuffle=True only if no sampler defined
+    validloader = DataLoader(valid_data, batch_size=valid_batch_size)
 
     return trainloader, validloader, model, optimizer
 
@@ -339,6 +367,7 @@ def train_epoch(model, dataloader, optimizer, device, eval_metric):
             eval_metric_value = running_loss
         else:
             raise ValueError(f"Unknown eval_metric: {eval_metric}")
+        break
 
     return running_loss / len(dataloader.sampler), eval_metric_value / len(
         dataloader.sampler
@@ -381,6 +410,7 @@ def validate_epoch(model, dataloader, device, eval_metric):
                 eval_metric_value = running_loss
             else:
                 raise ValueError(f"Unknown eval_metric: {eval_metric}")
+            break
 
     return running_loss / len(dataloader.sampler), eval_metric_value / len(
         dataloader.sampler
