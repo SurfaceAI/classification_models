@@ -68,8 +68,11 @@ def _run_training(project=None, name=None, config=None, wandb_on=True):
     if wandb_on:
         run = wandb.init(project=project, name=name, config=config)
         config = wandb.config
-        # best instead of last value for metric
-        wandb.define_metric("eval/acc", summary="max")
+        # TODO: wandb best instead of last value for metric
+        summary = "max" if config.get("eval_metric")==const.EVAL_METRIC_ACCURACY else "min"
+        wandb.define_metric(config.get("eval_metric"), summary=summary)
+        # wandb.define_metric("eval/acc", summary="max")
+        # wandb.define_metric("eval/mse", summary="min")
 
     model_cls = helper.string_to_object(config.get("model"))
     optimizer_cls = helper.string_to_object(config.get("optimizer"))
