@@ -318,7 +318,7 @@ def train(
 
         if early_stop:
             print(f"Early stopped training at epoch {epoch}")
-            # break
+            break
 
     print("Done.")
 
@@ -410,7 +410,7 @@ def validate_epoch(model, dataloader, device, eval_metric):
                 eval_metric_value = running_loss
             else:
                 raise ValueError(f"Unknown eval_metric: {eval_metric}")
-            break
+            # break
 
     return running_loss / len(dataloader.sampler), eval_metric_value / len(
         dataloader.sampler
