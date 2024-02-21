@@ -73,6 +73,7 @@ efficientnet_params = {
     "name": "efficientnet",
     "level": const.SURFACE,
     "model": const.EFFICIENTNET,
+    # "max_class_size": 2,
 }
 
 efficientnet_flatten_params = {
@@ -152,6 +153,23 @@ vgg16_regression_params = {
     "project": const.PROJECT_SMOOTHNESS_FIXED,
     "name": "VGG16_Regression",
     "level": const.SMOOTHNESS,
+    "model": const.VGG16,
+
+}
+
+vgg16_asphalt_regression_params = {
+    **global_config.global_config,
+    **default_params,
+    "batch_size": 48,
+    "epochs": 20,
+    "learning_rate": 0.0001,
+    "is_regression": True,
+    "eval_metric": const.EVAL_METRIC_MSE,
+    "project": const.PROJECT_SMOOTHNESS_FIXED,
+    "name": "VGG16_Regression",
+    "level": const.ASPHALT,
+    "selected_classes": global_config.global_config.get("selected_classes")[const.ASPHALT],
+    "dataset": "V7/annotated/asphalt",
     "model": const.VGG16,
 
 }
