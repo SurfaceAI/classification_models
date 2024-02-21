@@ -9,11 +9,13 @@ from datetime import datetime
 
 import torch
 from torch import nn
-from torch.utils.data import DataLoader, WeightedRandomSampler
+from torch.utils.data import DataLoader, WeightedRandomSampler, Subset
+import random
 
 import wandb
 from src import constants as const
 from src.utils import checkpointing, helper, preprocessing
+import argparse
 
 
 
@@ -26,7 +28,7 @@ def run_training(
     project = config.get("project")
     if os.environ["WANDB_MODE"] == const.WANDB_MODE_OFF:
         project = "OFF_" + project
-
+    
     # extract all levels that need training, only multi elements if smoothness is trained
     # each surface has to be trained seperately
     to_train_list = extract_levels(
@@ -109,6 +111,7 @@ def _run_training(project=None, name=None, config=None, wandb_on=True):
         learning_rate=config.get("learning_rate"),
         random_seed=config.get("seed"),
         is_regression=config.get("is_regression"),
+        max_class_size=config.get("max_class_size")
     )
 
     trained_model = train(
@@ -157,6 +160,7 @@ def prepare_train(
     learning_rate,
     random_seed,
     is_regression,
+    max_class_size,
 ):
     train_data, valid_data = preprocessing.create_train_validation_datasets(
         data_root=data_root,
@@ -172,18 +176,7 @@ def prepare_train(
     )
 
     # torch.save(valid_data, os.path.join(general_config.save_path, "valid_data.pt"))
-    print(f"classes: {train_data.class_to_idx}")
-
-    # TODO: loader in preprocessing?
-    # TODO: weighted sampling on/off?
-    class_counts = Counter(train_data.targets)
-    sample_weights = [1 / class_counts[i] for i in train_data.targets]
-    sampler = WeightedRandomSampler(weights=sample_weights, num_samples=len(train_data))
-
-    trainloader = DataLoader(
-        train_data, batch_size=batch_size, sampler=sampler
-    )  # shuffle=True only if no sampler defined
-    validloader = DataLoader(valid_data, batch_size=valid_batch_size)
+    # print(f"classes: {train_data.class_to_idx}")
 
     # load model
     if is_regression:
@@ -213,6 +206,42 @@ def prepare_train(
     # set parameters to optimize
     optimizer = optimizer_cls(optimizer_params, lr=learning_rate)
 
+    # limit max class size
+    if max_class_size is not None:
+        # define indices with max number of class size
+        indices = []
+        class_counts = {}
+        # TODO: randomize sample picking?
+        for i, label in enumerate(train_data.targets):
+            if label not in class_counts:
+                class_counts[label] = 0
+            if class_counts[label] < max_class_size:
+                indices.append(i)
+                class_counts[label] += 1
+            # stop if all classes are filled
+            if all(count >= max_class_size for count in class_counts.values()):
+                break
+
+        # create a) (Subset with indices + WeightedRandomSampler) or b) (SubsetRandomSampler) (no weighting, if max class size larger than smallest class size!)
+        # b) SubsetRandomSampler ? 
+        #    Samples elements randomly from a given list of indices, without replacement.
+        # a):
+        train_data = Subset(train_data, indices)
+
+        sample_weights = [1.0 / class_counts[label] for _, label in train_data]
+    else:
+        # TODO: loader in preprocessing?
+        # TODO: weighted sampling on/off?
+        class_counts = Counter(train_data.targets)
+        sample_weights = [1.0 / class_counts[label] for label in train_data.targets]
+
+    sampler = WeightedRandomSampler(weights=sample_weights, num_samples=len(train_data))        
+
+    trainloader = DataLoader(
+        train_data, batch_size=batch_size, sampler=sampler
+    )  # shuffle=True only if no sampler defined
+    validloader = DataLoader(valid_data, batch_size=valid_batch_size)
+
     return trainloader, validloader, model, optimizer
 
 
@@ -239,7 +268,7 @@ def train(
     checkpointer = checkpointing.CheckpointSaver(
         dirpath=model_saving_path,
         saving_name=model_saving_name,
-        decreasing=False,
+        decreasing=True,
         config=config,
         dataset=validloader.dataset,
         top_n=checkpoint_top_n,
@@ -248,7 +277,7 @@ def train(
     )
 
     for epoch in range(epochs):
-        train_loss, train_accuracy = train_epoch(
+        train_loss, train_metric_value = train_epoch(
             model,
             trainloader,
             optimizer,
@@ -256,7 +285,7 @@ def train(
             eval_metric=eval_metric,
         )
 
-        val_loss, val_accuracy = validate_epoch(
+        val_loss, val_metric_value = validate_epoch(
             model,
             validloader,
             device,
@@ -265,7 +294,7 @@ def train(
 
         # checkpoint saving with early stopping
         early_stop = checkpointer(
-            model=model, epoch=epoch, metric_val=val_accuracy, optimizer=optimizer
+            model=model, epoch=epoch, metric_val=val_loss, optimizer=optimizer
         )
 
         if wandb_on:
@@ -273,9 +302,9 @@ def train(
                 {
                     "epoch": epoch + 1,
                     "train/loss": train_loss,
-                    "train/acc": train_accuracy,  # TODO: metric not necessarily accuracy
+                    f"train/{eval_metric}": train_metric_value,
                     "eval/loss": val_loss,
-                    "eval/acc": val_accuracy,  # TODO: metric not necessarily accuracy
+                    f"eval/{eval_metric}": val_metric_value,
                 }
             )
 
@@ -283,13 +312,13 @@ def train(
             f"Epoch {epoch+1:>{len(str(epochs))}}/{epochs}.. ",
             f"Train loss: {train_loss:.3f}.. ",
             f"Test loss: {val_loss:.3f}.. ",
-            f"Train {eval_metric}: {train_accuracy:.3f}.. ",
-            f"Test {eval_metric}: {val_accuracy:.3f}",
+            f"Train {eval_metric}: {train_metric_value:.3f}.. ",
+            f"Test {eval_metric}: {val_metric_value:.3f}",
         )
 
         if early_stop:
             print(f"Early stopped training at epoch {epoch}")
-            break
+            # break
 
     print("Done.")
 
@@ -323,7 +352,7 @@ def train_epoch(model, dataloader, optimizer, device, eval_metric):
         # TODO: metric as function, metric_name as input argument
 
         if eval_metric == const.EVAL_METRIC_ACCURACY:
-            if isinstance(criterion, nn.MSELoss):
+            if isinstance(criterion, nn.MSELoss): # compare with is_regression for generalization?
                 predictions = outputs.round()
             else:
                 probs = model.get_class_probabilies(outputs)
@@ -331,13 +360,14 @@ def train_epoch(model, dataloader, optimizer, device, eval_metric):
             eval_metric_value += (predictions == labels).sum().item()
 
         elif eval_metric == const.EVAL_METRIC_MSE:
-            if not isinstance(criterion, nn.MSELoss):
+            if not isinstance(criterion, nn.MSELoss): # compare with is_regression for generalization?
                 raise ValueError(
                     f"Criterion must be nn.MSELoss for eval_metric {eval_metric}"
                 )
             eval_metric_value = running_loss
         else:
             raise ValueError(f"Unknown eval_metric: {eval_metric}")
+        # break
 
     return running_loss / len(dataloader.sampler), eval_metric_value / len(
         dataloader.sampler
@@ -380,6 +410,7 @@ def validate_epoch(model, dataloader, device, eval_metric):
                 eval_metric_value = running_loss
             else:
                 raise ValueError(f"Unknown eval_metric: {eval_metric}")
+            break
 
     return running_loss / len(dataloader.sampler), eval_metric_value / len(
         dataloader.sampler
@@ -430,39 +461,25 @@ def extract_levels(level, selected_classes):
     return to_train_list
 
 
-# def main():
-#     # command line args
-#     # name, data_root, dataset, transform, model_root, model_dict, predict_dir, gpu_kernel, batch_size
-#     arg_parser = argparse.ArgumentParser(description='Model Prediction')
-#     arg_parser.add_argument('run_type', type=str, help='Required: run fixed training or sweep: fix or sweep')
-#     arg_parser.add_argument('config', type=str, help='Required: config for training')
-#     arg_parser.add_argument('sweep_counts_tmp', type=int, help='Optional, used for sweep only: max number of runs in sweep')
-#     arg_parser.add_argument('--method', type=str, help='Required, used for sweep only: method for sweep hyperparameter creation')
-#     arg_parser.add_argument('--metric', type=str, help='Optional, used for sweep only: metric for sweep if method is bayes')
-#     arg_parser.add_argument('--project', type=str, help='Optional: wandb project name')
-#     arg_parser.add_argument('--name', type=str, help='Optional: wandb name')
-#     arg_parser.add_argument('--level', type=str, help='Optional: flatten, surface or smoothness')
-#     arg_parser.add_argument('--wandb_mode', type=str, help='Optional: wandb mode (syncing to wandb), default: offline')
-#     arg_parser.add_argument('--wandb_on', type=str, help='Optional, used for fixed training only: initializing wandb, default: on')
-#     arg_parser.add_argument('--sweep_counts', type=int, help='Optional, used for sweep only: max number of runs in sweep')
+def main():
+    '''train image classifier
+    
+    command line args:
+    - config: with
+        - project
+        - name
+        - wandb_mode
+        - config
+        ...
+    - sweep: (Optional) False (dafault) or True
+    '''
+    arg_parser = argparse.ArgumentParser(description='Model Training')
+    arg_parser.add_argument('config', type=helper.dict_type, help='Required: configuration for training')
+    arg_parser.add_argument('--sweep', type=bool, default=False, help='Optinal: Running a sweep or no sweep (default=False)')
+    
+    args = arg_parser.parse_args()
 
-#     args = arg_parser.parse_args()
+    run_training(args.config, args.sweep)
 
-#     config = json.loads(args.config)
-#     if args.method is not None:
-#         method = json.loads(args.method)
-#     if args.metric is not None:
-#         metric = json.loads(args.metric)
-
-#     print(args.sweep_counts_tmp*2)
-
-#     # csv or json
-#     if args.run_type == 'fix':
-#         run_fixed_training(config, args.project, args.name, args.level, args.wandb_mode, args.wandb_on)
-#     elif args.run_type == 'sweep':
-#         run_sweep_training(config, method, metric, args.project, args.name, args.level, args.sweep_counts, args.wandb_mode)
-#     else:
-#         print('no valid run type')
-
-# if __name__ == "__main__":
-#     main()
+if __name__ == "__main__":
+    main()
