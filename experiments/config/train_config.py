@@ -194,3 +194,24 @@ vgg16_asphalt_crophalf_regression_params = {
     "model": const.VGG16,
 
 }
+
+effnet_asphalt_crophalf_regression_params = {
+    **global_config.global_config,
+    **default_params,
+    "transform": 
+        {"resize": const.H256_W256,
+        "crop": const.CROP_LOWER_MIDDLE_HALF,
+        "normalize": const.NORM_DATA,},
+    "batch_size": 96,
+    "epochs": 20,
+    "learning_rate": 0.0001,
+    "is_regression": True,
+    "eval_metric": const.EVAL_METRIC_MSE,
+    "project": const.PROJECT_SMOOTHNESS_FIXED,
+    "name": "effnet_Regression",
+    "level": const.ASPHALT,
+    "selected_classes": global_config.global_config.get("selected_classes")[const.ASPHALT],
+    "dataset": "V7/annotated/asphalt",
+    "model": const.EFFICIENTNET,
+
+}
