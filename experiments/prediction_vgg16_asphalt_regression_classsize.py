@@ -26,10 +26,10 @@ model_names = {
     'Inf': "asphalt-vgg16-20240221_192424-tzcfmtkv_epoch17.pt",
 }
 
-for max_class_size, model in model_names.itmens():
+for max_class_size, model in model_names.items():
     config = {
         **base_config,
-        "name": f"asphalt_c_third_42_{max_class_size}_prediction",
+        "name": f"asphalt_crop-third_seed42_max{max_class_size}_prediction",
         "dataset": f"V7/annotated/asphalt",
         "model_dict": {"trained_model": model}, 
     }
@@ -55,10 +55,10 @@ model_names = {
     'Inf': "asphalt-vgg16-20240221_182152-m9cjnxez_epoch6.pt",
 }
 
-for max_class_size, model in model_names.itmens():
+for max_class_size, model in model_names.items():
     config = {
         **base_config,
-        "name": f"asphalt_c_half_42_{max_class_size}_prediction",
+        "name": f"asphalt_crop-half_seed42_max{max_class_size}_prediction",
         "dataset": f"V7/annotated/asphalt",
         "model_dict": {"trained_model": model}, 
     }
@@ -84,10 +84,10 @@ model_names = {
     'Inf': "asphalt-vgg16-20240221_214453-lw5zyx6p_epoch3.pt",
 }
 
-for max_class_size, model in model_names.itmens():
+for max_class_size, model in model_names.items():
     config = {
         **base_config,
-        "name": f"asphalt_c_half_1024_{max_class_size}_prediction",
+        "name": f"asphalt_crop-half_seed1024_max{max_class_size}_prediction",
         "dataset": f"V7/annotated/asphalt",
         "model_dict": {"trained_model": model}, 
     }
