@@ -212,6 +212,6 @@ effnet_asphalt_crophalf_regression_params = {
     "level": const.ASPHALT,
     "selected_classes": global_config.global_config.get("selected_classes")[const.ASPHALT],
     "dataset": "V7/annotated/asphalt",
-    "model": const.EFFICIENTNET,
+    "model": const.EFFNET_LINEAR,
 
 }
