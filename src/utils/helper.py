@@ -16,6 +16,7 @@ def string_to_object(string):
         const.VGG16: vgg16.CustomVGG16,
         const.VGG16REGRESSION: vgg16.CustomVGG16,
         const.EFFICIENTNET: efficientnet.CustomEfficientNetV2SLogsoftmax,
+        const.EFFNET_LINEAR: efficientnet.CustomEfficientNetV2SLinear,
         const.OPTI_ADAM: optim.Adam,
     }
 
