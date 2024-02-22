@@ -45,7 +45,7 @@ class CustomEfficientNetV2SLogsoftmax(nn.Module):
 
 class CustomEfficientNetV2SLinear(nn.Module):
     def __init__(self, num_classes):
-        super(CustomEfficientNetV2SLogsoftmax, self).__init__()
+        super(CustomEfficientNetV2SLinear, self).__init__()
 
         model = models.efficientnet_v2_s(weights='IMAGENET1K_V1')
         # adapt output layer
