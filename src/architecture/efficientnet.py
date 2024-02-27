@@ -50,9 +50,7 @@ class CustomEfficientNetV2SLinear(nn.Module):
         model = models.efficientnet_v2_s(weights='IMAGENET1K_V1')
         # adapt output layer
         in_features = model.classifier[-1].in_features
-        fc = nn.Sequential(OrderedDict([
-            ('fc1', nn.Linear(in_features, num_classes, bias=True)),
-            ]))
+        fc = nn.Linear(in_features, num_classes, bias=True)
         model.classifier[-1] = fc
         
         self.features = model.features
