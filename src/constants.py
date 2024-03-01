@@ -1,6 +1,9 @@
 ### hint: last part should be 'normalization values', this is extended by calculation of new dataset normalization
 
 import numpy as np
+from pathlib import Path
+
+ROOT_DIR = Path(__file__).parent.parent
 
 # weights and biases
 WANDB_MODE_ON = "online"
@@ -78,6 +81,13 @@ EVAL_METRIC_MSE = "MSE"
 # checkpoint & early stopping
 CHECKPOINT_DEFAULT_TOP_N = 1
 EARLY_STOPPING_DEFAULT = np.Inf
+
+### segmentation
+# mapillary road types
+SEGMENT_ROAD = 'construction--flat--road'
+SEGMENT_BIKE = 'construction--flat--bike-lane'
+SEGMENT_SIDEWALK = 'construction--flat--sidewalk'
+SEGMENT_CROSSWALK = 'construction--flat--crosswalk-plain'
 
 ### preprocessing
 # image size

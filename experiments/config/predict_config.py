@@ -1,5 +1,13 @@
 from src import constants as const
 from experiments.config import global_config
+import os
+
+segment_color = {
+    const.SEGMENT_ROAD: (255, 0, 0),
+    const.SEGMENT_BIKE: (0, 255, 0),
+    const.SEGMENT_SIDEWALK: (0, 0, 255),
+    const.SEGMENT_CROSSWALK: (255, 255, 0),
+}
 
 rateke_CC = {
     **global_config.global_config,
@@ -35,4 +43,29 @@ vgg16_surface = {
         "normalize": (const.V6_ANNOTATED_MEAN, const.V6_ANNOTATED_SD),
     },
     "batch_size": 96,
+}
+
+segmentation_CC_test = {
+    **global_config.global_config,
+    "name": "test_RatekeCNN_VGG16_prediction",
+    "model_dict": {
+        "trained_model": "surface-rateke-20240207_202104-gnzhpn11_epoch0.pt",
+        "submodels": {
+            const.ASPHALT: {
+                "trained_model": "smoothness-asphalt-vgg16-20240207_202414-krno5gva_epoch0.pt"
+            },
+            const.CONCRETE: {
+                "trained_model": "smoothness-concrete-vgg16-20240207_202524-jqetza3o_epoch0.pt"
+            },
+        },
+    },
+    "dataset": "V0/predicted",
+    "transform": {
+        "resize": const.H256_W256,
+        # "crop": const.CROP_LOWER_MIDDLE_THIRD,
+        "normalize": (const.V4_ANNOTATED_MEAN, const.V4_ANNOTATED_SD),
+    },
+    "batch_size": 48,
+    'segment_color': segment_color,
+    'mapillary_token_path': os.path.join(const.ROOT_DIR, 'mapillary_token.txt'),
 }

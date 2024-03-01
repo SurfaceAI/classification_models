@@ -16,3 +16,5 @@ tb_log_medium_dynamic
 
 Archive
 .pre-commit-config.yaml
+
+mapillary_token.txt

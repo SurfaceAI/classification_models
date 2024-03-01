@@ -454,12 +454,17 @@ def train_validation_split_datasets(
 
 def custom_crop(img, crop_style=None):
     im_width, im_height = img.size
-    if crop_style == "lower_middle_third":
+    if isinstance(crop_style, tuple) and len(crop_style) == 4:
+        top = crop_style[0] * im_height
+        left = crop_style[1] * im_width
+        height = crop_style[2] * im_height
+        width = crop_style[3] * im_width
+    elif crop_style == "lower_middle_third":
         top = im_height / 3 * 2
         left = im_width / 3
         height = im_height - top
         width = im_width / 3
-    if crop_style == "lower_middle_half":
+    elif crop_style == "lower_middle_half":
         top = im_height / 2
         left = im_width / 4
         height = im_height / 2
