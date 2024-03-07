@@ -18,6 +18,7 @@ from src.architecture import Rateke_CNN
 from PIL import Image, ImageDraw, ImageFont
 import pandas as pd
 import argparse
+import matplotlib.pyplot as plt
 
 def cam_prediction(config):
     # load device
@@ -154,43 +155,48 @@ def save_cam(model, data, normalize_transform, classes, valid_dataset, is_regres
         for image, image_id in data:
             input = normalize_transform(image).unsqueeze(0).to(device)
             
-            output = model(input).squeeze(0)
+            output = model(input)
             # TODO: wie sinnvoll ist class activation map bei regression?
             if is_regression:
-                output = output.flatten()
+                output = output.flatten().squeeze(0)
                 pred_value = output.item()
                 idx = 0
                 pred_class = "outside" if str(pred_value.round().int()) not in classes.keys() else classes[str(pred_value.round().int())]
             else:
-                output = model.get_class_probabilies(output)
+                output = model.get_class_probabilies(output).squeeze(0)
                 pred_value = torch.max(output, dim=0).values.item()
                 idx = torch.argmax(output, dim=0).item()
                 pred_class = classes[idx]
 
             # create cam
             activations = activation_hook.activation[0]
-            cam_map = torch.einsum('ck,kij->cij', out_weights, activations)[idx]
+            cam_map = torch.einsum('ck,kij->cij', out_weights, activations)
 
-            # merge original image with cam
-            cam_map_normalized = F.interpolate((cam_map - cam_map.min()) / (cam_map.max() - cam_map.min()) * 255, size=image.shape, mode='bilinear', align_corners=False).int()
-            alpha = 0.5
-            cam_map_alpha = alpha * cam_map_normalized
-
-            blended_image = (1 - alpha) * image + cam_map_alpha
-
-            # draw prediction on image
             text = 'validation_data: {}\nprediction: {}\nvalue: {:.3f}'.format('True' if image_id in valid_dataset_ids else 'False', pred_class, pred_value)
             
-            blended_image_pil = transforms.ToPILImage()(blended_image)
-            draw = ImageDraw.Draw(blended_image_pil)
+            fig, ax = plt.subplots(1, len(classes))
+            for i in range(len(classes)):
 
-            draw.text((10, 10), text, fill=(255, 255, 255))
-            
-            # save merged image 
-            image_path = os.path.join(image_folder, "{}_cam.png".format(image_id))
-            # with open(image_path, 'wb') as handler:
-            #     handler.write(image)
-            blended_image_pil.save(image_path)
+                # merge original image with cam
+                
+                ax[i].imshow(image.permute(1, 2, 0))
+
+                ax[i].imshow(cam_map[i].detach(), alpha=0.5, extent=(0, image.shape[2], image.shape[1], 0),
+                        interpolation='bilinear', cmap='magma')
+
+                ax[i].axis('off')
+
+                if i == idx:
+                    # draw prediction on image
+                    ax[i].text(10, 50, text, color='white', fontsize=12, fontweight='bold')
+
+                # save image
+                image_path = os.path.join(image_folder, "{}_cam.png".format(image_id))
+                # plt.savefig(image_path)
+
+                # show image
+            plt.show()
+            plt.close()
 
 
 def prepare_data(data_root, dataset, transform):
