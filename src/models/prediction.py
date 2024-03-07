@@ -33,7 +33,7 @@ def cam_prediction(config):
     }
     predict_data = prepare_data(config.get("root_data"), config.get("dataset"), non_normalize_transform)
 
-    model_path = os.path.join(model_dict=config.get("model_dict"), model_root=config.get("root_model")['trained_model'])
+    model_path = os.path.join(config.get("root_model"), config.get("model_dict")['trained_model'])
     model, classes, is_regression, valid_dataset = load_model(model_path=model_path, device=device)
     image_folder = os.path.join(config.get("root_predict"), config.get("dataset"))
     if not os.path.exists(image_folder):

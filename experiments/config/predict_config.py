@@ -40,8 +40,7 @@ vgg16_surface = {
 cam_surface = {
     **global_config.global_config,
     "name": "cam_surface_prediction",
-    # "model_dict": {"trained_model": "surface-vgg16-20240215_122253-wgch26j7_epoch18.pt"},
-    "model_dict": {"trained_model": "surface-rateke-20240207_202104-gnzhpn11_epoch0.pt"},
+    "model_dict": {"trained_model": "surface-efficientNetV2SLinear-20240307_104557-n5s9367p_epoch17.pt"},
     "dataset": "CAM",
     "transform": {
         "resize": const.H256_W256,
