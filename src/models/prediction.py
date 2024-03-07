@@ -7,17 +7,43 @@ import os
 import json
 from src.utils import preprocessing
 from torch.utils.data import DataLoader, Subset
+from torchvision import transforms
+import torch.nn.functional as F
 from datetime import datetime
 import time
 from src.utils import helper
 from src import constants
 from experiments.config import global_config
 from src.architecture import Rateke_CNN
-from PIL import Image
+from PIL import Image, ImageDraw, ImageFont
 import pandas as pd
 import argparse
 
+def cam_prediction(config):
+    # load device
+    device = torch.device(
+        f"cuda:{config.get('gpu_kernel')}" if torch.cuda.is_available() else "cpu"
+    )
 
+    # prepare data
+    normalize_transform = transforms.Normalize(*config.get("transform")['normalize'])
+    non_normalize_transform = {
+        **config.get("transform"),
+        'normalize': None,
+    }
+    predict_data = prepare_data(config.get("root_data"), config.get("dataset"), non_normalize_transform)
+
+    model_path = os.path.join(model_dict=config.get("model_dict"), model_root=config.get("root_model")['trained_model'])
+    model, classes, is_regression, valid_dataset = load_model(model_path=model_path, device=device)
+    image_folder = os.path.join(config.get("root_predict"), config.get("dataset"))
+    if not os.path.exists(image_folder):
+        os.makedirs(image_folder)
+    
+    save_cam(model, predict_data, normalize_transform, classes, valid_dataset, is_regression, device, image_folder)
+
+    print(f'Images {config.get("dataset")} predicted and saved with CAM: {image_folder}')
+
+    
 def run_dataset_predict_csv(config):
     # load device
     device = torch.device(
@@ -113,6 +139,60 @@ def predict(model, data, batch_size, is_regression, device):
 
     return pred_outputs, ids
 
+def save_cam(model, data, normalize_transform, classes, valid_dataset, is_regression, device, image_folder):
+
+    feature_layer = model.features
+    out_weights = model.classifier[-1].weight
+
+    model.to(device)
+    model.eval()
+
+    valid_dataset_ids = [os.path.splitext(os.path.split(id[0])[-1])[0] for id in valid_dataset.samples]
+    
+    with torch.no_grad() and helper.ActivationHook(feature_layer) as activation_hook:
+        
+        for image, image_id in data:
+            input = normalize_transform(image).unsqueeze(0).to(device)
+            
+            output = model(input).squeeze(0)
+            # TODO: wie sinnvoll ist class activation map bei regression?
+            if is_regression:
+                output = output.flatten()
+                pred_value = output.item()
+                idx = 0
+                pred_class = "outside" if str(pred_value.round().int()) not in classes.keys() else classes[str(pred_value.round().int())]
+            else:
+                output = model.get_class_probabilies(output)
+                pred_value = torch.max(output, dim=0).values.item()
+                idx = torch.argmax(output, dim=0).item()
+                pred_class = classes[idx]
+
+            # create cam
+            activations = activation_hook.activation[0]
+            cam_map = torch.einsum('ck,kij->cij', out_weights, activations)[idx]
+
+            # merge original image with cam
+            cam_map_normalized = F.interpolate((cam_map - cam_map.min()) / (cam_map.max() - cam_map.min()) * 255, size=image.shape, mode='bilinear', align_corners=False).int()
+            alpha = 0.5
+            cam_map_alpha = alpha * cam_map_normalized
+
+            blended_image = (1 - alpha) * image + cam_map_alpha
+
+            # draw prediction on image
+            text = 'validation_data: {}\nprediction: {}\nvalue: {:.3f}'.format('True' if image_id in valid_dataset_ids else 'False', pred_class, pred_value)
+            
+            blended_image_pil = transforms.ToPILImage()(blended_image)
+            draw = ImageDraw.Draw(blended_image_pil)
+
+            draw.text((10, 10), text, fill=(255, 255, 255))
+            
+            # save merged image 
+            image_path = os.path.join(image_folder, "{}_cam.png".format(image_id))
+            # with open(image_path, 'wb') as handler:
+            #     handler.write(image)
+            blended_image_pil.save(image_path)
+
+
 def prepare_data(data_root, dataset, transform):
 
     data_path = os.path.join(data_root, dataset)
@@ -124,7 +204,8 @@ def prepare_data(data_root, dataset, transform):
 def load_model(model_path, device):
     model_state = torch.load(model_path, map_location=device)
     model_cls = helper.string_to_object(model_state['config']['model'])
-    is_regression = model_state['config']["is_regression"]
+    # is_regression = model_state['config']["is_regression"]
+    is_regression = False
     valid_dataset = model_state['dataset']
 
     if is_regression:
