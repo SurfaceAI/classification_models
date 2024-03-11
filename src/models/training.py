@@ -280,6 +280,8 @@ def train(
     )
 
     for epoch in range(epochs):
+        if epoch == 5:
+            optimizer.add_param_group({'params': model.features.parameters(), 'lr': 0.00001})
         train_loss, train_metric_value = train_epoch(
             model,
             trainloader,
@@ -370,7 +372,7 @@ def train_epoch(model, dataloader, optimizer, device, eval_metric):
             eval_metric_value = running_loss
         else:
             raise ValueError(f"Unknown eval_metric: {eval_metric}")
-        # break
+        break
 
     return running_loss / len(dataloader.sampler), eval_metric_value / len(
         dataloader.sampler
@@ -413,7 +415,7 @@ def validate_epoch(model, dataloader, device, eval_metric):
                 eval_metric_value = running_loss
             else:
                 raise ValueError(f"Unknown eval_metric: {eval_metric}")
-            # break
+            break
 
     return running_loss / len(dataloader.sampler), eval_metric_value / len(
         dataloader.sampler

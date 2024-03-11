@@ -74,6 +74,7 @@ efficientnet_params = {
     "level": const.SURFACE,
     "model": const.EFFICIENTNET,
     # "max_class_size": 2,
+    "wandb_on":False,
 }
 
 efficientnet_flatten_params = {
