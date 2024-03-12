@@ -174,24 +174,31 @@ def save_cam(model, data, normalize_transform, classes, valid_dataset, is_regres
 
             text = 'validation_data: {}\nprediction: {}\nvalue: {:.3f}'.format('True' if image_id in valid_dataset_ids else 'False', pred_class, pred_value)
             
-            fig, ax = plt.subplots(1, len(classes))
-            for i in range(len(classes)):
+            fig, ax = plt.subplots(1, len(classes)+1, figsize=(len(classes)*2.5, 2.5))
 
+            ax[0].imshow(image.permute(1, 2, 0))
+            ax[0].axis('off')
+
+            for i in range(1, len(classes)+1):
+                
                 # merge original image with cam
                 
                 ax[i].imshow(image.permute(1, 2, 0))
 
-                ax[i].imshow(cam_map[i].detach(), alpha=0.5, extent=(0, image.shape[2], image.shape[1], 0),
+                ax[i].imshow(cam_map[i-1].detach(), alpha=0.75, extent=(0, image.shape[2], image.shape[1], 0),
                         interpolation='bilinear', cmap='magma')
 
                 ax[i].axis('off')
 
-                if i == idx:
+                if i - 1 == idx:
                     # draw prediction on image
-                    ax[i].text(10, 50, text, color='white', fontsize=12, fontweight='bold')
+                    ax[i].text(10, 80, text, color='white', fontsize=6)
+                else:
+                    t = '\n\nprediction: {}\nvalue: {:.3f}'.format(classes[i - 1], output[i - 1].item())
+                    ax[i].text(10, 80, t, color='white', fontsize=6)
 
                 # save image
-                image_path = os.path.join(image_folder, "{}_cam.png".format(image_id))
+                # image_path = os.path.join(image_folder, "{}_cam.png".format(image_id))
                 # plt.savefig(image_path)
 
                 # show image

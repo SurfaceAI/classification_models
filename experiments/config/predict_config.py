@@ -40,10 +40,10 @@ vgg16_surface = {
 cam_surface = {
     **global_config.global_config,
     "name": "cam_surface_prediction",
-    "model_dict": {"trained_model": "surface-efficientNetV2SLinear-20240307_121909-egmm72l3_epoch17.pt"},
+    "model_dict": {"trained_model": "surface-efficientNetV2SLinear-20240312_090721-iia9tei2_epoch14.pt"},
     "dataset": "V6/annotated",
     "transform": {
-        "resize": const.H256_W256,
+        "resize": (384, 384),
         "crop": const.CROP_LOWER_MIDDLE_HALF,
         "normalize": (const.V6_ANNOTATED_MEAN, const.V6_ANNOTATED_SD),
     },
