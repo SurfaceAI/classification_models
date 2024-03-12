@@ -459,7 +459,7 @@ def custom_crop(img, crop_style=None):
         left = im_width / 3
         height = im_height - top
         width = im_width / 3
-    if crop_style == "lower_middle_half":
+    elif crop_style == "lower_middle_half":
         top = im_height / 2
         left = im_width / 4
         height = im_height / 2
