@@ -161,7 +161,7 @@ def save_cam(model, data, normalize_transform, classes, valid_dataset, is_regres
                 output = output.flatten().squeeze(0)
                 pred_value = output.item()
                 idx = 0
-                pred_class = "outside" if str(pred_value.round().int()) not in classes.keys() else classes[str(pred_value.round().int())]
+                pred_class = "outside" if str(round(pred_value)) not in classes.keys() else classes[str(round(pred_value))]
             else:
                 output = model.get_class_probabilies(output).squeeze(0)
                 pred_value = torch.max(output, dim=0).values.item()
@@ -174,12 +174,14 @@ def save_cam(model, data, normalize_transform, classes, valid_dataset, is_regres
 
             text = 'validation_data: {}\nprediction: {}\nvalue: {:.3f}'.format('True' if image_id in valid_dataset_ids else 'False', pred_class, pred_value)
             
-            fig, ax = plt.subplots(1, len(classes)+1, figsize=(len(classes)*2.5, 2.5))
+            n_classes = 1 if is_regression else len(classes)
+
+            fig, ax = plt.subplots(1, n_classes+1, figsize=((n_classes+1)*2.5, 2.5))
 
             ax[0].imshow(image.permute(1, 2, 0))
             ax[0].axis('off')
 
-            for i in range(1, len(classes)+1):
+            for i in range(1, n_classes+1):
                 
                 # merge original image with cam
                 
@@ -217,8 +219,8 @@ def prepare_data(data_root, dataset, transform):
 def load_model(model_path, device):
     model_state = torch.load(model_path, map_location=device)
     model_cls = helper.string_to_object(model_state['config']['model'])
-    # is_regression = model_state['config']["is_regression"]
-    is_regression = False
+    is_regression = model_state['config']["is_regression"]
+    # is_regression = False
     valid_dataset = model_state['dataset']
 
     if is_regression:
