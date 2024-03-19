@@ -188,16 +188,19 @@ def save_cam(model, data, normalize_transform, classes, valid_dataset, is_regres
                 ax[i].imshow(image.permute(1, 2, 0))
 
                 ax[i].imshow(cam_map[i-1].detach(), alpha=0.75, extent=(0, image.shape[2], image.shape[1], 0),
-                        interpolation='bilinear', cmap='magma')
+                        interpolation='bicubic', cmap='magma')
 
                 ax[i].axis('off')
 
-                if i - 1 == idx:
-                    # draw prediction on image
-                    ax[i].text(10, 80, text, color='white', fontsize=6)
-                else:
-                    t = '\n\nprediction: {}\nvalue: {:.3f}'.format(classes[i - 1], output[i - 1].item())
-                    ax[i].text(10, 80, t, color='white', fontsize=6)
+                # if i - 1 == idx:
+                #     # draw prediction on image
+                #     ax[i].text(10, 80, text, color='white', fontsize=6)
+                # else:
+                #     t = '\n\nprediction: {}\nvalue: {:.3f}'.format(classes[i - 1], output[i - 1].item())
+                #     ax[i].text(10, 80, t, color='white', fontsize=6)
+
+                t = '\n\nprediction: {}\nvalue: {:.3f}'.format(classes[i - 1], output[i - 1].item())
+                ax[i].text(10, 60, t, color='white', fontsize=6)
 
                 # save image
                 # image_path = os.path.join(image_folder, "{}_cam.png".format(image_id))
