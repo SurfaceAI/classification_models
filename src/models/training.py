@@ -372,6 +372,7 @@ def train_epoch(model, dataloader, optimizer, device, eval_metric):
             eval_metric_value = running_loss
         else:
             raise ValueError(f"Unknown eval_metric: {eval_metric}")
+        # break
 
     return running_loss / len(dataloader.sampler), eval_metric_value / len(
         dataloader.sampler
@@ -414,6 +415,7 @@ def validate_epoch(model, dataloader, device, eval_metric):
                 eval_metric_value = running_loss
             else:
                 raise ValueError(f"Unknown eval_metric: {eval_metric}")
+            # break
 
     return running_loss / len(dataloader.sampler), eval_metric_value / len(
         dataloader.sampler
