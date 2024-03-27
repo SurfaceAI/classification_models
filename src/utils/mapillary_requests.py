@@ -120,7 +120,11 @@ def request_image_data_from_image_entity(image_id,
 
 # extract image detections from image data
 def extract_detections_from_image(image_data):
-    return image_data['detections']['data']
+    if 'detections' in image_data.keys():
+        detections = image_data['detections']['data']
+    else:
+        detections = []
+    return detections
 
 # extract image url from image data
 def extract_url_from_image(image_data, image_size='thumb_1024_url'):
