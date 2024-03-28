@@ -215,3 +215,48 @@ effnet_asphalt_crophalf_regression_params = {
     "model": const.EFFNET_LINEAR,
 
 }
+
+effnet_surface_sweep_params = {
+    **global_config.global_config,**default_params,
+    'gpu_kernel': 0,
+    "eval_metric": const.EVAL_METRIC_ACCURACY,
+    'model': const.EFFNET_LINEAR,
+    "dataset": "V9/annotated",
+    "method": "bayes",
+    "metric": {"name": f"eval/{const.EVAL_METRIC_ACCURACY}", "goal": "maximize"},
+    "search_params":
+        {"batch_size": {"values": [16]},
+        "learning_rate": {"distribution": "log_uniform_values", "min": 1e-05, "max": 0.001},},
+    "project": const.PROJECT_SURFACE_SWEEP,
+    "name": "optim_lf_effnet",
+    "level": const.SURFACE,
+    "sweep_counts": 10,
+    "transform": 
+        {"resize": (384, 384),
+        "crop": const.CROP_LOWER_MIDDLE_HALF,
+        "normalize": const.NORM_DATA,},  
+}
+
+effnet_quality_sweep_params = {
+    **global_config.global_config,
+    **default_params,
+    'gpu_kernel': 0,
+    "eval_metric": const.EVAL_METRIC_MSE,
+    'model': const.EFFNET_LINEAR,
+    "dataset": "V9/annotated",
+    "method": "bayes",
+    "is_regression": True,
+    "metric": {"name": f"eval/{const.EVAL_METRIC_MSE}", "goal": "minimize"},
+    "search_params": {
+        "batch_size": {"values": [8, 16]},
+        "learning_rate": {"distribution": "log_uniform_values", "min": 1e-05, "max": 0.001},
+    },
+    "project": const.PROJECT_SMOOTHNESS_SWEEP,
+    "name": "optim_lf_effnet_reg",
+    "level": const.SMOOTHNESS,
+    "sweep_counts": 10,
+    "transform": 
+        {"resize": (384, 384),
+        "crop": const.CROP_LOWER_MIDDLE_HALF,
+        "normalize": const.NORM_DATA,},  
+}
