@@ -63,6 +63,21 @@ vgg16_surface = {
     "batch_size": 96,
 }
 
+cam_surface = {
+    **global_config.global_config,
+    "name": "cam_surface_prediction",
+    # "model_dict": {"trained_model": "surface-efficientNetV2SLinear-20240312_090721-iia9tei2_epoch14.pt"},
+    "model_dict": {"trained_model": "surface-efficientNetV2SLinear-20240314_164055-mi0872lh_epoch6.pt"},
+    # "dataset": "V9/annotated",
+    "dataset": "V9/metadata/model_predictions/misclassified_images/surface",
+    "transform": {
+        "resize": (384, 384),
+        "crop": const.CROP_LOWER_MIDDLE_HALF,
+        "normalize": (const.V9_ANNOTATED_MEAN, const.V9_ANNOTATED_SD),
+    },
+    "batch_size": 8,
+}
+
 segmentation_CC_test = {
     **global_config.global_config,
     "name": "test_RatekeCNN_VGG16_prediction",
