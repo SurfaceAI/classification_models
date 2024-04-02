@@ -7,17 +7,44 @@ import os
 import json
 from src.utils import preprocessing
 from torch.utils.data import DataLoader, Subset
+from torchvision import transforms
+import torch.nn.functional as F
 from datetime import datetime
 import time
 from src.utils import helper
 from src import constants
 from experiments.config import global_config
 from src.architecture import Rateke_CNN
-from PIL import Image
+from PIL import Image, ImageDraw, ImageFont
 import pandas as pd
 import argparse
+import matplotlib.pyplot as plt
 
+def cam_prediction(config):
+    # load device
+    device = torch.device(
+        f"cuda:{config.get('gpu_kernel')}" if torch.cuda.is_available() else "cpu"
+    )
 
+    # prepare data
+    normalize_transform = transforms.Normalize(*config.get("transform")['normalize'])
+    non_normalize_transform = {
+        **config.get("transform"),
+        'normalize': None,
+    }
+    predict_data = prepare_data(config.get("root_data"), config.get("dataset"), non_normalize_transform)
+
+    model_path = os.path.join(config.get("root_model"), config.get("model_dict")['trained_model'])
+    model, classes, is_regression, valid_dataset = load_model(model_path=model_path, device=device)
+    image_folder = os.path.join(config.get("root_predict"), config.get("dataset"))
+    if not os.path.exists(image_folder):
+        os.makedirs(image_folder)
+    
+    save_cam(model, predict_data, normalize_transform, classes, valid_dataset, is_regression, device, image_folder)
+
+    print(f'Images {config.get("dataset")} predicted and saved with CAM: {image_folder}')
+
+    
 def run_dataset_predict_csv(config):
     # load device
     device = torch.device(
@@ -113,6 +140,77 @@ def predict(model, data, batch_size, is_regression, device):
 
     return pred_outputs, ids
 
+def save_cam(model, data, normalize_transform, classes, valid_dataset, is_regression, device, image_folder):
+
+    feature_layer = model.features
+    out_weights = model.classifier[-1].weight
+
+    model.to(device)
+    model.eval()
+
+    valid_dataset_ids = [os.path.splitext(os.path.split(id[0])[-1])[0] for id in valid_dataset.samples]
+    
+    with torch.no_grad() and helper.ActivationHook(feature_layer) as activation_hook:
+        
+        for image, image_id in data:
+            input = normalize_transform(image).unsqueeze(0).to(device)
+            
+            output = model(input)
+            # TODO: wie sinnvoll ist class activation map bei regression?
+            if is_regression:
+                output = output.flatten().squeeze(0)
+                pred_value = output.item()
+                idx = 0
+                pred_class = "outside" if str(round(pred_value)) not in classes.keys() else classes[str(round(pred_value))]
+            else:
+                output = model.get_class_probabilies(output).squeeze(0)
+                pred_value = torch.max(output, dim=0).values.item()
+                idx = torch.argmax(output, dim=0).item()
+                pred_class = classes[idx]
+
+            # create cam
+            activations = activation_hook.activation[0]
+            cam_map = torch.einsum('ck,kij->cij', out_weights, activations)
+
+            text = 'validation_data: {}\nprediction: {}\nvalue: {:.3f}'.format('True' if image_id in valid_dataset_ids else 'False', pred_class, pred_value)
+            
+            n_classes = 1 if is_regression else len(classes)
+
+            fig, ax = plt.subplots(1, n_classes+1, figsize=((n_classes+1)*2.5, 2.5))
+
+            ax[0].imshow(image.permute(1, 2, 0))
+            ax[0].axis('off')
+
+            for i in range(1, n_classes+1):
+                
+                # merge original image with cam
+                
+                ax[i].imshow(image.permute(1, 2, 0))
+
+                ax[i].imshow(cam_map[i-1].detach(), alpha=0.75, extent=(0, image.shape[2], image.shape[1], 0),
+                        interpolation='bicubic', cmap='magma')
+
+                ax[i].axis('off')
+
+                # if i - 1 == idx:
+                #     # draw prediction on image
+                #     ax[i].text(10, 80, text, color='white', fontsize=6)
+                # else:
+                #     t = '\n\nprediction: {}\nvalue: {:.3f}'.format(classes[i - 1], output[i - 1].item())
+                #     ax[i].text(10, 80, t, color='white', fontsize=6)
+
+                t = '\n\nprediction: {}\nvalue: {:.3f}'.format(classes[i - 1], output[i - 1].item())
+                ax[i].text(10, 60, t, color='white', fontsize=6)
+
+                # save image
+                # image_path = os.path.join(image_folder, "{}_cam.png".format(image_id))
+                # plt.savefig(image_path)
+
+                # show image
+            plt.show()
+            plt.close()
+
+
 def prepare_data(data_root, dataset, transform):
 
     data_path = os.path.join(data_root, dataset)
@@ -125,6 +223,7 @@ def load_model(model_path, device):
     model_state = torch.load(model_path, map_location=device)
     model_cls = helper.string_to_object(model_state['config']['model'])
     is_regression = model_state['config']["is_regression"]
+    # is_regression = False
     valid_dataset = model_state['dataset']
 
     if is_regression:

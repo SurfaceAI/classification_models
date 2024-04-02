@@ -280,6 +280,8 @@ def train(
     )
 
     for epoch in range(epochs):
+        if epoch == 3:
+            optimizer.add_param_group({'params': model.features.parameters(), 'lr': config.get("learning_rate")*0.1})
         train_loss, train_metric_value = train_epoch(
             model,
             trainloader,

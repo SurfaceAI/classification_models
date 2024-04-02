@@ -9,6 +9,26 @@ from src.architecture import Rateke_CNN, efficientnet, vgg16
 import json
 import argparse
 
+class ActivationHook:
+    def __init__(self, module):
+        self.module = module
+        self.hook = None
+        self.activation = None
+
+    def __enter__(self):
+        self.hook = self.module.register_forward_hook(self.hook_func)
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        self.close()
+
+    def hook_func(self, module, input, output):
+        self.activation = output.detach()
+
+    def close(self):
+        if self.hook is not None:
+            self.hook.remove()
+
 def string_to_object(string):
 
     string_dict = {
