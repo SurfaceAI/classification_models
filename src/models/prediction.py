@@ -498,7 +498,7 @@ def run_image_per_image_predict_segmentation_train_validation(config):
                 continue
 
             # for debugging only
-            print(det["value"])
+            # print(det["value"])
 
             # segments rescaled to [0, 1]
             rescaled_segments = [
@@ -553,8 +553,8 @@ def run_image_per_image_predict_segmentation_train_validation(config):
             continue
 
         # for debugging only
-        print(max_detection["value"])
-        print(max_detection["area"])
+        # print(max_detection["value"])
+        # print(max_detection["area"])
                         
         # to avoid fringed edges/smooth edges
         convex_hull = mapillary_detections.generate_polygon_convex_hull(
