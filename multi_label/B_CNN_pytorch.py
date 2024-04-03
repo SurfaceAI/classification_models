@@ -19,6 +19,8 @@ from torch.utils.tensorboard import SummaryWriter
 from torchvision.datasets import ImageFolder
 import torch.nn.functional as F
 from torchsummary import summary
+import matplotlib.pyplot as plt
+import torchvision.utils as vutils
 #from torchtnt.framework.callback import Callback
 
 import numpy as np
@@ -125,19 +127,19 @@ class B_CNN(nn.Module):
         self.f_flat = nn.Flatten() 
         self.fc = nn.Sequential(
             nn.Dropout(0.5),
-            nn.Linear(512 * 16 * 16, 4096),
+            nn.Linear(512 * 16 * 16, 1024),
             #nn.Linear(512 * 16 * 16, 256),
             nn.ReLU(),
-            nn.BatchNorm1d(4096),
+            nn.BatchNorm1d(1024),
             )
         self.fc1 = nn.Sequential(
             nn.Dropout(0.5),
-            nn.Linear(4096, 4096),
+            nn.Linear(1024, 1024),
             nn.ReLU(),
-            nn.BatchNorm1d(4096),
+            nn.BatchNorm1d(1024),
             )
         self.fc2 = (
-            nn.Linear(4096, num_classes)
+            nn.Linear(1024, num_classes)
         )     
     
     @ staticmethod
@@ -216,9 +218,20 @@ train_data, valid_data = preprocessing.create_train_validation_datasets(data_roo
                                                                         )
 
 
+# mapping = {
+#     1: 0, 2: 1, 3: 2, 0: 3, 5: 4, 6: 5, 7: 6, 4: 7,
+#     9: 8, 10: 9, 11: 10, 8: 11, 13: 12, 14: 13, 12: 14,
+#     16: 15, 15: 16, 17: 17
+# }
+
+
+# train_data.targets = [mapping[target] for target in train_data.targets]
+
+
 #create train and valid loader
 train_loader = DataLoader(train_data, batch_size=config.get('batch_size'), shuffle=True)
 valid_loader = DataLoader(train_data, batch_size=config.get('batch_size'), shuffle=False)
+
 
 #create one-hot encoded tensors with the fine class labels
 y_train = to_one_hot_tensor(train_data.targets, num_classes)
@@ -251,7 +264,7 @@ beta = torch.tensor(0.02)
 
 # Initialize the model, loss function, and optimizer
 model = B_CNN(num_c=5, num_classes=18)
-criterion = nn.CrossEntropyLoss(reduction='sum')
+criterion = nn.CrossEntropyLoss()
 optimizer = optim.SGD(model.parameters(), lr=0.003, momentum=0.9)
 
 # Set up learning rate scheduler
@@ -270,7 +283,16 @@ for epoch in range(num_epochs):
     fine_correct = 0
     
     for batch_index, (inputs, fine_labels) in enumerate(train_loader):
-    
+        
+        
+        if batch_index == 0:  # Print only the first batch
+            print("Batch Images:")
+            images_grid = vutils.make_grid(inputs, nrow=8, padding=2, normalize=True)  # Assuming batch size is 64
+            plt.figure(figsize=(16, 16))
+            plt.imshow(np.transpose(images_grid, (1, 2, 0)))
+            plt.axis('off')
+            plt.show()
+
         inputs, labels = inputs.to(device), fine_labels.to(device)
         
         optimizer.zero_grad()
@@ -292,8 +314,8 @@ for epoch in range(num_epochs):
         fine_predictions = torch.argmax(fine_probs, dim=1)
         fine_correct += (fine_predictions == fine_labels).sum().item()
         
-        if batch_index == 0:
-            break
+        # if batch_index == 0:
+        #     break
     
     #learning rate step        
     before_lr = optimizer.param_groups[0]["lr"]
@@ -303,17 +325,18 @@ for epoch in range(num_epochs):
     #loss weights step
     alpha, beta = loss_weights_modifier.on_epoch_end(epoch)
     
-    epoch_loss = running_loss /  len(inputs) * (batch_index + 1) 
-    epoch_coarse_accuracy = 100 * coarse_correct / (len(inputs) * (batch_index + 1))
-    epoch_fine_accuracy = 100 * fine_correct / (len(inputs) * (batch_index + 1))
-    # epoch_loss = running_loss /  len(train_loader.sampler)
-    # epoch_coarse_accuracy = 100 *coarse_correct / len(train_loader.sampler)
-    # epoch_fine_accuracy = 100 * fine_correct / len(train_loader.sampler)
+    # epoch_loss = running_loss /  len(inputs) * (batch_index + 1) 
+    # epoch_coarse_accuracy = 100 * coarse_correct / (len(inputs) * (batch_index + 1))
+    # epoch_fine_accuracy = 100 * fine_correct / (len(inputs) * (batch_index + 1))
+    epoch_loss = running_loss /  len(train_loader)
+    epoch_coarse_accuracy = 100 * coarse_correct / len(train_loader.sampler)
+    epoch_fine_accuracy = 100 * fine_correct / len(train_loader.sampler)
     
     #writer.add_scalar('Training Loss', epoch_loss, epoch)
     
     # Validation
     model.eval()
+    loss = 0.0
     val_running_loss = 0.0
     val_coarse_correct = 0
     val_fine_correct = 0
@@ -329,7 +352,7 @@ for epoch in range(num_epochs):
             coarse_loss = criterion(coarse_outputs, coarse_labels)
             fine_loss = criterion(fine_outputs, fine_labels)
             
-            loss = alpha * coarse_loss + beta * fine_loss
+            loss = (coarse_loss + fine_loss) / 2
             val_running_loss += loss.item() 
             
             coarse_probs = model.get_class_probabilies(coarse_outputs)
@@ -340,15 +363,15 @@ for epoch in range(num_epochs):
             fine_predictions = torch.argmax(fine_probs, dim=1)
             val_fine_correct += (fine_predictions == fine_labels).sum().item()
             
-            if batch_index == 1:
-                break
+            # if batch_index == 1:
+            #     break
     
-    val_epoch_loss = val_running_loss /  (len(inputs) * (batch_index + 1))
-    val_epoch_coarse_accuracy = 100 * val_coarse_correct / (len(inputs) * (batch_index + 1))
-    val_epoch_fine_accuracy = 100 * val_fine_correct / (len(inputs) * (batch_index + 1))
-    # val_epoch_loss = val_running_loss /  len(valid_loader.sampler)
-    # val_epoch_coarse_accuracy = 100 * val_coarse_correct / len(valid_loader.sampler)
-    # val_epoch_fine_accuracy = 100 * val_fine_correct / len(valid_loader.sampler)
+    # val_epoch_loss = val_running_loss /  (len(inputs) * (batch_index + 1))
+    # val_epoch_coarse_accuracy = 100 * val_coarse_correct / (len(inputs) * (batch_index + 1))
+    # val_epoch_fine_accuracy = 100 * val_fine_correct / (len(inputs) * (batch_index + 1))
+    val_epoch_loss = val_running_loss /  len(valid_loader)
+    val_epoch_coarse_accuracy = 100 * val_coarse_correct / len(valid_loader.sampler)
+    val_epoch_fine_accuracy = 100 * val_fine_correct / len(valid_loader.sampler)
     
     print(f"""
         Epoch: {epoch+1}: 
