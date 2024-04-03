@@ -462,7 +462,9 @@ def run_image_per_image_predict_segmentation_train_validation(config):
     inverse_cropping_box = box(cropping_factor[1], 1-(cropping_factor[0] + cropping_factor[2]), cropping_factor[1] + cropping_factor[3], 1-cropping_factor[0])
 
     for image, image_id in predict_data:
-        # for debugging only
+        # if image_id != '765100174607174':
+        #     continue
+        # # for debugging only
         count += 1
         # if count > 20:
         #     break
@@ -510,7 +512,26 @@ def run_image_per_image_predict_segmentation_train_validation(config):
                 mapillary_detections.convert_to_polygon(segment)
                 for segment in rescaled_segments
             ]
+
+            if any([not polygon.is_valid for polygon in detection_polygons]):
+                # for polygon in detection_polygons:
+                #     if not polygon.is_valid:
+                #         print("polygon")
+                #         print(polygon)
+
+                        # import matplotlib.pyplot as plt
+                        # xs, ys = merged_polygon.exterior.xy
+                        # fig, axs = plt.subplots()
+                        # axs.set_aspect('equal', 'datalim')
+                        # axs.fill(xs, ys, alpha=0.5, fc='r', ec='none')
+                continue
+            
             merged_polygon = mapillary_detections.merge_polygons(detection_polygons)
+
+            # if not merged_polygon.is_valid:
+                # print("merged_polygon")
+                # print(merged_polygon)
+                # continue
 
             # intersection of detection with cropping
             intersection_polygon = intersection(merged_polygon, inverse_cropping_box)
