@@ -33,23 +33,23 @@ train_validation_segmentation_CC = {
     "model_dict": {
        # "trained_model": "surface-efficientNetV2SLinear-20240314_164055-mi0872lh_epoch6.pt",
         "trained_model": "surface-efficientNetV2SLinear-20240318_114422-a68tf9lt_epoch4.pt", 
-        "submodel": {
-            const.ASPHALT: {
-                "trained_model": "smoothness-asphalt-efficientNetV2SLinear-20240314_202655-x67n9qjz_epoch18.pt"
-            },
-            const.CONCRETE: {
-                "trained_model": "smoothness-concrete-efficientNetV2SLinear-20240314_221414-z9pumhri_epoch18.pt"
-            },
-            const.PAVING_STONES: {
-                "trained_model": "smoothness-paving_stones-efficientNetV2SLinear-20240314_223314-c8cxtraf_epoch14.pt"
-            },
-            const.SETT: {
-                "trained_model": "smoothness-sett-efficientNetV2SLinear-20240314_233003-mplaq0xd_epoch19.pt"
-            },
-            const.UNPAVED: {
-                "trained_model": "smoothness-unpaved-efficientNetV2SLinear-20240315_001707-zu6wt2fs_epoch16.pt"
-            },
-        },
+        # "submodel": {
+        #     const.ASPHALT: {
+        #         "trained_model": "smoothness-asphalt-efficientNetV2SLinear-20240314_202655-x67n9qjz_epoch18.pt"
+        #     },
+        #     const.CONCRETE: {
+        #         "trained_model": "smoothness-concrete-efficientNetV2SLinear-20240314_221414-z9pumhri_epoch18.pt"
+        #     },
+        #     const.PAVING_STONES: {
+        #         "trained_model": "smoothness-paving_stones-efficientNetV2SLinear-20240314_223314-c8cxtraf_epoch14.pt"
+        #     },
+        #     const.SETT: {
+        #         "trained_model": "smoothness-sett-efficientNetV2SLinear-20240314_233003-mplaq0xd_epoch19.pt"
+        #     },
+        #     const.UNPAVED: {
+        #         "trained_model": "smoothness-unpaved-efficientNetV2SLinear-20240315_001707-zu6wt2fs_epoch16.pt"
+        #     },
+        # },
     },
     "dataset": "V9/annotated",
     "transform": {
