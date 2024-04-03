@@ -21,6 +21,7 @@ import pandas as pd
 import numpy as np
 import argparse
 import matplotlib.pyplot as plt
+from shapely import box, intersection
 
 def cam_prediction(config):
     # load device
@@ -260,6 +261,7 @@ def run_segmentation(config):
     print(f'Images {config.get("dataset")} segmented and saved.')
 
 def run_image_per_image_predict_segmentation(config):
+    
     # load device
     device = torch.device(
         f"cuda:{config.get('gpu_kernel')}" if torch.cuda.is_available() else "cpu"
@@ -431,6 +433,227 @@ def run_image_per_image_predict_segmentation(config):
 
     print(f'Images {config.get("dataset")} predicted and saved: {saving_path}')
 
+def run_image_per_image_predict_segmentation_train_validation(config):
+    
+    # load device
+    device = torch.device(
+        f"cuda:{config.get('gpu_kernel')}" if torch.cuda.is_available() else "cpu"
+    )
+
+    # prepare data
+    predict_data = prepare_data(config.get("root_data"), config.get("dataset"))
+
+    level = 0
+    columns = ["Image", "Segment", "Prediction", f"Level_{level}"]
+    df = pd.DataFrame(columns=columns)
+
+    # for debugging only
+    count = 0
+
+    # threshold for min detection area
+    threshold = 0.05
+
+    # cropping parameters rescaled to [0, 1]
+    if config.get("transform") is not None:
+        crop_style = config.get("transform").get("crop")
+    else:
+        crop_style = None
+    cropping_factor = preprocessing.crop_factor(crop_style=crop_style)
+    inverse_cropping_box = box(cropping_factor[1], 1-(cropping_factor[0] + cropping_factor[2]), cropping_factor[1] + cropping_factor[3], 1-cropping_factor[0])
+
+    for image, image_id in predict_data:
+        # for debugging only
+        count += 1
+        # if count > 20:
+        #     break
+        print(image_id)
+
+        # # for segmentation analysis only
+        # image_det = image.copy().transpose(Image.FLIP_TOP_BOTTOM)
+        # draw_det = ImageDraw.Draw(image_det)
+        # text_list = []
+
+        # detection
+        detections = mapillary_requests.extract_detections_from_image(
+            mapillary_requests.request_image_data_from_image_entity(
+                image_id,
+                mapillary_requests.load_mapillary_token(
+                    token_path=config.get("mapillary_token_path")
+                ),
+                url=False,
+                detections=True,
+            )
+        )
+        
+        # TODO: save image in csv plain (to be registered if no valid segmentation)
+
+        # search for max detection
+        max_detection = {"area": 0}
+        for det in detections:
+            
+            # only consider "road" elements
+            if det["value"] not in config.get("segment_color").keys():
+                continue
+
+            # for debugging only
+            print(det["value"])
+
+            # segments rescaled to [0, 1]
+            rescaled_segments = [
+                np.divide(segment, 4096)
+                for segment in mapillary_detections.decode_detection_geometry(
+                    det["geometry"]
+                )
+            ]
+
+            detection_polygons = [
+                mapillary_detections.convert_to_polygon(segment)
+                for segment in rescaled_segments
+            ]
+            merged_polygon = mapillary_detections.merge_polygons(detection_polygons)
+
+            # intersection of detection with cropping
+            intersection_polygon = intersection(merged_polygon, inverse_cropping_box)
+
+            # polygon area
+            area = mapillary_detections.calculate_polygon_area(intersection_polygon)
+
+            # reject detection if coverage area of detection is low (sum of segments (alternative: max segment))
+            if area < threshold:
+                continue
+
+            if area > max_detection.get("area"):
+                max_detection["area"] = area
+                max_detection["value"] = det["value"]
+                max_detection["polygon"] = intersection_polygon
+
+        # if no valid detection in max_detection
+        if max_detection["area"] == 0:
+            continue
+
+        # for debugging only
+        print(max_detection["value"])
+        print(max_detection["area"])
+                        
+        # to avoid fringed edges/smooth edges
+        convex_hull = mapillary_detections.generate_polygon_convex_hull(
+            max_detection["polygon"]
+        )
+
+        # Create Mask Image (TODO: include in transformation?)
+        mask = Image.new("L", image.size, 0)
+        draw = ImageDraw.Draw(mask)
+        rescaled_convex = (
+            np.multiply(convex_hull.exterior.coords, image.size)
+            .flatten()
+            .tolist()
+        )
+        draw.polygon(rescaled_convex, fill=255)
+        mask = mask.copy().transpose(Image.FLIP_TOP_BOTTOM)
+        image_rgba = image.copy()
+        image_rgba.putalpha(mask)
+        color_layer = Image.new("RGB", image.size, (0, 0, 0)).convert("RGBA")
+        image_masked = Image.alpha_composite(color_layer, image_rgba).convert(
+            "RGB"
+        )
+
+        # bounding box for cropping
+        # # cropping based on polygon
+        # bbox = mapillary_detections.generate_polygon_bbox(convex_hull)
+        # top = 1 - bbox[3]
+        # left = bbox[0]
+        # height = bbox[3] - bbox[1]
+        # width = bbox[2] - bbox[0]
+
+        # transform = {
+        #     **config.get("transform"),
+        #     "crop": (top, left, height, width),
+        # }
+        # transform = preprocessing.transform(**transform)
+
+        # cropping based on transform cropping
+        transform = preprocessing.transform(**config.get("transform"))
+        image_transformed = transform(image_masked)
+
+        # for debugging only
+        # helper.imshow(image_transformed)
+
+        _ = recursive_image_per_image_predict_csv(
+            model_dict=config.get("model_dict"),
+            model_root=config.get("root_model"),
+            image_id=image_id,
+            segment=max_detection["value"],
+            image_transformed=image_transformed,
+            device=device,
+            df=df,
+            level=level,
+        )
+
+        # for segmentation analysis only
+        image_det = image.copy().transpose(Image.FLIP_TOP_BOTTOM)
+        draw_det = ImageDraw.Draw(image_det)
+        # draw polygons
+        # for segment in rescaled_segments:
+        #     draw_det.polygon(np.multiply(segment, image_det.size).flatten().tolist(), fill=config.get('segment_color')[det['value']], outline="blue")
+        draw_det.polygon(
+            np.multiply(convex_hull.exterior.coords, image_det.size)
+            .flatten()
+            .tolist(),
+            fill=config.get("segment_color")[max_detection["value"]],
+            outline="blue",
+        )
+        # draw bbox
+        # left = bbox[0] * image_det.size[0]
+        # right = bbox[2] * image_det.size[0]
+        # top = bbox[1] * image_det.size[1]
+        # upper = bbox[3] * image_det.size[1]
+        # draw_det.rectangle(
+        #     [left, top, right, upper],
+        #     outline="white",
+        # )
+        draw_det.polygon(
+            np.multiply(inverse_cropping_box.exterior.coords, image_det.size)
+            .flatten()
+            .tolist(),
+            outline="white",
+        )
+        # # label prediction
+        # text_list.append([text, (left + 5, image_det.size[1] - upper + 5)])
+        # draw_det.text((left+5, top+5), text=text)
+
+        # for segmentation analysis only
+        image_det = image_det.transpose(Image.FLIP_TOP_BOTTOM)
+        composite = Image.blend(image, image_det, 0.2)
+        # composite_draw = ImageDraw.Draw(composite)
+        # for label in text_list:
+        #     composite_draw.text(label[1], label[0])
+        # composite.show()
+            
+        # save image with detections
+        image_folder = os.path.join(config.get("root_predict"), config.get("dataset"))
+        if not os.path.exists(image_folder):
+            os.makedirs(image_folder)
+        image_path = os.path.join(image_folder, "{}_segment.png".format(image_id))
+        # with open(image_path, 'wb') as handler:
+        #     handler.write(image)
+        composite.save(image_path)
+
+    # save predictions
+    start_time = datetime.fromtimestamp(time.time()).strftime("%Y%m%d_%H%M%S")
+    saving_name = (
+        config.get("name")
+        + "-"
+        + config.get("dataset").replace("/", "_")
+        + "-"
+        + start_time
+        + ".csv"
+    )
+
+    saving_path = save_predictions_csv(
+        df=df, saving_dir=config.get("root_predict"), saving_name=saving_name
+    )
+
+    print(f'Images {config.get("dataset")} predicted and saved: {saving_path}')
 
 def recursive_image_per_image_predict_csv(
     model_dict,
@@ -477,24 +700,22 @@ def recursive_image_per_image_predict_csv(
         if pre_cls is not None:
             columns = columns + [f"Level_{level-1}"]
             pre_cls_entry = [pre_cls]
+
+        pred_value, pred_class = convert_forward_step_outputs(outputs=pred_output, classes=classes, is_regression=is_regression)
+        pred_value, pred_class = pred_value[0], pred_class[0]
+
         if is_regression:
-            cls = (
-                "outside"
-                if str(pred_output.round().int().item()) not in classes.keys()
-                else classes[str(pred_output.round().int().item())]
-            )
             i = df.shape[0]
             df.loc[i, columns] = [
                 image_id,
                 segment,
-                pred_output.item(),
+                pred_value,
                 is_valid_data,
-                cls,
+                pred_class,
             ] + pre_cls_entry
-            text = cls + ": " + f"{pred_output.item():.3f}"
+            text = cls + ": " + f"{pred_value:.3f}"
         else:
-            pred_class = classes[torch.argmax(pred_output, dim=0).item()]
-            for cls, prob in zip(classes, pred_output.tolist()):
+            for cls, prob in zip(classes, pred_value):
                 i = df.shape[0]
                 df.loc[i, columns] = [
                     image_id,
@@ -514,12 +735,12 @@ def recursive_image_per_image_predict_csv(
                 device=device,
                 df=df,
                 level=level + 1,
-                pre_cls=cls,
+                pre_cls=pred_class,
             )
             text = (
                 pred_class
                 + ": "
-                + f"{torch.max(pred_output, dim=0).values.item():.3f}"
+                + f"{max(pred_value):.3f}"
                 + "\n"
                 + sub_text
             )
@@ -564,24 +785,18 @@ def recursive_predict_csv(
         if pre_cls is not None:
             columns = columns + [f"Level_{level-1}"]
             pre_cls_entry = [pre_cls]
+
+        pred_values, pred_classes = convert_forward_step_outputs(outputs=pred_outputs, classes=classes, is_regression=is_regression)
+            
         if is_regression:
-            pred_classes = [
-                "outside"
-                if str(pred.item()) not in classes.keys()
-                else classes[str(pred.item())]
-                for pred in pred_outputs.round().int()
-            ]
             for image_id, pred, is_vd, cls in zip(
-                image_ids, pred_outputs, is_valid_data, pred_classes
+                image_ids, pred_values, is_valid_data, pred_classes
             ):
                 i = df.shape[0]
-                df.loc[i, columns] = [image_id, pred.item(), is_vd, cls] + pre_cls_entry
+                df.loc[i, columns] = [image_id, pred, is_vd, cls] + pre_cls_entry
         else:
-            pred_classes = [
-                classes[idx.item()] for idx in torch.argmax(pred_outputs, dim=1)
-            ]
-            for image_id, pred, is_vd in zip(image_ids, pred_outputs, is_valid_data):
-                for cls, prob in zip(classes, pred.tolist()):
+            for image_id, pred, is_vd in zip(image_ids, pred_values, is_valid_data):
+                for cls, prob in zip(classes, pred):
                     i = df.shape[0]
                     df.loc[i, columns] = [image_id, prob, is_vd, cls] + pre_cls_entry
             # subclasses not for regression implemented
@@ -605,19 +820,20 @@ def recursive_predict_csv(
                 )
 
 
-def predict_image_per_image(model, image_transformed, is_regression, device):
+def predict_image_per_image(model, image, is_regression, device):
     model.to(device)
     model.eval()
 
     with torch.no_grad():
-        input = torch.unsqueeze(image_transformed, 0).to(device)
-        output = model(input)
-        if is_regression:
-            output = output.flatten()
-        else:
-            output = model.get_class_probabilies(output)
+        input = torch.unsqueeze(image, 0)
 
-    return torch.squeeze(output, 0)
+        output = batch_forward_step(model_to_device=model,
+                                    batch_inputs=input,
+                                    is_regression=is_regression,
+                                    device=device)
+
+    # return torch.squeeze(output, 0)
+    return output
 
 
 def predict(model, data, batch_size, is_regression, device):
@@ -630,20 +846,38 @@ def predict(model, data, batch_size, is_regression, device):
     ids = []
     with torch.no_grad():
         for batch_inputs, batch_ids in loader:
-            batch_inputs = batch_inputs.to(device)
-
-            batch_outputs = model(batch_inputs)
-            if is_regression:
-                batch_outputs = batch_outputs.flatten()
-            else:
-                batch_outputs = model.get_class_probabilies(batch_outputs)
-
+            batch_outputs = batch_forward_step(model_to_device=model, batch_inputs=batch_inputs, is_regression=is_regression, device=device)
             outputs.append(batch_outputs)
             ids.extend(batch_ids)
 
     pred_outputs = torch.cat(outputs, dim=0)
 
     return pred_outputs, ids
+
+def batch_forward_step(model_to_device, batch_inputs, is_regression, device):
+    batch_inputs = batch_inputs.to(device)
+    batch_outputs = model_to_device(batch_inputs)
+
+    if is_regression:
+        batch_outputs = batch_outputs.flatten()
+    else:
+        batch_outputs = model_to_device.get_class_probabilies(batch_outputs)
+
+    return batch_outputs
+
+def convert_forward_step_outputs(outputs, classes, is_regression):
+    # batch
+    if is_regression:
+        pred_values = [output.item() for output in outputs]
+        rounded_pred_values = [str(round(pred_value)) for pred_value in pred_values]
+        pred_classes = [classes.get(value, "outside") for value in rounded_pred_values]    
+    else:
+        pred_values = [output.tolist() for output in outputs]
+        pred_classes = [
+            classes[idx.item()] for idx in torch.argmax(outputs, dim=1)
+        ]
+
+    return pred_values, pred_classes
 
 def save_cam(model, data, normalize_transform, classes, valid_dataset, is_regression, device, image_folder):
 
@@ -658,20 +892,13 @@ def save_cam(model, data, normalize_transform, classes, valid_dataset, is_regres
     with torch.no_grad() and helper.ActivationHook(feature_layer) as activation_hook:
         
         for image, image_id in data:
-            input = normalize_transform(image).unsqueeze(0).to(device)
+            input = normalize_transform(image).unsqueeze(0)
             
-            output = model(input)
+            pred_output = batch_forward_step(model_to_device=model, batch_inputs=input, is_regression=is_regression, device=device)
+            pred_value, pred_class = convert_forward_step_outputs(outputs=pred_output, classes=classes, is_regression=is_regression)
+            pred_value, pred_class = pred_value[0], pred_class[0]
+
             # TODO: wie sinnvoll ist class activation map bei regression?
-            if is_regression:
-                output = output.flatten().squeeze(0)
-                pred_value = output.item()
-                idx = 0
-                pred_class = "outside" if str(round(pred_value)) not in classes.keys() else classes[str(round(pred_value))]
-            else:
-                output = model.get_class_probabilies(output).squeeze(0)
-                pred_value = torch.max(output, dim=0).values.item()
-                idx = torch.argmax(output, dim=0).item()
-                pred_class = classes[idx]
 
             # create cam
             activations = activation_hook.activation[0]
@@ -715,8 +942,6 @@ def save_cam(model, data, normalize_transform, classes, valid_dataset, is_regres
             plt.show()
             plt.close()
 
-
-def prepare_data(data_root, dataset, transform):
 
 def prepare_data(data_root, dataset, transform=None):
     data_path = os.path.join(data_root, dataset)

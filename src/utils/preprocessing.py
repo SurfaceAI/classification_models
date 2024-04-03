@@ -454,6 +454,7 @@ def train_validation_split_datasets(
 
 def custom_crop(img, crop_style=None):
     im_width, im_height = img.size
+    # TODO: integrate crop_factor
     if isinstance(crop_style, tuple) and len(crop_style) == 4:
         top = crop_style[0] * im_height
         left = crop_style[1] * im_width
@@ -474,6 +475,17 @@ def custom_crop(img, crop_style=None):
 
     cropped_img = transforms.functional.crop(img, top, left, height, width)
     return cropped_img
+
+def crop_factor(crop_style):
+    if isinstance(crop_style, tuple) and len(crop_style) == 4:
+        crop_factor_tuple = crop_style
+    elif crop_style == "lower_middle_third":
+        crop_factor_tuple = [2 / 3, 1 / 3, 1 / 3, 1 / 3]
+    elif crop_style == "lower_middle_half":
+        crop_factor_tuple = [1 / 2, 1 / 4, 1 / 2, 1 / 2]
+    else:
+        crop_factor_tuple = [0, 0, 1, 1]
+    return crop_factor_tuple
 
 
 def transform(
