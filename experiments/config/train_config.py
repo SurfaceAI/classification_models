@@ -2,9 +2,9 @@ from src import constants as const
 from experiments.config  import global_config
 
 default_params = {
-    "batch_size": 16,  # 48
-    "epochs": 10,
-    "learning_rate": 0.0001,
+    "batch_size": 128,#16,  # 48
+    "epochs": 80,
+    "learning_rate": 0.003,
     "optimizer": const.OPTI_ADAM,
     "is_regression": False,
     "eval_metric": const.EVAL_METRIC_ACCURACY,
@@ -214,4 +214,13 @@ effnet_asphalt_crophalf_regression_params = {
     "dataset": "V7/annotated/asphalt",
     "model": const.EFFNET_LINEAR,
 
+}
+
+B_CNN_multilabel = {
+    **global_config.global_config,
+    **default_params,
+    "project": const.PROJECT_MULTI_LABEL_FIXED,
+    "name": "B_CNN",
+    "level": const.FLATTEN,
+    #"model": const.RATEKE,
 }
