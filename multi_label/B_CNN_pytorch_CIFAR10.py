@@ -151,7 +151,6 @@ class B_CNN(nn.Module):
             nn.MaxPool2d(kernel_size = 2, stride = 2))
         
         ### Fine Block
-        self.f_flat = nn.Flatten() 
         self.fc = nn.Sequential(
             nn.Linear(512 * 2 * 2, 1024),
             #nn.Linear(512 * 16 * 16, 256),
