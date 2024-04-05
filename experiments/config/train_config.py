@@ -3,7 +3,7 @@ from experiments.config  import global_config
 
 default_params = {
     "batch_size": 128,#16,  # 48
-    "epochs": 80,
+    "epochs": 40,
     "learning_rate": 0.003,
     "optimizer": const.OPTI_ADAM,
     "is_regression": False,
