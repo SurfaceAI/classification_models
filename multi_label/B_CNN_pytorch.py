@@ -14,12 +14,10 @@ from torch.optim import lr_scheduler
 import torchvision
 from torchvision import transforms
 from torch.utils.data import DataLoader
-from torch.utils.tensorboard import SummaryWriter
 from torchvision.datasets import ImageFolder
 import torch.nn.functional as F
-from torchsummary import summary
 import matplotlib.pyplot as plt
-import torchvision.utils as vutils
+#import torchvision.utils as vutils
 #from torchtnt.framework.callback import Callback
 
 import wandb
