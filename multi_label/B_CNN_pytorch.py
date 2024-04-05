@@ -188,9 +188,9 @@ class B_CNN(nn.Module):
 #learning rate scheduler manual, it returns the multiplier for our initial learning rate
 def lr_lambda(epoch):
   learning_rate_multi = 1.0
-  if epoch > 42:
+  if epoch > 22:
     learning_rate_multi = (1/6) # 0.003/6 to get lr = 0.0005
-  if epoch > 52:
+  if epoch > 32:
     learning_rate_multi = (1/30) # 0.003/30 to get lr = 0.0001
   return learning_rate_multi
 
