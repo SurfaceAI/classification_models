@@ -1,7 +1,6 @@
 import sys
 sys.path.append('.')
 
-from src.models import training
 from experiments.config import train_config
 from src.utils import preprocessing
 from src import constants
