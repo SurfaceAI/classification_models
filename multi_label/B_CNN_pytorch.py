@@ -23,16 +23,27 @@ import matplotlib.pyplot as plt
 import torchvision.utils as vutils
 #from torchtnt.framework.callback import Callback
 
+import wandb
 import numpy as np
 import os
 
 
-config = train_config.rateke_flatten_params
+
+
+config = train_config.B_CNN_multilabel
+
 device = torch.device(
         f"cuda:{config.get('gpu_kernel')}" if torch.cuda.is_available() else "cpu"
     )
 
 print(device)
+
+if config.get('wandb_on'):
+    run = wandb.init(
+        project=config.get('project'),
+        name=config.get('name'),
+        config = config
+    )
 
 
 def to_one_hot_tensor(y, num_classes):
@@ -56,6 +67,12 @@ model_name = 'weights_B_CNN_surfaceai'+train_id+'.h5'
 model_path = os.path.join(weights_store_filepath, model_name)
 
 
+#functions
+def imshow(img):
+    img = img / 2 + 0.5     # unnormalize
+    npimg = img.numpy()
+    plt.imshow(np.transpose(npimg, (1, 2, 0)))
+    plt.show()
 
 # Define the neural network model
 class B_CNN(nn.Module):
@@ -85,21 +102,6 @@ class B_CNN(nn.Module):
             nn.ReLU(),
             nn.MaxPool2d(kernel_size = 2, stride = 2))
         
-        ### Coarse branch
-        self.c_flat = nn.Flatten() 
-        self.c_fc = nn.Sequential(
-            nn.Linear(128 * 64 * 64, 1024),
-            nn.ReLU(),
-            #nn.BatchNorm1d(256),
-            nn.Dropout(0.5))
-        self.c_fc1 = nn.Sequential(
-            nn.Linear(1024, 1024),
-            nn.ReLU(),
-            #nn.BatchNorm1d(256),
-            nn.Dropout(0.5))
-        self.c_fc2 = (
-            nn.Linear(1024, num_c)
-        )
 
         ### Block 3
         self.block3_layer1 = nn.Sequential(
@@ -111,6 +113,23 @@ class B_CNN(nn.Module):
             nn.BatchNorm2d(256),
             nn.ReLU(),
             nn.MaxPool2d(kernel_size = 2, stride = 2))
+        
+        ### Coarse branch
+        self.c_flat = nn.Flatten() 
+        self.c_fc = nn.Sequential(
+            nn.Linear(256 * 32 * 32, 512),
+            nn.ReLU(),
+            #nn.BatchNorm1d(256),
+            nn.Dropout(0.5))
+        self.c_fc1 = nn.Sequential(
+            nn.Linear(512, 512),
+            nn.ReLU(),
+            #nn.BatchNorm1d(256),
+            nn.Dropout(0.5))
+        self.c_fc2 = (
+            nn.Linear(512, num_c)
+        )
+        
         
         ### Block 4
         self.block4_layer1 = nn.Sequential(
@@ -124,19 +143,15 @@ class B_CNN(nn.Module):
             nn.MaxPool2d(kernel_size = 2, stride = 2))
         
         ### Fine Block
-        self.f_flat = nn.Flatten() 
         self.fc = nn.Sequential(
-            nn.Dropout(0.5),
             nn.Linear(512 * 16 * 16, 1024),
-            #nn.Linear(512 * 16 * 16, 256),
             nn.ReLU(),
-            nn.BatchNorm1d(1024),
+            nn.Dropout(0.5),
             )
         self.fc1 = nn.Sequential(
-            nn.Dropout(0.5),
             nn.Linear(1024, 1024),
             nn.ReLU(),
-            nn.BatchNorm1d(1024),
+            nn.Dropout(0.5),
             )
         self.fc2 = (
             nn.Linear(1024, num_classes)
@@ -153,15 +168,13 @@ class B_CNN(nn.Module):
         x = self.block2_layer1(x)#[batch_size, 64, 128, 128] 
         x = self.block2_layer2(x) #(batch_size, 128, 64, 64)
         
-        flat = x.reshape(x.size(0), -1) #(48, 524288)
-        #coarse_output = self.c_flat(x) #(batch_size, 256)
-        coarse_output = self.c_fc(flat) #(48,4096)
-        coarse_output = self.c_fc1(coarse_output)
-
-        coarse_output = self.c_fc2(coarse_output)
-        
         x = self.block3_layer1(x)
         x = self.block3_layer2(x)
+        
+        flat = x.reshape(x.size(0), -1) 
+        coarse_output = self.c_fc(flat) 
+        coarse_output = self.c_fc1(coarse_output)
+        coarse_output = self.c_fc2(coarse_output)
         
         x = self.block4_layer1(x)
         x = self.block4_layer2(x) # output: [batch_size, 512 #channels, 16, 16 #height&width]
@@ -178,9 +191,9 @@ class B_CNN(nn.Module):
 #learning rate scheduler manual, it returns the multiplier for our initial learning rate
 def lr_lambda(epoch):
   learning_rate_multi = 1.0
-  if epoch > 2:
+  if epoch > 42:
     learning_rate_multi = (1/6) # 0.003/6 to get lr = 0.0005
-  if epoch > 6:
+  if epoch > 52:
     learning_rate_multi = (1/30) # 0.003/30 to get lr = 0.0001
   return learning_rate_multi
 
@@ -192,13 +205,13 @@ class LossWeightsModifier():
         self.beta = beta
 
     def on_epoch_end(self, epoch):
-        if epoch >= 3:
+        if epoch >= 10:
             self.alpha = torch.tensor(0.6)
             self.beta = torch.tensor(0.4)
-        elif epoch >= 5:
+        elif epoch >= 20:
             self.alpha = torch.tensor(0.2)
             self.beta = torch.tensor(0.8)
-        elif epoch >= 8:
+        elif epoch >= 30:
             self.alpha = torch.tensor(0.0)
             self.beta = torch.tensor(1.0)
             
@@ -257,6 +270,7 @@ for j in range(y_valid.shape[0]):
     y_c_valid[j][parent[torch.argmax(y_valid[j])]] = 1.0
 
 
+
 # Initialize the loss weights
 
 alpha = torch.tensor(0.98)
@@ -265,7 +279,7 @@ beta = torch.tensor(0.02)
 # Initialize the model, loss function, and optimizer
 model = B_CNN(num_c=5, num_classes=18)
 criterion = nn.CrossEntropyLoss()
-optimizer = optim.SGD(model.parameters(), lr=0.003, momentum=0.9)
+optimizer = optim.SGD(model.parameters(), lr=config.get('learning_rate'), momentum=0.9)
 
 # Set up learning rate scheduler
 #scheduler = lr_scheduler.StepLR(optimizer, step_size=3, gamma=0.1)
@@ -273,10 +287,9 @@ scheduler = lr_scheduler.LambdaLR(optimizer, lr_lambda)
 loss_weights_modifier = LossWeightsModifier(alpha, beta)
 
 # Train the model
-num_epochs = 10
-writer = SummaryWriter('logs')
+#writer = SummaryWriter('logs')
 
-for epoch in range(num_epochs):
+for epoch in range(config.get('epochs')):
     model.train()
     running_loss = 0.0
     coarse_correct = 0
@@ -285,23 +298,25 @@ for epoch in range(num_epochs):
     for batch_index, (inputs, fine_labels) in enumerate(train_loader):
         
         
-        if batch_index == 0:  # Print only the first batch
-            print("Batch Images:")
-            images_grid = vutils.make_grid(inputs, nrow=8, padding=2, normalize=True)  # Assuming batch size is 64
-            plt.figure(figsize=(16, 16))
-            plt.imshow(np.transpose(images_grid, (1, 2, 0)))
-            plt.axis('off')
-            plt.show()
+        # if batch_index == 0:  # Print only the first batch
+        #     print("Batch Images:")
+        #     images_grid = vutils.make_grid(inputs, nrow=8, padding=2, normalize=True)  # Assuming batch size is 64
+        #     plt.figure(figsize=(16, 16))
+        #     plt.imshow(np.transpose(images_grid, (1, 2, 0)))
+        #     plt.axis('off')
+        #     plt.show()
 
         inputs, labels = inputs.to(device), fine_labels.to(device)
         
         optimizer.zero_grad()
+        
         coarse_labels = parent[fine_labels]
         
         coarse_outputs, fine_outputs = model.forward(inputs)
         coarse_loss = criterion(coarse_outputs, coarse_labels)
         fine_loss = criterion(fine_outputs, fine_labels)
         loss = alpha * coarse_loss + beta * fine_loss  #weighted loss functions for different levels
+        
         loss.backward()
         optimizer.step()
         running_loss += loss.item() 
@@ -373,6 +388,21 @@ for epoch in range(num_epochs):
     val_epoch_coarse_accuracy = 100 * val_coarse_correct / len(valid_loader.sampler)
     val_epoch_fine_accuracy = 100 * val_fine_correct / len(valid_loader.sampler)
     
+    if config.get('wandb_on'):
+            wandb.log(
+                {
+                    "epoch": epoch + 1,
+                    "dataset": config.get('dataset'),
+                    "train/loss": epoch_loss,
+                    "train/accuracy/coarse": epoch_coarse_accuracy,
+                    "train/accuracy/fine": epoch_fine_accuracy , 
+                    "eval/loss": val_epoch_loss,
+                    "eval/accuracy/coarse": val_epoch_coarse_accuracy,
+                    "eval/accuracy/fine": val_epoch_fine_accuracy,
+                }
+            )
+    
+    
     print(f"""
         Epoch: {epoch+1}: 
         Learning Rate: {before_lr} ->  {after_lr},
@@ -384,4 +414,6 @@ for epoch in range(num_epochs):
         Validation coarse accuracy: {val_epoch_coarse_accuracy:.3f}%, 
         Validation fine accuracy: {val_epoch_fine_accuracy:.3f}% """)
 
+if config.get('wandb_on'):
+        wandb.finish()
 #writer.close()
