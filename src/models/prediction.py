@@ -491,12 +491,15 @@ def run_image_per_image_predict_segmentation_train_validation(config):
 
         # search for max detection
         max_detection = {"area": 0}
+
+        # check sum of detections of interest
+        sum_detections = 0
+
+        image_manipulated = image.copy()
+        transform = config.get("transform")
+
         for det in detections:
             
-            # only consider "road" elements
-            if det["value"] not in config.get("segment_color").keys():
-                continue
-
             # for debugging only
             # print(det["value"])
 
@@ -524,6 +527,7 @@ def run_image_per_image_predict_segmentation_train_validation(config):
                         # fig, axs = plt.subplots()
                         # axs.set_aspect('equal', 'datalim')
                         # axs.fill(xs, ys, alpha=0.5, fc='r', ec='none')
+                # TODO: only exclude single invalid polygon
                 continue
             
             merged_polygon = mapillary_detections.merge_polygons(detection_polygons)
@@ -534,49 +538,125 @@ def run_image_per_image_predict_segmentation_train_validation(config):
                 # continue
 
             # intersection of detection with cropping
+            # TODO: difference: first intersect than convex-hull vs convex-hull than intersection?
             intersection_polygon = intersection(merged_polygon, inverse_cropping_box)
 
             # polygon area
             area = mapillary_detections.calculate_polygon_area(intersection_polygon)
+            # print(area)
 
-            # reject detection if coverage area of detection is low (sum of segments (alternative: max segment))
-            if area < threshold:
-                continue
+            sum_detections += area
 
-            if area > max_detection.get("area"):
+            # only consider "road" elements, reject detection if coverage area of detection is low (sum of segments (alternative: max segment))
+            if det["value"] in config.get("segment_color").keys() and area > threshold and area > max_detection.get("area"):
                 max_detection["area"] = area
                 max_detection["value"] = det["value"]
                 max_detection["polygon"] = intersection_polygon
 
         # if no valid detection in max_detection
+        
         if max_detection["area"] == 0:
-            continue
+            # TODO: Überprüfen, ob es nur wenige detections gab (z.B. weil zu alt), oder ob keine der "color"-Klassen ausreichend groß war
+            # und das entsprechend festhalten zum Überprüfen!
 
-        # for debugging only
-        # print(max_detection["value"])
-        # print(max_detection["area"])
-                        
-        # to avoid fringed edges/smooth edges
-        convex_hull = mapillary_detections.generate_polygon_convex_hull(
-            max_detection["polygon"]
-        )
+            # betrachtete detections zusammen Fläche weniger als Grenzwert
+            if sum_detections > 0.9:
+                segment = 'completely_segmented'
+            else:
+                segment = 'not_completely_segmented'
+        else:
 
-        # Create Mask Image (TODO: include in transformation?)
-        mask = Image.new("L", image.size, 0)
-        draw = ImageDraw.Draw(mask)
-        rescaled_convex = (
-            np.multiply(convex_hull.exterior.coords, image.size)
-            .flatten()
-            .tolist()
-        )
-        draw.polygon(rescaled_convex, fill=255)
-        mask = mask.copy().transpose(Image.FLIP_TOP_BOTTOM)
-        image_rgba = image.copy()
-        image_rgba.putalpha(mask)
-        color_layer = Image.new("RGB", image.size, (0, 0, 0)).convert("RGBA")
-        image_masked = Image.alpha_composite(color_layer, image_rgba).convert(
-            "RGB"
-        )
+            # for debugging only
+            # print(max_detection["value"])
+            # print(max_detection["area"])
+
+            segment = max_detection["value"]
+
+            # to avoid fringed edges/smooth edges
+            convex_hull = mapillary_detections.generate_polygon_convex_hull(
+                max_detection["polygon"]
+            )
+            rescaled_convex = (
+                np.multiply(convex_hull.exterior.coords, image.size)
+                .flatten()
+                .tolist()
+            )
+                
+            if 'mask' in config.get('segmentation'):                            
+                # Create Mask Image (TODO: include in transformation?)
+                mask = Image.new("L", image.size, 0)
+                draw = ImageDraw.Draw(mask)
+                draw.polygon(rescaled_convex, fill=255)
+                mask = mask.copy().transpose(Image.FLIP_TOP_BOTTOM)
+                image_rgba = image.copy()
+                image_rgba.putalpha(mask)
+                color_layer = Image.new("RGB", image.size, (0, 0, 0)).convert("RGBA")
+                image_manipulated = Image.alpha_composite(color_layer, image_rgba).convert(
+                    "RGB"
+                )
+                
+            if 'crop' in config.get('segmentation'):
+                bbox = mapillary_detections.generate_polygon_bbox(convex_hull)
+                top = 1 - bbox[3]
+                left = bbox[0]
+                height = bbox[3] - bbox[1]
+                width = bbox[2] - bbox[0]
+
+                print(f'top: {top}, left: {left}, height: {height}, width: {width}')
+
+                transform = {
+                    **transform,
+                    "crop": (top, left, height, width),
+                }
+                
+            # for segmentation analysis only
+            image_det = image.copy().transpose(Image.FLIP_TOP_BOTTOM)
+            draw_det = ImageDraw.Draw(image_det)
+            # draw polygons
+            # for segment in rescaled_segments:
+            #     draw_det.polygon(np.multiply(segment, image_det.size).flatten().tolist(), fill=config.get('segment_color')[det['value']], outline="blue")
+            draw_det.polygon(
+                np.multiply(convex_hull.exterior.coords, image_det.size)
+                .flatten()
+                .tolist(),
+                fill=config.get("segment_color")[max_detection["value"]],
+                outline="blue",
+            )
+            # draw bbox
+            # left = bbox[0] * image_det.size[0]
+            # right = bbox[2] * image_det.size[0]
+            # top = bbox[1] * image_det.size[1]
+            # upper = bbox[3] * image_det.size[1]
+            # draw_det.rectangle(
+            #     [left, top, right, upper],
+            #     outline="white",
+            # )
+            draw_det.polygon(
+                np.multiply(inverse_cropping_box.exterior.coords, image_det.size)
+                .flatten()
+                .tolist(),
+                outline="white",
+            )
+            # # label prediction
+            # text_list.append([text, (left + 5, image_det.size[1] - upper + 5)])
+            # draw_det.text((left+5, top+5), text=text)
+
+            # for segmentation analysis only
+            image_det = image_det.transpose(Image.FLIP_TOP_BOTTOM)
+            composite = Image.blend(image, image_det, 0.2)
+            # composite_draw = ImageDraw.Draw(composite)
+            # for label in text_list:
+            #     composite_draw.text(label[1], label[0])
+            # composite.show()
+                
+            # save image with detections
+            image_folder = os.path.join(config.get("root_predict"), config.get("dataset"))
+            if not os.path.exists(image_folder):
+                os.makedirs(image_folder)
+            image_path = os.path.join(image_folder, "{}_segment.png".format(image_id))
+            # with open(image_path, 'wb') as handler:
+            #     handler.write(image)
+            composite.save(image_path)
 
         # bounding box for cropping
         # # cropping based on polygon
@@ -592,9 +672,8 @@ def run_image_per_image_predict_segmentation_train_validation(config):
         # }
         # transform = preprocessing.transform(**transform)
 
-        # cropping based on transform cropping
-        transform = preprocessing.transform(**config.get("transform"))
-        image_transformed = transform(image_masked)
+        transform = preprocessing.transform(**transform)
+        image_transformed = transform(image_manipulated)
 
         # for debugging only
         # helper.imshow(image_transformed)
@@ -603,61 +682,14 @@ def run_image_per_image_predict_segmentation_train_validation(config):
             model_dict=config.get("model_dict"),
             model_root=config.get("root_model"),
             image_id=image_id,
-            segment=max_detection["value"],
+            segment=segment,
             image_transformed=image_transformed,
             device=device,
             df=df,
             level=level,
         )
 
-        # for segmentation analysis only
-        image_det = image.copy().transpose(Image.FLIP_TOP_BOTTOM)
-        draw_det = ImageDraw.Draw(image_det)
-        # draw polygons
-        # for segment in rescaled_segments:
-        #     draw_det.polygon(np.multiply(segment, image_det.size).flatten().tolist(), fill=config.get('segment_color')[det['value']], outline="blue")
-        draw_det.polygon(
-            np.multiply(convex_hull.exterior.coords, image_det.size)
-            .flatten()
-            .tolist(),
-            fill=config.get("segment_color")[max_detection["value"]],
-            outline="blue",
-        )
-        # draw bbox
-        # left = bbox[0] * image_det.size[0]
-        # right = bbox[2] * image_det.size[0]
-        # top = bbox[1] * image_det.size[1]
-        # upper = bbox[3] * image_det.size[1]
-        # draw_det.rectangle(
-        #     [left, top, right, upper],
-        #     outline="white",
-        # )
-        draw_det.polygon(
-            np.multiply(inverse_cropping_box.exterior.coords, image_det.size)
-            .flatten()
-            .tolist(),
-            outline="white",
-        )
-        # # label prediction
-        # text_list.append([text, (left + 5, image_det.size[1] - upper + 5)])
-        # draw_det.text((left+5, top+5), text=text)
-
-        # for segmentation analysis only
-        image_det = image_det.transpose(Image.FLIP_TOP_BOTTOM)
-        composite = Image.blend(image, image_det, 0.2)
-        # composite_draw = ImageDraw.Draw(composite)
-        # for label in text_list:
-        #     composite_draw.text(label[1], label[0])
-        # composite.show()
-            
-        # save image with detections
-        image_folder = os.path.join(config.get("root_predict"), config.get("dataset"))
-        if not os.path.exists(image_folder):
-            os.makedirs(image_folder)
-        image_path = os.path.join(image_folder, "{}_segment.png".format(image_id))
-        # with open(image_path, 'wb') as handler:
-        #     handler.write(image)
-        composite.save(image_path)
+        
 
     # save predictions
     start_time = datetime.fromtimestamp(time.time()).strftime("%Y%m%d_%H%M%S")

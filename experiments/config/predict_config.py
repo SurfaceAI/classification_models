@@ -23,16 +23,16 @@ segment_color = {
     'nature--sand': (127, 0, 255), # lilac
     'nature--snow': (127, 0, 255), # lilac
     'nature--terrain': (127, 0, 255), # lilac
-    'nature--vegetation': (127, 0, 255), # lilac
+    # 'nature--vegetation': (127, 0, 255), # lilac
     'nature--water': (127, 0, 255), # lilac
 }
 
 train_validation_segmentation_CC = {
     **global_config.global_config,
-    "name": "all_train_effnet_surface_quality_prediction",
+    "name": "effnet_surface_prediction",
     "model_dict": {
        # "trained_model": "surface-efficientNetV2SLinear-20240314_164055-mi0872lh_epoch6.pt",
-        "trained_model": "surface-efficientNetV2SLinear-20240318_114422-a68tf9lt_epoch4.pt", 
+        "trained_model": "effnet_surface_prediction-V11_annotated-20240408_143707.csv", 
         # "submodel": {
         #     const.ASPHALT: {
         #         "trained_model": "smoothness-asphalt-efficientNetV2SLinear-20240314_202655-x67n9qjz_epoch18.pt"
@@ -51,15 +51,18 @@ train_validation_segmentation_CC = {
         #     },
         # },
     },
-    "dataset": "V9/annotated",
+    "dataset": "V11/annotated",
     "transform": {
         "resize": (384, 384),
         "crop": const.CROP_LOWER_MIDDLE_HALF,
-        "normalize": (const.V9_ANNOTATED_MEAN, const.V9_ANNOTATED_SD),
+        "normalize": (const.V11_ANNOTATED_MEAN, const.V11_ANNOTATED_SD),
     },
     "batch_size": 16,
     "segment_color": segment_color,
     'mapillary_token_path': os.path.join(const.ROOT_DIR, 'mapillary_token.txt'),
+    'segmentation': 'crop',
+    # 'segmentation': 'mask',
+    'segmentation': 'mask_crop',
 }
 
 rateke_CC = {
