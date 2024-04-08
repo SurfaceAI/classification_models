@@ -1,6 +1,5 @@
 import torch.nn as nn
 
-
 class B_CNN(nn.Module):
     def __init__(self, num_c, num_classes):
         super(B_CNN, self).__init__()
@@ -81,7 +80,12 @@ class B_CNN(nn.Module):
             )
         self.fc2 = (
             nn.Linear(1024, num_classes)
-        )     
+        )
+        
+        if num_classes == 1:
+            self.criterion = nn.MSELoss
+        else:
+            self.criterion = nn.CrossEntropyLoss
     
     @ staticmethod
     def get_class_probabilies(x):
