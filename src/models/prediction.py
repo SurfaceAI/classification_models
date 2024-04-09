@@ -602,7 +602,7 @@ def run_image_per_image_predict_segmentation_train_validation(config):
                 height = bbox[3] - bbox[1]
                 width = bbox[2] - bbox[0]
 
-                print(f'top: {top}, left: {left}, height: {height}, width: {width}')
+                # print(f'top: {top}, left: {left}, height: {height}, width: {width}')
 
                 transform = {
                     **transform,
@@ -984,7 +984,7 @@ def save_cam(model, data, normalize_transform, classes, valid_dataset, is_regres
                 #     t = '\n\nprediction: {}\nvalue: {:.3f}'.format(classes[i - 1], output[i - 1].item())
                 #     ax[i].text(10, 80, t, color='white', fontsize=6)
 
-                t = '\n\nprediction: {}\nvalue: {:.3f}'.format(classes[i - 1], output[i - 1].item())
+                t = '\n\nprediction: {}\nvalue: {:.3f}'.format(classes[i - 1], pred_output[i - 1].item())
                 ax[i].text(10, 60, t, color='white', fontsize=6)
 
                 # save image

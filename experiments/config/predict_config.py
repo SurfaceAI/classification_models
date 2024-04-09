@@ -32,7 +32,7 @@ train_validation_segmentation_CC = {
     "name": "effnet_surface_prediction",
     "model_dict": {
        # "trained_model": "surface-efficientNetV2SLinear-20240314_164055-mi0872lh_epoch6.pt",
-        "trained_model": "effnet_surface_prediction-V11_annotated-20240408_143707.csv", 
+        "trained_model": "surface-efficientNetV2SLinear-20240408_135216-sd61xphn_epoch5.pt", 
         # "submodel": {
         #     const.ASPHALT: {
         #         "trained_model": "smoothness-asphalt-efficientNetV2SLinear-20240314_202655-x67n9qjz_epoch18.pt"
@@ -63,6 +63,7 @@ train_validation_segmentation_CC = {
     'segmentation': 'crop',
     # 'segmentation': 'mask',
     'segmentation': 'mask_crop',
+    'gpu_kernel': 0,
 }
 
 rateke_CC = {
