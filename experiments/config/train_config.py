@@ -6,7 +6,7 @@ default_params = {
     "epochs": 40,
     "learning_rate": 0.003,
     "optimizer": const.OPTI_ADAM,
-    "is_regression": False,
+    "is_regression": True,
     "eval_metric": const.EVAL_METRIC_ACCURACY,
 }
 
@@ -221,6 +221,17 @@ B_CNN_multilabel = {
     **default_params,
     "project": const.PROJECT_MULTI_LABEL_FIXED,
     "name": "B_CNN",
+    "level": const.FLATTEN,
+    #"model": const.RATEKE,
+}
+
+B_CNN_multilabel_regression = {
+    **global_config.global_config,
+    **default_params,
+    "project": const.PROJECT_MULTI_LABEL_FIXED,
+    #"coarse_eval_metric": const.EVAL_METRIC_ACCURACY,
+    #"fine_eval_metric": const.EVAL_METRIC_MSE,
+    "name": "B_CNN_Regression",
     "level": const.FLATTEN,
     #"model": const.RATEKE,
 }

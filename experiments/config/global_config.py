@@ -6,8 +6,8 @@ ROOT_DIR = Path(__file__).parent.parent.parent
 
 global_config = dict(
     gpu_kernel = 0,
-    wandb_mode = constants.WANDB_MODE_ON,
-    wandb_on=True,
+    wandb_mode = constants.WANDB_MODE_OFF,
+    wandb_on=False,
     root_data = str(ROOT_DIR / "data" / "training"),
     root_model = str(ROOT_DIR / "trained_models"),
     root_predict = str(ROOT_DIR / "data" / "training" / "prediction"),
@@ -44,7 +44,7 @@ global_config = dict(
         random_horizontal_flip=True,
         random_rotation=10,
     ),
-    dataset = "V11/annotated",
+    dataset = "V10/annotated",
     seed = 42,
     validation_size = 0.2,
     valid_batch_size = 128,

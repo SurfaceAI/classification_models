@@ -46,10 +46,13 @@ class VGG16_B_CNN(nn.Module):
         self.features = model.features
         #self.avgpool = model.avgpool #brauch ich nicht, da ich die Input feature für den Classifier angepasst habe.
         self.classifier = model.classifier
+        
+        self.coarse_criterion = nn.CrossEntropyLoss
+        
         if num_classes == 1:
-            self.criterion = nn.MSELoss
+            self.fine_criterion = nn.MSELoss
         else:
-            self.criterion = nn.CrossEntropyLoss
+            self.fine_criterion = nn.CrossEntropyLoss
     
     @ staticmethod
     def get_class_probabilies(x):

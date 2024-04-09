@@ -82,10 +82,13 @@ class B_CNN(nn.Module):
             nn.Linear(1024, num_classes)
         )
         
+        self.coarse_criterion = nn.CrossEntropyLoss
+        
         if num_classes == 1:
-            self.criterion = nn.MSELoss
+            self.fine_criterion = nn.MSELoss
         else:
-            self.criterion = nn.CrossEntropyLoss
+            self.fine_criterion = nn.CrossEntropyLoss
+            
     
     @ staticmethod
     def get_class_probabilies(x):
