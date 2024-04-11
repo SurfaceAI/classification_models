@@ -59,7 +59,9 @@ train_validation_segmentation_CC = {
     },
     "batch_size": 16,
     "segment_color": segment_color,
-    'mapillary_token_path': os.path.join(const.ROOT_DIR, 'mapillary_token.txt'),
+    # 'mapillary_token_path': os.path.join(const.ROOT_DIR, 'mapillary_token.txt'),
+    'detections_folder': 'V11/segmentation/detections',
+    "saving_postfix": "detection",
     'segmentation': 'crop',
     # 'segmentation': 'mask',
     'segmentation': 'mask_crop',
@@ -140,7 +142,7 @@ segmentation_CC_test = {
     },
     "batch_size": 48,
     'segment_color': segment_color,
-    'mapillary_token_path': os.path.join(const.ROOT_DIR, 'mapillary_token.txt'),
+    # 'mapillary_token_path': os.path.join(const.ROOT_DIR, 'mapillary_token.txt'),
 }
 
 segmentation = {
@@ -148,5 +150,5 @@ segmentation = {
     # "mode": "testing",
     "dataset": "segmentation/original",
     "segment_color": segment_color,
-    'mapillary_token_path': os.path.join(const.ROOT_DIR, 'mapillary_token.txt'),
+    # 'mapillary_token_path': os.path.join(const.ROOT_DIR, 'mapillary_token.txt'),
 }

@@ -3,6 +3,8 @@ import requests
 from vt2geojson.tools import vt_bytes_to_geojson
 from PIL import Image
 from io import BytesIO
+import os
+import json
 
 # load mapillary access token
 def load_mapillary_token(token_path = 'mapillary_token.txt'):
@@ -142,3 +144,39 @@ def open_image(image_data, image_size='thumb_1024_url'):
     image = Image.open(BytesIO(image_raw))
 
     return image
+
+def save_image_data(
+        saving_folder,
+        saving_postfix, 
+        image_id, 
+        access_token, 
+        url=True, 
+        image_size='thumb_1024_url', 
+        detections=True, 
+        captured_at=False, 
+        compass_angle=False, 
+        geometry=False, 
+        height=False, 
+        width=False, 
+        is_pano=False, 
+        sequence=False):
+    data = request_image_data_from_image_entity(
+            image_id=image_id,
+            access_token=access_token,
+            url=url,
+            image_size=image_size, 
+            detections=detections, 
+            captured_at=captured_at, 
+            compass_angle=compass_angle, 
+            geometry=geometry, 
+            height=height, 
+            width=width, 
+            is_pano=is_pano, 
+            sequence=sequence,
+        )
+    if not os.path.exists(saving_folder):
+        os.makedirs(saving_folder)
+    out_path = os.path.join(saving_folder, '{}_{}.geojson'.format(image_id, saving_postfix))
+    with open(out_path, 'w') as file:
+        json.dump(data, file)
+    

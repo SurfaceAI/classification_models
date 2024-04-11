@@ -8,6 +8,7 @@ global_config = dict(
     gpu_kernel = 1,
     wandb_mode = constants.WANDB_MODE_ON,
     wandb_on=True,
+    root = str(ROOT_DIR),
     root_data = str(ROOT_DIR / "data" / "training"),
     root_model = str(ROOT_DIR / "trained_models"),
     root_predict = str(ROOT_DIR / "data" / "training" / "prediction"),
@@ -50,5 +51,6 @@ global_config = dict(
     valid_batch_size = 48,
     checkpoint_top_n = 1,
     early_stop_thresh = 5,
+    mapillary_token_file = 'mapillary_token.txt',
     save_state = False,
 )
