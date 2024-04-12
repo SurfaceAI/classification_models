@@ -69,7 +69,7 @@ class VGG16_B_CNN(nn.Module):
         x = self.block4(x) # [128, 512, 16, 16])
         x = self.block5(x) 
         
-        x = self.avgpool(x)
+       # x = self.avgpool(x)
         flat = x.reshape(x.size(0), -1) #([128, 131072])
         fine_output = self.classifier(flat) #[48, 18])
         

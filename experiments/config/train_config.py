@@ -6,7 +6,7 @@ default_params = {
     "epochs": 40,
     "learning_rate": 0.003,
     "optimizer": const.OPTI_ADAM,
-    "is_regression": True,
+    "is_regression": False,
     "eval_metric": const.EVAL_METRIC_ACCURACY,
 }
 
