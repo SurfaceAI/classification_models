@@ -85,6 +85,8 @@ V2 = "V2"
 V3 = "V3"
 V4 = "V4"
 V10 = "V10"
+V11 = "V11"
+
 
 # label type
 ANNOTATED = "annotated"
