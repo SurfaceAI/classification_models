@@ -440,9 +440,8 @@ def run_dataset_predict_segmentation_train_validation(config):
         f"cuda:{config.get('gpu_kernel')}" if torch.cuda.is_available() else "cpu"
     )
 
-    segmentation_selection = preprocessing.segmentation_selection_config(preprocessing.segmentation_selection_func_max_area_in_lower_half_crop,
-                                                                         config.get("segment_color").keys(),
-                                                                         )
+    segmentation_selection = config.get("segmentation_selection_func")
+    
     individual_transform_generator = preprocessing.extract_segmentation_properties(segmentation_path=os.path.join(config.get("root_data"), config.get("detections_folder")),
                                                                                    postfix=config.get("saving_postfix"),
                                                                                    segmentation_selection=segmentation_selection,

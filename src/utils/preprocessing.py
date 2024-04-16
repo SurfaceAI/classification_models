@@ -686,10 +686,10 @@ def extract_segmentation_properties(segmentation_path, postfix, segmentation_sel
         return transformed_segmentation_properties_list
     return extract_segmentation_properties_by_id
 
-def segmentation_selection_config(segmentation_selection_func, detection_values):
-    def segmentation_selection(detections):
-        return segmentation_selection_func(detections, detection_values)
-    return segmentation_selection
+# def segmentation_selection_config(segmentation_selection_func, detection_values):
+#     def segmentation_selection(detections):
+#         return segmentation_selection_func(detections, detection_values)
+#     return segmentation_selection
 
 def segmentation_selection_func_max_area_in_lower_half_crop(detections, detection_values):
     # search for max detection
