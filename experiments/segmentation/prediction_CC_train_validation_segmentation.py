@@ -4,7 +4,7 @@ sys.path.append('.')
 from src.models import prediction
 from experiments.config import predict_config
 
-config = predict_config.train_validation_segmentation_CC
-config['name'] = config.get('name') + '_' + config.get('segmentation')
+config = predict_config.train_validation_segmentation_CC_v2
+config['name'] = config.get('name') + '__mask_' + config.get('seg_mask_style') + '__crop_' + config.get('seg_crop_style')
 
-prediction.run_image_per_image_predict_segmentation_train_validation(config=config)
+prediction.run_dataset_predict_segmentation_train_validation(config=config)

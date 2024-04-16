@@ -9,15 +9,19 @@ from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union, cast
 
 import torch
-from PIL import Image
+from PIL import Image, ImageDraw
 from sklearn.model_selection import StratifiedShuffleSplit, train_test_split
 from torch.utils.data import DataLoader, Dataset
 from torchvision import datasets, transforms
 from torchvision.io import read_image
 from tqdm import tqdm
+import numpy as np
+import json
+from shapely import box, intersection
 
 from experiments.config import global_config
 from src import constants as const
+from src.utils import mapillary_requests, mapillary_detections
 
 
 class PartialImageFolder(datasets.ImageFolder):
@@ -218,8 +222,8 @@ class PredictImageFolder(datasets.VisionDataset):
         directory: str,
         extensions: Optional[Union[str, Tuple[str, ...]]] = None,
         is_valid_file: Optional[Callable[[str], bool]] = None,
-    ) -> List[str]:
-        """Generates a list of samples of a form "path_to_sample" """
+    ) -> List[Tuple[str, str]]:
+        """Generates a list of samples of a form "path_to_sample, id" """
         directory = os.path.expanduser(directory)
 
         both_none = extensions is None and is_valid_file is None
@@ -240,8 +244,10 @@ class PredictImageFolder(datasets.VisionDataset):
         for root, _, fnames in sorted(os.walk(directory, followlinks=True)):
             for fname in sorted(fnames):
                 path = os.path.join(root, fname)
+                id = os.path.splitext(os.path.split(path)[-1])[0]
                 if is_valid_file(path):
-                    instances.append(path)
+                    item = path, id
+                    instances.append(item)
 
         return instances
 
@@ -253,17 +259,66 @@ class PredictImageFolder(datasets.VisionDataset):
         Returns:
             tuple: (sample, id) where id is file name w/o extension.
         """
-        path = self.samples[index]
+        path, id = self.samples[index]
         sample = self.loader(path)
         if self.transform is not None:
             sample = self.transform(sample)
-        id = os.path.splitext(os.path.split(path)[-1])[0]
-
+        
         return sample, id
 
     def __len__(self) -> int:
         return len(self.samples)
 
+# VisionDataset instead of Dataset only used due to __repr__
+class PredictIndividualTransformImageFolder(PredictImageFolder):
+    def __init__(
+        self,
+        root: str,
+        loader: Callable[[str], Any] = datasets.folder.default_loader,
+        transform: Optional[Callable] = None,
+        individual_transform_generator: Callable[[str], List[Tuple[str, Callable]]] = None,
+        is_valid_file: Optional[Callable[[str], bool]] = None,
+    ) -> None:
+        super().__init__(root, loader=loader, transform=transform, is_valid_file=is_valid_file)
+        augmented_samples = self.augment_dataset(individual_transform_generator)
+        self.augmented_samples = augmented_samples
+
+    def augment_dataset(
+        self,
+        individual_transform_generator: Callable[[str], List[Tuple[str, Callable]]],
+    ) -> List[Tuple[str, str, str, Callable]]:
+        """Generates a list of samples of a form "path_to_sample, id, additional_value, additional_transformation" """
+
+        if individual_transform_generator is None:
+            individual_transform_generator = lambda id: ('', None)
+        
+        instances  = []
+        for path, id in self.samples:
+            for value, value_transform in individual_transform_generator(id):
+                item = path, id, value, value_transform
+                instances.append(item)
+
+        return instances
+
+    def __getitem__(self, index: int) -> Tuple[Any, Any]:
+        """
+        Args:
+            index (int): Index
+
+        Returns:
+            tuple: (sample, id, add_value) where id is file name w/o extension.
+        """
+        path, id, add_value, add_transform = self.augmented_samples[index]
+        sample = self.loader(path)
+        if add_transform is not None:
+            sample = add_transform(sample)
+        if self.transform is not None:
+            sample = self.transform(sample)
+        
+        return sample, id, add_value
+
+    def __len__(self) -> int:
+        return len(self.augmented_samples)
 
 # Here we read images that are not sorted in subfolders
 class TestImages(Dataset):
@@ -452,42 +507,6 @@ def train_validation_split_datasets(
     return train_dataset, valid_dataset
 
 
-def custom_crop(img, crop_style=None):
-    im_width, im_height = img.size
-    # TODO: integrate crop_factor
-    if isinstance(crop_style, tuple) and len(crop_style) == 4:
-        top = crop_style[0] * im_height
-        left = crop_style[1] * im_width
-        height = crop_style[2] * im_height
-        width = crop_style[3] * im_width
-    elif crop_style == "lower_middle_third":
-        top = im_height / 3 * 2
-        left = im_width / 3
-        height = im_height - top
-        width = im_width / 3
-    elif crop_style == "lower_middle_half":
-        top = im_height / 2
-        left = im_width / 4
-        height = im_height / 2
-        width = im_width / 2
-    else:  # None, or not valid
-        return img
-
-    cropped_img = transforms.functional.crop(img, top, left, height, width)
-    return cropped_img
-
-def crop_factor(crop_style):
-    if isinstance(crop_style, tuple) and len(crop_style) == 4:
-        crop_factor_tuple = crop_style
-    elif crop_style == "lower_middle_third":
-        crop_factor_tuple = [2 / 3, 1 / 3, 1 / 3, 1 / 3]
-    elif crop_style == "lower_middle_half":
-        crop_factor_tuple = [1 / 2, 1 / 4, 1 / 2, 1 / 2]
-    else:
-        crop_factor_tuple = [0, 0, 1, 1]
-    return crop_factor_tuple
-
-
 def transform(
     resize=None,
     crop=None,
@@ -555,3 +574,216 @@ def transform(
     composed_transform = transforms.Compose(transform_list)
 
     return composed_transform
+
+def custom_crop(img, crop_style=None):
+    im_width, im_height = img.size
+    # TODO: integrate crop_factor
+    if isinstance(crop_style, tuple) and len(crop_style) == 4:
+        top = crop_style[0] * im_height
+        left = crop_style[1] * im_width
+        height = crop_style[2] * im_height
+        width = crop_style[3] * im_width
+    elif crop_style == "lower_middle_third":
+        top = im_height / 3 * 2
+        left = im_width / 3
+        height = im_height - top
+        width = im_width / 3
+    elif crop_style == "lower_middle_half":
+        top = im_height / 2
+        left = im_width / 4
+        height = im_height / 2
+        width = im_width / 2
+    else:  # None, or not valid
+        return img
+
+    cropped_img = transforms.functional.crop(img, top, left, height, width)
+    return cropped_img
+
+def crop_factor(crop_style):
+    if isinstance(crop_style, tuple) and len(crop_style) == 4:
+        crop_factor_tuple = crop_style
+    elif crop_style == "lower_middle_third":
+        crop_factor_tuple = (2 / 3, 1 / 3, 1 / 3, 1 / 3)
+    elif crop_style == "lower_middle_half":
+        crop_factor_tuple = (1 / 2, 1 / 4, 1 / 2, 1 / 2)
+    else:
+        crop_factor_tuple = (0, 0, 1, 1)
+    return crop_factor_tuple
+
+
+def segmentation_transform(
+        polygon=None,
+        mask_style=None,
+        crop_style=None,
+):
+    transform_list = []
+
+    if mask_style is not None:
+        transform_list.append(transforms.Lambda(partial(custom_mask, mask_style=mask_style, mask_polygon=polygon)))
+
+    if crop_style is not None:
+        if crop_style == 'segmentation':
+            if polygon is not None:
+                bbox = mapillary_detections.generate_polygon_bbox(polygon=polygon)
+                crop_style = (bbox[1], bbox[0], bbox[3] - bbox[1], bbox[2] - bbox[0])
+            else:
+                crop_style = 'lower_middle_half'
+        transform_list.append(transforms.Lambda(partial(custom_crop, crop_style=crop_style)))
+
+    composed_transform = transforms.Compose(transform_list)
+
+    return composed_transform
+
+def custom_mask(img, mask_style=None, mask_polygon=None):
+    if mask_polygon is not None and mask_style is not None:
+        image_size = img.size
+        mask_polygon = (
+            np.multiply(mask_polygon.exterior.coords, image_size)
+            .flatten()
+            .tolist()
+        )
+        # outside is default
+        if 'inside' in mask_style:
+            # polygon is masked/transparent
+            mask = Image.new("L", image_size, 255)
+            draw = ImageDraw.Draw(mask)
+            draw.polygon(mask_polygon, fill=0)
+        else:
+            # polygon is not transparent
+            mask = Image.new("L", image_size, 0)
+            draw = ImageDraw.Draw(mask)
+            draw.polygon(mask_polygon, fill=255)
+        # mask = mask.copy().transpose(Image.FLIP_TOP_BOTTOM)
+        # image_rgba = img.copy()
+        # black is default
+        if 'blur' in mask_style:
+            kernel = 25
+            sigma = 20.0
+            mask_layer = transforms.functional.gaussian_blur(img.copy(), kernel, sigma).convert("RGBA")
+        elif 'white' in mask_style:
+            mask_layer = Image.new("RGB", image_size, 'white').convert("RGBA")
+        else:
+            mask_layer = Image.new("RGB", image_size, 'black').convert("RGBA")
+        img.putalpha(mask)
+        img = Image.alpha_composite(mask_layer, img).convert(
+            "RGB"
+        )
+
+    return img
+
+def extract_segmentation_properties(segmentation_path, postfix, segmentation_selection, mask_style, crop_style):
+    def extract_segmentation_properties_by_id(image_id):
+
+        image_segmentation_file = os.path.join(segmentation_path, '{}_{}.geojson'.format(image_id, postfix))
+        with open(image_segmentation_file, 'r') as file:
+            detections = json.load(file)
+        detections = mapillary_requests.extract_detections_from_image(
+            detections
+        )
+
+        segmentation_properties_list = segmentation_selection(detections)
+        transformed_segmentation_properties_list = [(value, segmentation_transform(polygon=polygon, mask_style=mask_style, crop_style=crop_style)) for value, polygon in segmentation_properties_list]
+        return transformed_segmentation_properties_list
+    return extract_segmentation_properties_by_id
+
+def segmentation_selection_config(segmentation_selection_func, detection_values):
+    def segmentation_selection(detections):
+        return segmentation_selection_func(detections, detection_values)
+    return segmentation_selection
+
+def segmentation_selection_func_max_area_in_lower_half_crop(detections, detection_values):
+    # search for max detection
+    max_detection = {"area": 0,
+                     "value": '',
+                     "polygon": None,}
+
+    # check sum of detections of interest
+    sum_detections = 0
+
+    for det in detections:
+        
+        # for debugging only
+        # print(det["value"])
+
+        # segments rescaled to [0, 1]
+        rescaled_segments = [
+            np.divide(segment, 4096)
+            for segment in mapillary_detections.decode_detection_geometry(
+                det["geometry"]
+            )
+        ]
+
+        detection_polygons = [
+            mapillary_detections.convert_to_polygon(segment)
+            for segment in rescaled_segments
+        ]
+
+        if any([not polygon.is_valid for polygon in detection_polygons]):
+            # for polygon in detection_polygons:
+            #     if not polygon.is_valid:
+            #         print("polygon")
+            #         print(polygon)
+
+                    # import matplotlib.pyplot as plt
+                    # xs, ys = merged_polygon.exterior.xy
+                    # fig, axs = plt.subplots()
+                    # axs.set_aspect('equal', 'datalim')
+                    # axs.fill(xs, ys, alpha=0.5, fc='r', ec='none')
+            # TODO: only exclude single invalid polygon
+            continue
+        
+        merged_polygon = mapillary_detections.merge_polygons(detection_polygons)
+
+        # if not merged_polygon.is_valid:
+            # print("merged_polygon")
+            # print(merged_polygon)
+            # continue
+
+        # intersection of detection with cropping
+        # TODO: difference: first intersect than convex-hull vs convex-hull than intersection?
+        cropping_factor = crop_factor(crop_style='lower_middle_half')
+        inverse_cropping_box = box(cropping_factor[1], 1-(cropping_factor[0] + cropping_factor[2]), cropping_factor[1] + cropping_factor[3], 1-cropping_factor[0])
+        intersection_polygon = intersection(merged_polygon, inverse_cropping_box)
+
+        # polygon area
+        area = mapillary_detections.calculate_polygon_area(intersection_polygon)
+        # print(area)
+
+        sum_detections += area
+
+        threshold = 0.05
+
+        # only consider "road" elements, reject detection if coverage area of detection is low (sum of segments (alternative: max segment))
+        if det["value"] in detection_values and area > threshold and area > max_detection.get("area"):
+            max_detection["area"] = area
+            max_detection["value"] = det["value"]
+            max_detection["polygon"] = intersection_polygon
+
+    # if no valid detection in max_detection
+    
+    if max_detection["area"] == 0:
+        # TODO: Überprüfen, ob es nur wenige detections gab (z.B. weil zu alt), oder ob keine der "color"-Klassen ausreichend groß war
+        # und das entsprechend festhalten zum Überprüfen!
+
+        # betrachtete detections zusammen Fläche weniger als Grenzwert
+        if sum_detections > 0.9:
+            max_detection["value"] = 'completely_segmented'
+        else:
+            max_detection["value"] = 'not_completely_segmented'
+    else:
+
+        # for debugging only
+        # print(max_detection["value"])
+        # print(max_detection["area"])
+
+        # segment = max_detection["value"]
+
+        # to avoid fringed edges/smooth edges
+        max_detection["polygon"] = mapillary_detections.invert_polygon(
+            mapillary_detections.generate_polygon_convex_hull(
+                max_detection["polygon"]
+        ))
+
+    return [(max_detection["value"], max_detection["polygon"])]
+
+    

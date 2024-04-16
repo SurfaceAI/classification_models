@@ -9,8 +9,10 @@ import mapbox_vector_tile
 import base64
 from shapely import Polygon
 from shapely.ops import unary_union
+from shapely.affinity import scale
 from PIL import Image, ImageDraw
 import numpy as np
+
 
 
 ### helper functions, general pre- and post calculations and transformations
@@ -63,6 +65,10 @@ def generate_polygon_bbox(polygon: Polygon):
 def generate_polygon_convex_hull(polygon: Polygon):
     
     return polygon.convex_hull
+
+# invert polygon
+def invert_polygon(polygon: Polygon):
+    return scale(polygon, yfact = -1, origin = (0, 0.5))
 
 # crop image by bbox
 def crop_image_by_bbox(image: Image, bbox: tuple[float, float, float, float]):

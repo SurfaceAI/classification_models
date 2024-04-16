@@ -68,6 +68,48 @@ train_validation_segmentation_CC = {
     'gpu_kernel': 0,
 }
 
+train_validation_segmentation_CC_v2 = {
+    **global_config.global_config,
+    "name": "effnet_surface_pred_segment",
+    "model_dict": {
+       # "trained_model": "surface-efficientNetV2SLinear-20240314_164055-mi0872lh_epoch6.pt",
+        "trained_model": "surface-efficientNetV2SLinear-20240408_135216-sd61xphn_epoch5.pt", 
+        # "submodel": {
+        #     const.ASPHALT: {
+        #         "trained_model": "smoothness-asphalt-efficientNetV2SLinear-20240314_202655-x67n9qjz_epoch18.pt"
+        #     },
+        #     const.CONCRETE: {
+        #         "trained_model": "smoothness-concrete-efficientNetV2SLinear-20240314_221414-z9pumhri_epoch18.pt"
+        #     },
+        #     const.PAVING_STONES: {
+        #         "trained_model": "smoothness-paving_stones-efficientNetV2SLinear-20240314_223314-c8cxtraf_epoch14.pt"
+        #     },
+        #     const.SETT: {
+        #         "trained_model": "smoothness-sett-efficientNetV2SLinear-20240314_233003-mplaq0xd_epoch19.pt"
+        #     },
+        #     const.UNPAVED: {
+        #         "trained_model": "smoothness-unpaved-efficientNetV2SLinear-20240315_001707-zu6wt2fs_epoch16.pt"
+        #     },
+        # },
+    },
+    "dataset": "V11/annotated",
+    "transform": {
+        "resize": (384, 384),
+        # "crop": const.CROP_LOWER_MIDDLE_HALF,
+        "normalize": (const.V11_ANNOTATED_MEAN, const.V11_ANNOTATED_SD),
+    },
+    "batch_size": 16,
+    "segment_color": segment_color,
+    # 'mapillary_token_path': os.path.join(const.ROOT_DIR, 'mapillary_token.txt'),
+    'detections_folder': 'V11/segmentation/detections',
+    "saving_postfix": "detection",
+    # 'segmentation': 'crop',
+    # 'segmentation': 'mask',
+    'seg_mask_style': 'outside_blur', # None
+    'seg_crop_style': 'segmentation', # None
+    'gpu_kernel': 0,
+}
+
 rateke_CC = {
     **global_config.global_config,
     "name": "test_RatekeCNN_VGG16_prediction",

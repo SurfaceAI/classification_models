@@ -433,6 +433,62 @@ def run_image_per_image_predict_segmentation(config):
 
     print(f'Images {config.get("dataset")} predicted and saved: {saving_path}')
 
+def run_dataset_predict_segmentation_train_validation(config):
+    
+    # load device
+    device = torch.device(
+        f"cuda:{config.get('gpu_kernel')}" if torch.cuda.is_available() else "cpu"
+    )
+
+    segmentation_selection = preprocessing.segmentation_selection_config(preprocessing.segmentation_selection_func_max_area_in_lower_half_crop,
+                                                                         config.get("segment_color").keys(),
+                                                                         )
+    individual_transform_generator = preprocessing.extract_segmentation_properties(segmentation_path=os.path.join(config.get("root_data"), config.get("detections_folder")),
+                                                                                   postfix=config.get("saving_postfix"),
+                                                                                   segmentation_selection=segmentation_selection,
+                                                                                   mask_style=config.get("seg_mask_style"),
+                                                                                   crop_style=config.get("seg_crop_style"),
+                                                                                   )
+
+    # prepare data
+    data = segmentation_data(config.get("root_data"), config.get("dataset"), config.get("transform"), individual_transform_generator)
+
+    level = 0
+    columns = ["Image", "Segment", "Prediction", f"Level_{level}"]
+    df = pd.DataFrame(columns=columns)
+
+    
+
+    recursive_predict_csv_segment(
+        model_dict=config.get("model_dict"),
+        model_root=config.get("root_model"),
+        data=data,
+        batch_size=config.get("batch_size"),
+        device=device,
+        df=df,
+        level=level,
+    )
+
+        
+
+    # save predictions
+    start_time = datetime.fromtimestamp(time.time()).strftime("%Y%m%d_%H%M%S")
+    saving_name = (
+        config.get("name")
+        + "-"
+        + config.get("dataset").replace("/", "_")
+        + "-"
+        + start_time
+        # + ".csv"
+    )
+
+    saving_path = save_predictions_csv(
+        df=df, saving_dir=config.get("root_predict"), saving_name=saving_name + ".csv"
+    )
+    save_config(config=config, saving_dir=config.get("root_predict"), saving_name=saving_name + "_config.json")
+
+    print(f'Images {config.get("dataset")} predicted and saved: {saving_path}')
+    
 def run_image_per_image_predict_segmentation_train_validation(config):
     
     # load device
@@ -441,7 +497,7 @@ def run_image_per_image_predict_segmentation_train_validation(config):
     )
 
     # prepare data
-    predict_data = prepare_data(config.get("root_data"), config.get("dataset"))
+    segmentation_data = prepare_data(config.get("root_data"), config.get("dataset"))
 
     level = 0
     columns = ["Image", "Segment", "Prediction", f"Level_{level}"]
@@ -461,7 +517,7 @@ def run_image_per_image_predict_segmentation_train_validation(config):
     cropping_factor = preprocessing.crop_factor(crop_style=crop_style)
     inverse_cropping_box = box(cropping_factor[1], 1-(cropping_factor[0] + cropping_factor[2]), cropping_factor[1] + cropping_factor[3], 1-cropping_factor[0])
 
-    for image, image_id in predict_data:
+    for image, image_id in segmentation_data:
         # if image_id != '765100174607174':
         #     continue
         # # for debugging only
@@ -882,6 +938,78 @@ def recursive_predict_csv(
                     pre_cls=cls,
                 )
 
+def recursive_predict_csv_segment(
+    model_dict, model_root, data, batch_size, device, df, level, pre_cls=None
+):
+    # base:
+    if model_dict is None:
+        # predictions = None
+        pass
+    else:
+        model_path = os.path.join(model_root, model_dict["trained_model"])
+        model, classes, is_regression, valid_dataset = load_model(
+            model_path=model_path, device=device
+        )
+
+        pred_outputs, image_ids, segments = predict_segment(
+            model, data, batch_size, is_regression, device
+        )
+
+        # compare valid dataset
+        # [image_id in valid_dataset ]
+        valid_dataset_ids = [
+            os.path.splitext(os.path.split(id[0])[-1])[0]
+            for id in valid_dataset.samples
+        ]
+        is_valid_data = [
+            1 if image_id in valid_dataset_ids else 0 for image_id in image_ids
+        ]
+
+        columns = [
+            "Image",
+            "Segment",
+            "Prediction",
+            "is_in_validation",
+            f"Level_{level}",
+        ]  # is_in_valid_dataset / join
+        pre_cls_entry = []
+        if pre_cls is not None:
+            columns = columns + [f"Level_{level-1}"]
+            pre_cls_entry = [pre_cls]
+
+        pred_values, pred_classes = convert_forward_step_outputs(outputs=pred_outputs, classes=classes, is_regression=is_regression)
+            
+        if is_regression:
+            for image_id, segment, pred, is_vd, cls in zip(
+                image_ids, segments, pred_values, is_valid_data, pred_classes
+            ):
+                i = df.shape[0]
+                df.loc[i, columns] = [image_id, segment, pred, is_vd, cls] + pre_cls_entry
+        else:
+            for image_id, segment, pred, is_vd in zip(image_ids, segments, pred_values, is_valid_data):
+                for cls, prob in zip(classes, pred):
+                    i = df.shape[0]
+                    df.loc[i, columns] = [image_id, segment, prob, is_vd, cls] + pre_cls_entry
+            # subclasses not for regression implemented
+            for cls in classes:
+                sub_indices = [
+                    idx for idx, pred_cls in enumerate(pred_classes) if pred_cls == cls
+                ]
+                sub_model_dict = model_dict.get("submodels", {}).get(cls)
+                if not sub_indices or sub_model_dict is None:
+                    continue
+                sub_data = Subset(data, sub_indices)
+                recursive_predict_csv_segment(
+                    model_dict=sub_model_dict,
+                    model_root=model_root,
+                    data=sub_data,
+                    batch_size=batch_size,
+                    device=device,
+                    df=df,
+                    level=level + 1,
+                    pre_cls=cls,
+                )
+
 
 def predict_image_per_image(model, image, is_regression, device):
     model.to(device)
@@ -916,6 +1044,31 @@ def predict(model, data, batch_size, is_regression, device):
     pred_outputs = torch.cat(outputs, dim=0)
 
     return pred_outputs, ids
+
+def predict_segment(model, data, batch_size, is_regression, device):
+    model.to(device)
+    model.eval()
+
+    loader = DataLoader(data, batch_size=batch_size)
+
+    outputs = []
+    ids = []
+    segments = []
+    with torch.no_grad():
+        for batch_inputs, batch_ids, batch_segments in loader:
+
+            # for debugging pnly
+            # helper.imshow(batch_inputs[0])
+
+            batch_outputs = batch_forward_step(model_to_device=model, batch_inputs=batch_inputs, is_regression=is_regression, device=device)
+            outputs.append(batch_outputs)
+            ids.extend(batch_ids)
+            segments.extend(batch_segments)
+
+
+    pred_outputs = torch.cat(outputs, dim=0)
+
+    return pred_outputs, ids, segments
 
 def batch_forward_step(model_to_device, batch_inputs, is_regression, device):
     batch_inputs = batch_inputs.to(device)
@@ -1014,6 +1167,14 @@ def prepare_data(data_root, dataset, transform=None):
 
     return predict_data
 
+def segmentation_data(data_root, dataset, transform=None, individual_transform_generator=None):
+    data_path = os.path.join(data_root, dataset)
+    if transform is not None:
+        transform = preprocessing.transform(**transform)
+    predict_data = preprocessing.PredictIndividualTransformImageFolder(root=data_path, transform=transform, individual_transform_generator=individual_transform_generator)
+
+    return predict_data
+
 
 def load_model(model_path, device):
     model_state = torch.load(model_path, map_location=device)
@@ -1055,6 +1216,15 @@ def save_predictions_csv(df, saving_dir, saving_name):
 
     return saving_path
 
+def save_config(config, saving_dir, saving_name):
+    if not os.path.exists(saving_dir):
+        os.makedirs(saving_dir)
+
+    saving_path = os.path.join(saving_dir, saving_name)
+    with open(saving_path, 'w') as file:
+        json.dump(config, file)
+
+    return saving_path
 
 # def run_dataset_prediction_json(name, data_root, dataset, transform, model_root, model_dict, predict_dir, gpu_kernel, batch_size):
 #     # TODO: config instead of data_root etc.?
