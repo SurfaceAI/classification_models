@@ -108,6 +108,7 @@ train_validation_segmentation_CC_v2 = {
     'seg_mask_style': 'outside_blur', # None
     'seg_crop_style': 'segmentation', # const.CROP_LOWER_MIDDLE_HALF
     'seg_pre_crop': const.CROP_LOWER_MIDDLE_HALF,
+    'segmentation_selection_func': 'seg_sel_func_max_area_in_lower_half_crop',
     'gpu_kernel': 0,
 }
 
@@ -188,10 +189,10 @@ segmentation_CC_test = {
     # 'mapillary_token_path': os.path.join(const.ROOT_DIR, 'mapillary_token.txt'),
 }
 
-segmentation = {
-    **global_config.global_config,
-    # "mode": "testing",
-    "dataset": "segmentation/original",
-    "segment_color": segment_color,
-    # 'mapillary_token_path': os.path.join(const.ROOT_DIR, 'mapillary_token.txt'),
-}
+# segmentation = {
+#     **global_config.global_config,
+#     # "mode": "testing",
+#     "dataset": "segmentation/original",
+#     "segment_color": segment_color,
+#     # 'mapillary_token_path': os.path.join(const.ROOT_DIR, 'mapillary_token.txt'),
+# }

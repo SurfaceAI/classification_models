@@ -91,17 +91,13 @@ def run_dataset_predict_csv(config):
 
     print(f'Images {config.get("dataset")} predicted and saved: {saving_path}')
 
-def run_segmentation(config):
-    # # load device
-    # device = torch.device(
-    #     f"cuda:{config.get('gpu_kernel')}" if torch.cuda.is_available() else "cpu"
-    # )
-
+def run_image_segmentation(config):
     # prepare data
-    data_root = config.get("root_data")
-    # if config.get("mode") == "testing":
-    #     data_root = config.get("data_testing_path")
-    segment_data = prepare_data(data_root, config.get("dataset"))
+    segment_data = prepare_data(config.get("root_data"), config.get("dataset"))
+
+    segmentation_selection = partial(helper.string_to_object(config.get("segmentation_selection_func")), config=config)
+
+    saving_folder = os.path.join(config.get("root_data"), config.get("detections_folder"), config.get("segmentation_selection_func"))
 
     # for debugging only
     count = 0
@@ -112,152 +108,45 @@ def run_segmentation(config):
         # if count > 5:
         #     break
         print(image_id)
-        # if image_id in [1246612526078070]:
-        #     continue
 
-        # detection
+        image_segmentation_file = os.path.join(config.get("root_data"), config.get("detections_folder"), '{}_{}.geojson'.format(image_id, config.get("saving_postfix")))
+        with open(image_segmentation_file, 'r') as file:
+            detections = json.load(file)
         detections = mapillary_requests.extract_detections_from_image(
-            mapillary_requests.request_image_data_from_image_entity(
-                image_id,
-                mapillary_requests.load_mapillary_token(
-                    token_path=os.path.join(config.get("root"), config.get("mapillary_token_file"))
-                ),
-                url=False,
-                detections=True,
-            )
+            detections
         )
 
-        # for segmentation analysis only
-        image_det = image.copy().transpose(Image.FLIP_TOP_BOTTOM)
-        draw_det = ImageDraw.Draw(image_det)
-        # text_list = []
-
-        for det in detections:
-            if det["value"] in config.get("segment_color").keys():
-                # for debugging only
-                print(det["value"])
-                # if det["value"] == 'construction--flat--crosswalk-plain':
-                #     print(det["value"])
-
-                # segments rescaled to [0, 1]
-                rescaled_segments = [
-                    np.divide(segment, 4096)
-                    for segment in mapillary_detections.decode_detection_geometry(
-                        det["geometry"]
-                    )
-                ]
-
-                # detection_polygons = [
-                #     mapillary_detections.convert_to_polygon(segment)
-                #     for segment in rescaled_segments
-                # ]
-                # merged_polygon = mapillary_detections.merge_polygons(detection_polygons)
-
-                # reject detection if coverage area of detection is low (sum of segments (alternative: max segment))
-                # threshold = 0.05
-                # threshold = 0
-                # if mapillary_detections.calculate_polygon_area(merged_polygon) < threshold:
-                #     continue
-
-                # to avoid fringed edges/smooth edges
-                # convex_hull = mapillary_detections.generate_polygon_convex_hull(
-                #     merged_polygon
-                # )
-
-                # # Create Mask Image (TODO: include in transformation?)
-                # mask = Image.new("L", image.size, 0)
-                # draw = ImageDraw.Draw(mask)
-                # rescaled_convex = (
-                #     np.multiply(convex_hull.exterior.coords, image.size)
-                #     .flatten()
-                #     .tolist()
-                # )
-                # draw.polygon(rescaled_convex, fill=255)
-                # mask = mask.copy().transpose(Image.FLIP_TOP_BOTTOM)
-                # image_rgba = image.copy()
-                # image_rgba.putalpha(mask)
-                # color_layer = Image.new("RGB", image.size, (0, 0, 0)).convert("RGBA")
-                # image_masked = Image.alpha_composite(color_layer, image_rgba).convert(
-                #     "RGB"
-                # )
-
-                # bounding box for cropping
-                # bbox = mapillary_detections.generate_polygon_bbox(merged_polygon)
-                # top = 1 - bbox[3]
-                # left = bbox[0]
-                # height = bbox[3] - bbox[1]
-                # width = bbox[2] - bbox[0]
-
-                # transform = {
-                #     **config.get("transform"),
-                #     "crop": (top, left, height, width),
-                # }
-                # transform = preprocessing.transform(**transform)
-                # image_transformed = transform(image_masked)
-
-                # for debugging only
-                # helper.imshow(image_transformed)
-
-                # text = f'{det["value"]}'
-
-                # for segmentation analysis only
-                # draw polygons
-                # for segment in rescaled_segments:
-                #     draw_det.polygon(np.multiply(segment, image_det.size).flatten().tolist(), fill=config.get('segment_color')[det['value']], outline="blue")
-                for seg in rescaled_segments:
-                    draw_det.polygon(
-                        np.multiply(seg, image_det.size)
-                        .flatten()
-                        .tolist(),
-                        fill=config.get("segment_color")[det["value"]],
-                        outline="blue",
-                    )
-                # draw bbox
-                # left = bbox[0] * image_det.size[0]
-                # right = bbox[2] * image_det.size[0]
-                # top = bbox[1] * image_det.size[1]
-                # upper = bbox[3] * image_det.size[1]
-                # draw_det.rectangle(
-                #     [left, top, right, upper],
-                #     outline=config.get("segment_color")[det["value"]],
-                # )
-                # label prediction
-                # text_list.append([text, (left + 5, image_det.size[1] - upper + 5)])
-                # draw_det.text((left+5, top+5), text=text)
-
-        # for segmentation analysis only
-        image_det = image_det.transpose(Image.FLIP_TOP_BOTTOM)
-        composite = Image.blend(image, image_det, 0.2)
-        composite_draw = ImageDraw.Draw(composite)
-        # for label in text_list:
-        #     composite_draw.text(label[1], label[0])
-        composite.show()
+        segmentation_properties_list = segmentation_selection(detections)
         
-        # # save image with detections
-        # image_folder = os.path.join(data_root, config.get("dataset"), "segmentation")
-        # if not os.path.exists(image_folder):
-        #     os.makedirs(image_folder)
-        # image_path = os.path.join(image_folder, "{}_segment.png".format(image_id))
-        # # with open(image_path, 'wb') as handler:
-        # #     handler.write(image)
-        # composite.save(image_path)
-        composite.close()
+        for value, polygon in segmentation_properties_list:
+
+            if value == 'not_completely_segmented':
+                continue
         
+            # for debugging only
+            print(value)
 
-    # # save predictions
-    # start_time = datetime.fromtimestamp(time.time()).strftime("%Y%m%d_%H%M%S")
-    # saving_name = (
-    #     config.get("name")
-    #     + "-"
-    #     + config.get("dataset").replace("/", "_")
-    #     + "-"
-    #     + start_time
-    #     + ".csv"
-    # )
+            image_det = image.copy()
+            draw_det = ImageDraw.Draw(image_det)
+            
+            draw_det.polygon(
+                np.multiply(polygon.exterior.coords, image_det.size)
+                .flatten()
+                .tolist(),
+                fill=config.get("segment_color")[value],
+                outline="blue",
+            )
 
-    # saving_path = save_predictions_csv(
-    #     df=df, saving_dir=config.get("root_predict"), saving_name=saving_name
-    # )
+            composite = Image.blend(image, image_det, 0.2)
+
+            # composite.show()
+        
+            # save image with detections
+            if not os.path.exists(saving_folder):
+                os.makedirs(saving_folder)
+            image_path = os.path.join(saving_folder, "{}_{}.png".format(image_id, value))
+            composite.save(image_path)
+            # composite.close()
 
     print(f'Images {config.get("dataset")} segmented and saved.')
 
@@ -434,7 +323,7 @@ def run_image_per_image_predict_segmentation(config):
 
     print(f'Images {config.get("dataset")} predicted and saved: {saving_path}')
 
-def run_dataset_predict_segmentation_train_validation(config):
+def run_dataset_predict_segmentation(config):
     
     # load device
     device = torch.device(
