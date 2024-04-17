@@ -691,7 +691,8 @@ def extract_segmentation_properties(segmentation_path, postfix, segmentation_sel
 #         return segmentation_selection_func(detections, detection_values)
 #     return segmentation_selection
 
-def segmentation_selection_func_max_area_in_lower_half_crop(detections, detection_values):
+def segmentation_selection_func_max_area_in_lower_half_crop(detections, config):
+    detection_values=config.get('segment_color').keys()
     # search for max detection
     max_detection = {"area": 0,
                      "value": '',

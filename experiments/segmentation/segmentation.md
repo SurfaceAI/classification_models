@@ -55,7 +55,7 @@ Images with segmentation
 
 ## V11
 
-Comparison: V11 (train-cropping) vs V9 (largest segment in train-cropping + masking + mask-cropping)
+Comparison: V11 (train-cropping) vs V11 (largest segment in train-cropping + masking + mask-cropping)
 
 Detection values:
 
@@ -103,7 +103,7 @@ Images with segmentation
 
 ![alt text](V11_seg_conf.png)
 
-Comparison 2: V11 (train-cropping) vs V9 (largest segment in train-cropping + masking + train-cropping)
+Comparison 2: V11 (train-cropping) vs V11 (largest segment in train-cropping + masking + train-cropping)
 
 Predictions:
 - training: effnet_surface_prediction-V11_annotated-20240408_143707
@@ -122,7 +122,7 @@ Images with segmentation
 
 ![alt text](V11_seg_conf_mask.png)
 
-Comparison 3: V11 (train-cropping) vs V9 (largest segment in train-cropping + mask-cropping)
+Comparison 3: V11 (train-cropping) vs V11 (largest segment in train-cropping + mask-cropping)
 
 Predictions:
 - training: effnet_surface_prediction-V11_annotated-20240408_143707
@@ -140,3 +140,22 @@ Images with segmentation
 - Recall: 0.98
 
 ![alt text](V11_seg_conf_crop.png)
+
+Comparison 4: V11 (train-cropping) vs V11 (largest segment in train-cropping + mask bluring (kernel = 25, sigma = 20.0) + mask-cropping)
+
+Predictions:
+- training: effnet_surface_prediction-V11_annotated-20240408_143707
+- segmentation: effnet_surface_pred_segment__mask_outside_blur__crop_segmentation-V11_annotated-20240416_165814
+
+Analysis CSV: V9/metadata/model_predictions/...
+- seg_mis_surface_blur_crop
+- seg_correct_surface_blur_crop
+
+Evaluation:
+
+Images with segmentation
+- Count: 2476
+- Precision: 0.96
+- Recall: 0.96
+
+![alt text](V11_seg_conf_blur_crop.png)

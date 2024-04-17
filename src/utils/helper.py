@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 from torch import optim
 from src import constants as const
 from src.architecture import Rateke_CNN, efficientnet, vgg16
+from src.utils import preprocessing
 import json
 import argparse
 
@@ -38,6 +39,7 @@ def string_to_object(string):
         const.EFFICIENTNET: efficientnet.CustomEfficientNetV2SLogsoftmax,
         const.EFFNET_LINEAR: efficientnet.CustomEfficientNetV2SLinear,
         const.OPTI_ADAM: optim.Adam,
+        'seg_sel_func_max_area_in_lower_half_crop': preprocessing.segmentation_selection_func_max_area_in_lower_half_crop,
     }
 
     return string_dict.get(string)

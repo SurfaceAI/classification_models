@@ -22,6 +22,7 @@ import numpy as np
 import argparse
 import matplotlib.pyplot as plt
 from shapely import box, intersection
+from functools import partial
 
 def cam_prediction(config):
     # load device
@@ -440,8 +441,8 @@ def run_dataset_predict_segmentation_train_validation(config):
         f"cuda:{config.get('gpu_kernel')}" if torch.cuda.is_available() else "cpu"
     )
 
-    segmentation_selection = config.get("segmentation_selection_func")
-    
+    segmentation_selection = partial(helper.string_to_object(config.get("segmentation_selection_func")), config=config)
+
     individual_transform_generator = preprocessing.extract_segmentation_properties(segmentation_path=os.path.join(config.get("root_data"), config.get("detections_folder")),
                                                                                    postfix=config.get("saving_postfix"),
                                                                                    segmentation_selection=segmentation_selection,
