@@ -583,12 +583,12 @@ def custom_crop(img, crop_style=None):
         left = crop_style[1] * im_width
         height = crop_style[2] * im_height
         width = crop_style[3] * im_width
-    elif crop_style == "lower_middle_third":
+    elif crop_style == const.CROP_LOWER_MIDDLE_THIRD:
         top = im_height / 3 * 2
         left = im_width / 3
         height = im_height - top
         width = im_width / 3
-    elif crop_style == "lower_middle_half":
+    elif crop_style == const.CROP_LOWER_MIDDLE_HALF:
         top = im_height / 2
         left = im_width / 4
         height = im_height / 2
@@ -602,9 +602,9 @@ def custom_crop(img, crop_style=None):
 def crop_factor(crop_style):
     if isinstance(crop_style, tuple) and len(crop_style) == 4:
         crop_factor_tuple = crop_style
-    elif crop_style == "lower_middle_third":
+    elif crop_style == const.CROP_LOWER_MIDDLE_THIRD:
         crop_factor_tuple = (2 / 3, 1 / 3, 1 / 3, 1 / 3)
-    elif crop_style == "lower_middle_half":
+    elif crop_style == const.CROP_LOWER_MIDDLE_HALF:
         crop_factor_tuple = (1 / 2, 1 / 4, 1 / 2, 1 / 2)
     else:
         crop_factor_tuple = (0, 0, 1, 1)
@@ -622,12 +622,10 @@ def segmentation_transform(
         transform_list.append(transforms.Lambda(partial(custom_mask, mask_style=mask_style, mask_polygon=polygon)))
 
     if crop_style is not None:
-        if crop_style == 'segmentation':
-            if polygon is not None:
+        if crop_style == 'segmentation' and polygon is not None:
                 bbox = mapillary_detections.generate_polygon_bbox(polygon=polygon)
                 crop_style = (bbox[1], bbox[0], bbox[3] - bbox[1], bbox[2] - bbox[0])
-            else:
-                crop_style = 'lower_middle_half'
+
         transform_list.append(transforms.Lambda(partial(custom_crop, crop_style=crop_style)))
 
     composed_transform = transforms.Compose(transform_list)
@@ -701,6 +699,11 @@ def segmentation_selection_func_max_area_in_lower_half_crop(detections, config):
     # check sum of detections of interest
     sum_detections = 0
 
+    # cropping parameters rescaled to [0, 1]
+    crop_style = config.get('seg_pre_crop')
+    cropping_factor = crop_factor(crop_style=crop_style)
+    inverse_cropping_box = box(cropping_factor[1], 1-(cropping_factor[0] + cropping_factor[2]), cropping_factor[1] + cropping_factor[3], 1-cropping_factor[0])
+
     for det in detections:
         
         # for debugging only
@@ -742,8 +745,6 @@ def segmentation_selection_func_max_area_in_lower_half_crop(detections, config):
 
         # intersection of detection with cropping
         # TODO: difference: first intersect than convex-hull vs convex-hull than intersection?
-        cropping_factor = crop_factor(crop_style='lower_middle_half')
-        inverse_cropping_box = box(cropping_factor[1], 1-(cropping_factor[0] + cropping_factor[2]), cropping_factor[1] + cropping_factor[3], 1-cropping_factor[0])
         intersection_polygon = intersection(merged_polygon, inverse_cropping_box)
 
         # polygon area
@@ -766,6 +767,9 @@ def segmentation_selection_func_max_area_in_lower_half_crop(detections, config):
         # TODO: Überprüfen, ob es nur wenige detections gab (z.B. weil zu alt), oder ob keine der "color"-Klassen ausreichend groß war
         # und das entsprechend festhalten zum Überprüfen!
 
+        # default polygon to be defaulkt cropping
+        max_detection["polygon"] = inverse_cropping_box
+
         # betrachtete detections zusammen Fläche weniger als Grenzwert
         if sum_detections > 0.9:
             max_detection["value"] = 'completely_segmented'
@@ -780,10 +784,13 @@ def segmentation_selection_func_max_area_in_lower_half_crop(detections, config):
         # segment = max_detection["value"]
 
         # to avoid fringed edges/smooth edges
-        max_detection["polygon"] = mapillary_detections.invert_polygon(
-            mapillary_detections.generate_polygon_convex_hull(
-                max_detection["polygon"]
-        ))
+        max_detection["polygon"] = mapillary_detections.generate_polygon_convex_hull(
+            max_detection["polygon"]
+        )
+
+    max_detection["polygon"] = mapillary_detections.invert_polygon(
+        max_detection["polygon"]
+    )
 
     return [(max_detection["value"], max_detection["polygon"])]
 

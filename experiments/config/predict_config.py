@@ -106,7 +106,8 @@ train_validation_segmentation_CC_v2 = {
     # 'segmentation': 'crop',
     # 'segmentation': 'mask',
     'seg_mask_style': 'outside_blur', # None
-    'seg_crop_style': 'segmentation', # None
+    'seg_crop_style': 'segmentation', # const.CROP_LOWER_MIDDLE_HALF
+    'seg_pre_crop': const.CROP_LOWER_MIDDLE_HALF,
     'gpu_kernel': 0,
 }
 

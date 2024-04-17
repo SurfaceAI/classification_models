@@ -457,8 +457,6 @@ def run_dataset_predict_segmentation_train_validation(config):
     columns = ["Image", "Segment", "Prediction", f"Level_{level}"]
     df = pd.DataFrame(columns=columns)
 
-    
-
     recursive_predict_csv_segment(
         model_dict=config.get("model_dict"),
         model_root=config.get("root_model"),
@@ -468,8 +466,6 @@ def run_dataset_predict_segmentation_train_validation(config):
         df=df,
         level=level,
     )
-
-        
 
     # save predictions
     start_time = datetime.fromtimestamp(time.time()).strftime("%Y%m%d_%H%M%S")
