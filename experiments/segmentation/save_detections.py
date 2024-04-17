@@ -12,9 +12,8 @@ config = {
 }
 
 # image ids
-# TODO: ImageFolder extraction is expensive due to image loading
 image_data = preprocessing.PredictImageFolder(root=os.path.join(config.get("root_data"), config.get("dataset")))
-image_ids = [image_id for _, image_id in image_data]
+image_ids = [image_id for _, image_id in image_data.samples]
 
 # load detections
 for image_id in image_ids:
