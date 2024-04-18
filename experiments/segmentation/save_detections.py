@@ -8,7 +8,7 @@ from src.utils import preprocessing, mapillary_requests
 config = {
     **global_config.global_config,
     'dataset': 'V11/annotated',
-    'detections_folder': 'V11/segmentation/detections',   
+    'segmentation_folder': 'V11/segmentation',   
 }
 
 # image ids
@@ -19,7 +19,7 @@ image_ids = [image_id for _, image_id in image_data.samples]
 for image_id in image_ids:
     # print(image_id)
     mapillary_requests.save_image_data(
-        saving_folder=os.path.join(config.get("root_data"), config.get("detections_folder")),
+        saving_folder=os.path.join(config.get("root_data"), config.get("segmentation_folder"), 'detections'),
         saving_postfix='detection',
         image_id=image_id,
         access_token=mapillary_requests.load_mapillary_token(
