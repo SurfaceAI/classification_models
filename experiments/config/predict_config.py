@@ -7,7 +7,7 @@ CC = {
     "model_dict": {
        # "trained_model": "surface-efficientNetV2SLinear-20240314_164055-mi0872lh_epoch6.pt",
         "trained_model": "surface-efficientNetV2SLinear-20240318_114422-a68tf9lt_epoch4.pt", 
-        "submodel": {
+        "submodels": {
             const.ASPHALT: {
                 "trained_model": "smoothness-asphalt-efficientNetV2SLinear-20240314_202655-x67n9qjz_epoch18.pt"
             },
