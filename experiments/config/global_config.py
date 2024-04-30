@@ -36,15 +36,15 @@ global_config = dict(
         constants.UNPAVED: [constants.INTERMEDIATE, constants.BAD, constants.VERY_BAD],
     },
     transform = dict(
-        resize=constants.H256_W256,
-        crop=constants.CROP_LOWER_MIDDLE_THIRD,
+        resize=(384, 384),
+        crop=constants.CROP_LOWER_MIDDLE_HALF,
         normalize=constants.NORM_DATA,
     ),
     augment = dict(
         random_horizontal_flip=True,
         random_rotation=10,
     ),
-    dataset = "V6/annotated",
+    dataset = "V12/annotated",
     seed = 42,
     validation_size = 0.2,
     valid_batch_size = 48,
