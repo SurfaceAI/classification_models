@@ -40,6 +40,7 @@ def string_to_object(string):
         const.EFFNET_LINEAR: efficientnet.CustomEfficientNetV2SLinear,
         const.OPTI_ADAM: optim.Adam,
         'seg_sel_func_max_area_in_lower_half_crop': preprocessing.segmentation_selection_func_max_area_in_lower_half_crop,
+        'seg_sel_func_all': preprocessing.segmentation_selection_func_all,
     }
 
     return string_dict.get(string)

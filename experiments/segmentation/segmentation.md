@@ -55,6 +55,8 @@ Images with segmentation
 
 ## V11
 
+![alt text](V11_segment_labels.png)
+
 Comparison: V11 (train-cropping) vs V11 (largest segment in train-cropping + masking + mask-cropping)
 
 Detection values:

@@ -21,7 +21,7 @@ import pandas as pd
 import numpy as np
 import argparse
 import matplotlib.pyplot as plt
-from shapely import box, intersection
+from shapely import box, intersection, geometry
 from functools import partial
 
 def cam_prediction(config):
@@ -91,7 +91,94 @@ def run_dataset_predict_csv(config):
 
     print(f'Images {config.get("dataset")} predicted and saved: {saving_path}')
 
-def run_image_segmentation(config):
+def run_image_segmentation_per_image(config):
+    # prepare data
+    segment_data = prepare_data(config.get("root_data"), config.get("dataset"))
+
+    segmentation_selection = partial(helper.string_to_object(config.get("segmentation_selection_func")), config=config)
+
+    saving_folder = os.path.join(config.get("root_data"), config.get("segmentation_folder"), config.get("segmentation_selection_func"))
+
+    # for debugging only
+    count = 0
+
+    for image, image_id in segment_data:
+        # for debugging only
+        count += 1
+        # if count > 5:
+        #     break
+        print(image_id)
+
+        image_segmentation_file = os.path.join(config.get("root_data"), config.get("segmentation_folder"), 'detections', '{}_{}.geojson'.format(image_id, config.get("saving_postfix")))
+        with open(image_segmentation_file, 'r') as file:
+            detections = json.load(file)
+        detections = mapillary_requests.extract_detections_from_image(
+            detections
+        )
+
+        segmentation_properties_list = segmentation_selection(detections)
+        if not segmentation_properties_list:
+            continue
+        
+        image_det = image.copy()
+        draw_det = ImageDraw.Draw(image_det)
+
+        image_text = Image.new("L", image_det.size, 255)
+        draw_text = ImageDraw.Draw(image_text)
+        
+        for value, polygon in segmentation_properties_list:
+
+            if value == 'not_completely_segmented':
+                continue
+        
+            # for debugging only
+            print(value)
+
+            if isinstance(polygon, geometry.Polygon):
+                polygon_list = [polygon]
+            elif isinstance(polygon, geometry.MultiPolygon):
+                polygon_list = [p for p in polygon.geoms]
+            elif isinstance(polygon, geometry.GeometryCollection):
+                polygon_list = [p for p in polygon.geoms if isinstance(polygon, geometry.Polygon)]
+            else:
+                print("No valid polygon type")
+                polygon_list = []
+            
+            for p in polygon_list:
+                draw_det.polygon(
+                    np.multiply(p.exterior.coords, image_det.size)
+                    .flatten()
+                    .tolist(),
+                    fill=config.get("segment_color")[value],
+                    outline="white",
+                    width=3,
+                )
+
+            # add value as label text
+            centroid = np.multiply(mapillary_detections.generate_polygon_convex_hull(polygon=polygon).centroid.coords, image_det.size).flatten().tolist()
+            draw_text.text((centroid[0], centroid[1]), value, fill=0, font_size=10)
+            # draw_text.text((centroid[0], centroid[1]+10), value, fill="black")
+
+        composite = Image.blend(image, image_det, 0.25)
+
+        text_layer = Image.new("RGB", image.size, 'white').convert("RGBA")
+        composite.putalpha(image_text)
+        composite = Image.alpha_composite(text_layer, composite).convert(
+            "RGB"
+        )
+
+        # composite.show()
+    
+        # save image with detections
+        if not os.path.exists(saving_folder):
+            os.makedirs(saving_folder)
+        image_path = os.path.join(saving_folder, "{}.png".format(image_id))
+        composite.save(image_path)
+        # composite.close()
+
+    print(f'Images {config.get("dataset")} segmented and saved.')
+
+def run_image_segmentation_per_value(config):
     # prepare data
     segment_data = prepare_data(config.get("root_data"), config.get("dataset"))
 
@@ -126,18 +213,34 @@ def run_image_segmentation(config):
             # for debugging only
             print(value)
 
+            if isinstance(polygon, geometry.Polygon):
+                polygon_list = [polygon]
+            elif isinstance(polygon, geometry.MultiPolygon):
+                polygon_list = [p for p in polygon.geoms]
+            elif isinstance(polygon, geometry.GeometryCollection):
+                polygon_list = [p for p in polygon.geoms if isinstance(p, geometry.Polygon)]
+            else:
+                print("No valid polygon type")
+                polygon_list = []
+
             image_det = image.copy()
             draw_det = ImageDraw.Draw(image_det)
             
-            draw_det.polygon(
-                np.multiply(polygon.exterior.coords, image_det.size)
-                .flatten()
-                .tolist(),
-                fill=config.get("segment_color")[value],
-                outline="blue",
-            )
+            for p in polygon_list:
+                draw_det.polygon(
+                    np.multiply(p.exterior.coords, image_det.size)
+                    .flatten()
+                    .tolist(),
+                    fill=config.get("segment_color")[value],
+                    outline="white",
+                    width=5,
+                )
 
-            composite = Image.blend(image, image_det, 0.2)
+            # add value as label text
+            centroid = np.multiply(mapillary_detections.generate_polygon_convex_hull(polygon=polygon).centroid.coords, image_det.size).flatten().tolist()
+            draw_det.text((centroid[0], centroid[1]), value, fill="white")
+
+            composite = Image.blend(image, image_det, 0.33)
 
             # composite.show()
         

@@ -9,6 +9,7 @@ from sklearn.metrics import mean_squared_error, r2_score, confusion_matrix
 import matplotlib.pyplot as plt
 import seaborn as sns
 import shutil
+from torchvision import datasets
 
 from experiments.config import global_config
 
@@ -23,9 +24,15 @@ annot["image_id"] = annot["image_id"].astype(str)
 
 segmentations_path = os.path.join(data_path, "segmentation", "seg_sel_func_max_area_in_lower_half_crop")
 
+extensions = datasets.folder.IMG_EXTENSIONS
+def is_valid_file(x):
+    return datasets.folder.has_file_allowed_extension(x, extensions)
+
 for root, _, fnames in sorted(os.walk(segmentations_path, followlinks=True)):
     for fname in sorted(fnames):
         path = os.path.join(root, fname)
+        if not is_valid_file(path):
+            continue
         file_name = os.path.split(path)[-1]
         id, value = os.path.splitext(file_name)[0].split("_", 1)
 

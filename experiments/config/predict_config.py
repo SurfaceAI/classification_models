@@ -11,7 +11,7 @@ segment_color = {
     'construction--flat--driveway': (255, 0, 255), # pink
     'construction--flat--parking': (255, 0, 255), # pink
     'construction--flat--parking-aisle': (255, 0, 255), # pink
-    'construction--flat--pedestrian-area': (255, 0, 255), # pink
+    'construction--flat--pedestrian-area': (0, 127, 255), # light blue
     'construction--flat--rail-track': (255, 0, 255), # pink
     'construction--flat--road-shoulder': (255, 0, 255), # pink
     'construction--flat--service-lane': (255, 0, 255), # pink
@@ -24,7 +24,7 @@ segment_color = {
     'nature--snow': (127, 0, 255), # lilac
     'nature--terrain': (127, 0, 255), # lilac
     # 'nature--vegetation': (127, 0, 255), # lilac
-    'nature--water': (127, 0, 255), # lilac
+    # 'nature--water': (127, 0, 255), # lilac
 }
 
 train_validation_segmentation_CC = {
@@ -33,7 +33,7 @@ train_validation_segmentation_CC = {
     "model_dict": {
        # "trained_model": "surface-efficientNetV2SLinear-20240314_164055-mi0872lh_epoch6.pt",
         "trained_model": "surface-efficientNetV2SLinear-20240408_135216-sd61xphn_epoch5.pt", 
-        # "submodel": {
+        # "submodels": {
         #     const.ASPHALT: {
         #         "trained_model": "smoothness-asphalt-efficientNetV2SLinear-20240314_202655-x67n9qjz_epoch18.pt"
         #     },
@@ -74,7 +74,7 @@ train_validation_segmentation_CC_v2 = {
     "model_dict": {
        # "trained_model": "surface-efficientNetV2SLinear-20240314_164055-mi0872lh_epoch6.pt",
         "trained_model": "surface-efficientNetV2SLinear-20240408_135216-sd61xphn_epoch5.pt", 
-        # "submodel": {
+        # "submodels": {
         #     const.ASPHALT: {
         #         "trained_model": "smoothness-asphalt-efficientNetV2SLinear-20240314_202655-x67n9qjz_epoch18.pt"
         #     },
@@ -106,9 +106,40 @@ train_validation_segmentation_CC_v2 = {
     # 'segmentation': 'crop',
     # 'segmentation': 'mask',
     'seg_mask_style': 'outside_blur', # None
+    # 'seg_mask_style': 'outside_blur_convex', # allways convex
     'seg_crop_style': 'segmentation', # const.CROP_LOWER_MIDDLE_HALF
     'seg_pre_crop': const.CROP_LOWER_MIDDLE_HALF,
     'segmentation_selection_func': 'seg_sel_func_max_area_in_lower_half_crop',
+    'seg_threshold': 0.05,
+    'gpu_kernel': 0,
+}
+
+seg_analysis = {
+    **global_config.global_config,
+    "name": "effnet_surface_pred_segment",
+    "model_dict": {
+       # "trained_model": "surface-efficientNetV2SLinear-20240314_164055-mi0872lh_epoch6.pt",
+        "trained_model": "surface-efficientNetV2SLinear-20240408_135216-sd61xphn_epoch5.pt", 
+    },
+    "dataset": "seg_analysis/original/not_recognizable/multi/park_path",
+    "transform": {
+        "resize": (384, 384),
+        # "crop": const.CROP_LOWER_MIDDLE_HALF,
+        "normalize": (const.V11_ANNOTATED_MEAN, const.V11_ANNOTATED_SD),
+    },
+    "batch_size": 16,
+    "segment_color": segment_color,
+    # 'mapillary_token_path': os.path.join(const.ROOT_DIR, 'mapillary_token.txt'),
+    'segmentation_folder': 'seg_analysis/segmentation/not_recognizable/multi/park_path',
+    "saving_postfix": "detection",
+    # 'segmentation': 'crop',
+    # 'segmentation': 'mask',
+    'seg_mask_style': 'outside_blur', # None
+    # 'seg_mask_style': 'outside_blur_convex', # allways convex
+    'seg_crop_style': 'segmentation', # const.CROP_LOWER_MIDDLE_HALF
+    'seg_pre_crop': const.CROP_LOWER_MIDDLE_HALF,
+    'segmentation_selection_func': 'seg_sel_func_all',
+    'seg_threshold': 0.01,
     'gpu_kernel': 0,
 }
 

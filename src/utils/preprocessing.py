@@ -17,7 +17,7 @@ from torchvision.io import read_image
 from tqdm import tqdm
 import numpy as np
 import json
-from shapely import box, intersection
+from shapely import box, intersection, geometry
 
 from experiments.config import global_config
 from src import constants as const
@@ -634,23 +634,41 @@ def segmentation_transform(
 
 def custom_mask(img, mask_style=None, mask_polygon=None):
     if mask_polygon is not None and mask_style is not None:
+        if 'convex' in mask_style:
+            mask_polygon = mapillary_detections.generate_polygon_convex_hull(
+                mask_polygon
+            )
+        
+        # check for Polygon/Multipolygon
+        if isinstance(mask_polygon, geometry.Polygon):
+            mask_polygon_list = [mask_polygon]
+        elif isinstance(mask_polygon, geometry.MultiPolygon):
+            mask_polygon_list = [p for p in mask_polygon.geoms]
+        elif isinstance(mask_polygon, geometry.GeometryCollection):
+            mask_polygon_list = [p for p in mask_polygon.geoms if isinstance(p, geometry.Polygon)]
+        else:
+            print("No valid polygon type")
+            return img
+
         image_size = img.size
-        mask_polygon = (
-            np.multiply(mask_polygon.exterior.coords, image_size)
+        mask_polygon_list = [
+            np.multiply(p.exterior.coords, image_size)
             .flatten()
             .tolist()
-        )
+        for p in mask_polygon_list]
         # outside is default
         if 'inside' in mask_style:
             # polygon is masked/transparent
             mask = Image.new("L", image_size, 255)
             draw = ImageDraw.Draw(mask)
-            draw.polygon(mask_polygon, fill=0)
+            for p in mask_polygon_list:
+                draw.polygon(mask_polygon, fill=0)
         else:
             # polygon is not transparent
             mask = Image.new("L", image_size, 0)
             draw = ImageDraw.Draw(mask)
-            draw.polygon(mask_polygon, fill=255)
+            for p in mask_polygon_list:
+                draw.polygon(mask_polygon, fill=255)
         # mask = mask.copy().transpose(Image.FLIP_TOP_BOTTOM)
         # image_rgba = img.copy()
         # black is default
@@ -699,6 +717,8 @@ def segmentation_selection_func_max_area_in_lower_half_crop(detections, config):
     # check sum of detections of interest
     sum_detections = 0
 
+    threshold = config.get('seg_threshold')
+
     # cropping parameters rescaled to [0, 1]
     crop_style = config.get('seg_pre_crop')
     cropping_factor = crop_factor(crop_style=crop_style)
@@ -722,29 +742,11 @@ def segmentation_selection_func_max_area_in_lower_half_crop(detections, config):
             for segment in rescaled_segments
         ]
 
-        if any([not polygon.is_valid for polygon in detection_polygons]):
-            # for polygon in detection_polygons:
-            #     if not polygon.is_valid:
-            #         print("polygon")
-            #         print(polygon)
-
-                    # import matplotlib.pyplot as plt
-                    # xs, ys = merged_polygon.exterior.xy
-                    # fig, axs = plt.subplots()
-                    # axs.set_aspect('equal', 'datalim')
-                    # axs.fill(xs, ys, alpha=0.5, fc='r', ec='none')
-            # TODO: only exclude single invalid polygon
-            continue
+        # exclude single invalid polygon
+        detection_polygons = [polygon for polygon in detection_polygons if polygon.is_valid]
         
         merged_polygon = mapillary_detections.merge_polygons(detection_polygons)
 
-        # if not merged_polygon.is_valid:
-            # print("merged_polygon")
-            # print(merged_polygon)
-            # continue
-
-        # intersection of detection with cropping
-        # TODO: difference: first intersect than convex-hull vs convex-hull than intersection?
         intersection_polygon = intersection(merged_polygon, inverse_cropping_box)
 
         # polygon area
@@ -752,8 +754,6 @@ def segmentation_selection_func_max_area_in_lower_half_crop(detections, config):
         # print(area)
 
         sum_detections += area
-
-        threshold = 0.05
 
         # only consider "road" elements, reject detection if coverage area of detection is low (sum of segments (alternative: max segment))
         if det["value"] in detection_values and area > threshold and area > max_detection.get("area"):
@@ -775,23 +775,51 @@ def segmentation_selection_func_max_area_in_lower_half_crop(detections, config):
             max_detection["value"] = 'completely_segmented'
         else:
             max_detection["value"] = 'not_completely_segmented'
-    else:
-
-        # for debugging only
-        # print(max_detection["value"])
-        # print(max_detection["area"])
-
-        # segment = max_detection["value"]
-
-        # to avoid fringed edges/smooth edges
-        max_detection["polygon"] = mapillary_detections.generate_polygon_convex_hull(
-            max_detection["polygon"]
-        )
 
     max_detection["polygon"] = mapillary_detections.invert_polygon(
         max_detection["polygon"]
     )
 
     return [(max_detection["value"], max_detection["polygon"])]
+
+    
+def segmentation_selection_func_all(detections, config):
+    detection_values=config.get('segment_color').keys()
+
+    segmentations = []
+
+    threshold = config.get('seg_threshold')
+
+    for det in detections:
+        
+        # for debugging only
+        # print(det["value"])
+
+        # segments rescaled to [0, 1]
+        rescaled_segments = [
+            np.divide(segment, 4096)
+            for segment in mapillary_detections.decode_detection_geometry(
+                det["geometry"]
+            )
+        ]
+
+        detection_polygons = [
+            mapillary_detections.convert_to_polygon(segment)
+            for segment in rescaled_segments
+        ]
+
+        detection_polygons = [polygon for polygon in detection_polygons if polygon.is_valid]
+        
+        merged_polygon = mapillary_detections.merge_polygons(detection_polygons)
+
+        # polygon area
+        area = mapillary_detections.calculate_polygon_area(merged_polygon)
+        # print(area)
+
+        # only consider "road" elements, reject detection if coverage area of detection is low (sum of segments (alternative: max segment))
+        if det["value"] in detection_values and area > threshold:
+            segmentations.append((det["value"], mapillary_detections.invert_polygon(merged_polygon)))
+
+    return segmentations
 
     
