@@ -216,9 +216,47 @@ effnet_asphalt_crophalf_regression_params = {
 
 }
 
+effnet_quality_regression_params = {
+    **global_config.global_config,
+    **default_params,
+    "transform": 
+        {"resize": (384, 384),
+        "crop": const.CROP_LOWER_MIDDLE_HALF,
+        "normalize": (const.V9_ANNOTATED_MEAN,const.V9_ANNOTATED_SD)},
+    "batch_size": 16,
+    "is_regression": True,
+    # "eval_metric": const.EVAL_METRIC_MSE,
+    "project": const.PROJECT_SMOOTHNESS_FIXED,
+    "name": "all_train_optim_lf_effnet_Reg",
+    "model": const.EFFNET_LINEAR,
+
+}
+
+effnet_surface_params = {
+    **global_config.global_config,
+    **default_params,
+    # "gpu_kernel": 0,
+    "transform": 
+        {"resize": (384, 384),
+        "crop": const.CROP_LOWER_MIDDLE_HALF,
+        "normalize": const.NORM_DATA,},
+    "batch_size": 16,
+    "epochs": 5,
+    "learning_rate": 0.00037,
+    "project": const.PROJECT_SURFACE_FIXED,
+    "name": "all_train_optim_lr_effnet_linear",
+    "dataset": "V9/annotated",
+    "level": const.SURFACE,
+    "model": const.EFFNET_LINEAR,
+    "gpu_kernel": 0,
+
+}
+
 effnet_surface_sweep_params = {
-    **global_config.global_config,**default_params,
-    'gpu_kernel': 0,
+    **global_config.global_config,
+    **default_params,
+    # 'gpu_kernel': 0,
+    "epochs": 20,
     "eval_metric": const.EVAL_METRIC_ACCURACY,
     'model': const.EFFNET_LINEAR,
     "dataset": "V9/annotated",
@@ -230,31 +268,31 @@ effnet_surface_sweep_params = {
     "project": const.PROJECT_SURFACE_SWEEP,
     "name": "optim_lf_effnet",
     "level": const.SURFACE,
-    "sweep_counts": 10,
-    "transform": 
+    "sweep_counts": 5,
+    "transform":
         {"resize": (384, 384),
-        "crop": const.CROP_LOWER_MIDDLE_HALF,
+        "crop": const.CROP_LOWER_MIDDLE_HALF,    
         "normalize": const.NORM_DATA,},  
-}
+ }
 
 effnet_quality_sweep_params = {
     **global_config.global_config,
     **default_params,
-    'gpu_kernel': 0,
+    # 'gpu_kernel': 0,
+    "epochs": 20,
     "eval_metric": const.EVAL_METRIC_MSE,
     'model': const.EFFNET_LINEAR,
     "dataset": "V9/annotated",
     "method": "bayes",
     "is_regression": True,
     "metric": {"name": f"eval/{const.EVAL_METRIC_MSE}", "goal": "minimize"},
-    "search_params": {
-        "batch_size": {"values": [8, 16]},
-        "learning_rate": {"distribution": "log_uniform_values", "min": 1e-05, "max": 0.001},
-    },
+    "search_params":
+        {"batch_size": {"values": [16]},
+        "learning_rate": {"distribution": "log_uniform_values", "min": 1e-05, "max": 0.001},},
     "project": const.PROJECT_SMOOTHNESS_SWEEP,
     "name": "optim_lf_effnet_reg",
     "level": const.SMOOTHNESS,
-    "sweep_counts": 10,
+    "sweep_counts": 5,
     "transform": 
         {"resize": (384, 384),
         "crop": const.CROP_LOWER_MIDDLE_HALF,
