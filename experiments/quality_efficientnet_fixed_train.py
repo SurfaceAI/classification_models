@@ -16,10 +16,10 @@ surfaces = [
 for surface in surfaces:
     config = {
             **train_config.effnet_quality_regression_params,
-            'epochs': 8,
+            'epochs': 7,
             'learning_rate': 0.0005,
             'level': f'{surface}',
-            'dataset': f'V9/annotated/{surface}',
+            'dataset': f'V11/annotated/{surface}',
             'selected_classes': global_config.global_config.get("selected_classes")[f'{surface}']
             }
     print(config)
