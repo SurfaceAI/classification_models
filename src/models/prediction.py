@@ -55,7 +55,7 @@ def run_dataset_predict_csv(config):
     predict_data = prepare_data(config.get("root_data"), config.get("dataset"), config.get("transform"))
 
     level = 0
-    columns = ['Image', 'Prediction', f'Level_{level}']
+    columns = ['Image', 'Prediction', 'Level', f'Level_{level}']
     df = pd.DataFrame(columns=columns)
 
     recursive_predict_csv(model_dict=config.get("model_dict"), model_root=config.get("root_model"), data=predict_data, batch_size=config.get("batch_size"), device=device, df=df, level=level)
@@ -76,6 +76,7 @@ def recursive_predict_csv(model_dict, model_root, data, batch_size, device, df, 
         pass
     else:
         model_path = os.path.join(model_root, model_dict['trained_model'])
+        level_name = model_dict.get('level', '')
         model, classes, is_regression, valid_dataset = load_model(model_path=model_path, device=device)
         
         pred_outputs, image_ids = predict(model, data, batch_size, is_regression, device)
@@ -85,7 +86,7 @@ def recursive_predict_csv(model_dict, model_root, data, batch_size, device, df, 
         valid_dataset_ids = [os.path.splitext(os.path.split(id[0])[-1])[0] for id in valid_dataset.samples]
         is_valid_data = [1 if image_id in valid_dataset_ids else 0 for image_id in image_ids]
         
-        columns = ['Image', 'Prediction', 'is_in_validation', f'Level_{level}'] # is_in_valid_dataset / join
+        columns = ['Image', 'Prediction', 'Level', 'is_in_validation', f'Level_{level}'] # is_in_valid_dataset / join
         pre_cls_entry = []
         if pre_cls is not None:
             columns = columns + [f'Level_{level-1}']
@@ -94,13 +95,13 @@ def recursive_predict_csv(model_dict, model_root, data, batch_size, device, df, 
             pred_classes = ["outside" if str(pred.item()) not in classes.keys() else classes[str(pred.item())] for pred in pred_outputs.round().int()]
             for image_id, pred, is_vd, cls in zip(image_ids, pred_outputs, is_valid_data, pred_classes):
                 i = df.shape[0]
-                df.loc[i, columns] = [image_id, pred.item(), is_vd, cls] + pre_cls_entry
+                df.loc[i, columns] = [image_id, pred.item(), level_name, is_vd, cls] + pre_cls_entry
         else:
             pred_classes = [classes[idx.item()] for idx in torch.argmax(pred_outputs, dim=1)]
             for image_id, pred, is_vd in zip(image_ids, pred_outputs, is_valid_data):
                 for cls, prob in zip(classes, pred.tolist()):
                     i = df.shape[0]
-                    df.loc[i, columns] = [image_id, prob, is_vd, cls] + pre_cls_entry
+                    df.loc[i, columns] = [image_id, prob, level_name, is_vd, cls] + pre_cls_entry
             # subclasses not for regression implemented
             for cls in classes:
                 sub_indices = [idx for idx, pred_cls in enumerate(pred_classes) if pred_cls == cls]

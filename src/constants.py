@@ -36,6 +36,9 @@ SURFACE = "surface"
 SMOOTHNESS = "smoothness"
 FLATTEN = "flatten"
 
+TYPE = "type"
+QUALITY = "quality"
+
 # dataset
 V0 = "V0"
 V1 = "V1"
