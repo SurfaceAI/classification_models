@@ -40,7 +40,7 @@ class B_CNN(nn.Module):
             nn.MaxPool2d(kernel_size = 2, stride = 2))
         
         ### Coarse branch
-        self.c_flat = nn.Flatten() 
+        #self.c_flat = nn.Flatten() 
         self.c_fc = nn.Sequential(
             nn.Linear(256 * 32 * 32, 512),
             nn.ReLU(),

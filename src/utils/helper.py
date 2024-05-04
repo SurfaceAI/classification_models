@@ -5,7 +5,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from torch import optim
 from src import constants as const
-from src.architecture import Rateke_CNN, efficientnet, vgg16
+from src.architecture import Rateke_CNN, efficientnet, vgg16, vgg16_B_CNN
 import json
 import argparse
 
@@ -18,6 +18,7 @@ def string_to_object(string):
         const.EFFICIENTNET: efficientnet.CustomEfficientNetV2SLogsoftmax,
         const.EFFNET_LINEAR: efficientnet.CustomEfficientNetV2SLinear,
         const.OPTI_ADAM: optim.Adam,
+        const.BCNN: vgg16_B_CNN.B_CNN,
     }
 
     return string_dict.get(string)
@@ -113,3 +114,8 @@ def multi_imshow(images, labels):
         label = labels[ii]
         ax.set_title(f'Label: {label}')
         imshow(images[ii], ax=ax, normalize=True)
+        
+def make_hook(key, feature_maps):
+    def hook(model, input, output):
+        feature_maps[key] = output.detach()
+    return hook

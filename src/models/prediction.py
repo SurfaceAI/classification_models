@@ -30,8 +30,13 @@ def run_dataset_predict_csv(config):
     level = 0
     columns = ['Image', 'Prediction', f'Level_{level}']
     df = pd.DataFrame(columns=columns)
+    feature_dict = {}
 
-    recursive_predict_csv(model_dict=config.get("model_dict"), model_root=config.get("root_model"), data=predict_data, batch_size=config.get("batch_size"), device=device, df=df, level=level)
+    recursive_predict_csv(model_dict=config.get("model_dict"), model_root=config.get("root_model"), data=predict_data, batch_size=config.get("batch_size"), device=device, df=df, level=level, feature_dict=feature_dict)
+
+    # save features
+    features_save_name = config.get("name") + '-' + config.get("dataset").replace('/', '_')
+    save_features(feature_dict, os.path.join(config.get("evaluation_path"), 'feature_maps'), features_save_name)
 
     # save predictions
     start_time = datetime.fromtimestamp(time.time()).strftime("%Y%m%d_%H%M%S")
@@ -41,7 +46,7 @@ def run_dataset_predict_csv(config):
 
     print(f'Images {config.get("dataset")} predicted and saved: {saving_path}')
 
-def recursive_predict_csv(model_dict, model_root, data, batch_size, device, df, level, pre_cls=None):
+def recursive_predict_csv(model_dict, model_root, data, batch_size, device, df, level, feature_dict, pre_cls=None):
 
     # base:
     if model_dict is None:
@@ -49,10 +54,12 @@ def recursive_predict_csv(model_dict, model_root, data, batch_size, device, df, 
         pass
     else:
         model_path = os.path.join(model_root, model_dict['trained_model'])
-        model, classes, is_regression, valid_dataset = load_model(model_path=model_path, device=device)
+        model, classes, is_regression, is_multilabel, valid_dataset = load_model(model_path=model_path, device=device)
         
-        pred_outputs, image_ids = predict(model, data, batch_size, is_regression, device)
-
+        pred_outputs, image_ids, features = predict(model, data, batch_size, is_regression, is_multilabel, device, feature_dict)
+        
+        feature_dict = {image_id: feature for image_id, feature in zip(image_ids, features)}
+        
         # compare valid dataset 
         # [image_id in valid_dataset ]
         valid_dataset_ids = [os.path.splitext(os.path.split(id[0])[-1])[0] for id in valid_dataset.samples]
@@ -84,8 +91,7 @@ def recursive_predict_csv(model_dict, model_root, data, batch_size, device, df, 
                 recursive_predict_csv(model_dict=sub_model_dict, model_root=model_root, data=sub_data, batch_size=batch_size, device=device, df=df, level=level+1, pre_cls=cls)
 
 
-
-def predict(model, data, batch_size, is_regression, device):
+def predict(model, data, batch_size, is_regression, is_multilabel, device, feature_dict=None):
     model.to(device)
     model.eval()
 
@@ -93,25 +99,71 @@ def predict(model, data, batch_size, is_regression, device):
         data, batch_size=batch_size
     )
     
-    outputs = []
+    if is_multilabel:
+        coarse_outputs = []
+        fine_outputs = []
+    else:
+        outputs = []
+        
     ids = []
+    
+    #where we store intermediate outputs 
+    if feature_dict is not None:
+
+        h_1 = model.block3_layer2.register_forward_hook(helper.make_hook("h1_features", feature_dict))
+        h_2 = model.block4_layer2.register_forward_hook(helper.make_hook("h2_features", feature_dict))
+
+        h_1_list, h_2_list = [], []    
+    
     with torch.no_grad():
         
         for batch_inputs, batch_ids in loader:
             batch_inputs = batch_inputs.to(device)
+
     
-            batch_outputs = model(batch_inputs)
-            if is_regression:
-                batch_outputs = batch_outputs.flatten()
+            if is_multilabel:
+                coarse_batch_outputs, fine_batch_outputs = model(batch_inputs)
+                
+                if is_regression:
+                    coarse_batch_outputs = coarse_batch_outputs.flatten()
+                    fine_batch_outputs = fine_batch_outputs.flatten()
+                else:
+                    coarse_batch_outputs = model.get_class_probabilies(coarse_batch_outputs)
+                    fine_batch_outputs = model.get_class_probabilies(fine_batch_outputs)
+                
+                coarse_outputs.append(coarse_batch_outputs)
+                fine_outputs.append(fine_batch_outputs)
+                
             else:
-                batch_outputs = model.get_class_probabilies(batch_outputs)
-
-            outputs.append(batch_outputs)
+                batch_outputs = model(batch_inputs)
+                
+                if is_regression:
+                    batch_outputs = batch_outputs.flatten()
+                else:
+                    batch_outputs = model.get_class_probabilies(batch_outputs) 
+                    
+                outputs.append(batch_outputs)
+            
             ids.extend(batch_ids)
+            
+            #flatten to vector
+            for feature in feature_dict:
+                feature_dict[feature] = feature_dict[feature].view(feature_dict[feature].size(0), -1)
+            
+            h_1_list.append(feature_dict['h1_features'])
+            h_2_list.append(feature_dict['h2_features'])
+            
+    h_1.remove()
+    h_2.remove()
+    
+    if is_multilabel:
+        pred_coarse_outputs = torch.cat(coarse_outputs, dim=0)
+        pred_fine_outputs = torch.cat(fine_outputs, dim=0)
+        return (pred_coarse_outputs, pred_fine_outputs), ids, feature_dict
 
-    pred_outputs = torch.cat(outputs, dim=0)
-
-    return pred_outputs, ids
+    else:
+        pred_outputs = torch.cat(outputs, dim=0)
+        return pred_outputs, ids, feature_dict
 
 def prepare_data(data_root, dataset, transform):
 
@@ -125,6 +177,7 @@ def load_model(model_path, device):
     model_state = torch.load(model_path, map_location=device)
     model_cls = helper.string_to_object(model_state['config']['model'])
     is_regression = model_state['config']["is_regression"]
+    is_multilabel = model_state['config']["level"] == 'multilabel'
     valid_dataset = model_state['dataset']
 
     if is_regression:
@@ -134,10 +187,14 @@ def load_model(model_path, device):
     else:
         classes = valid_dataset.classes
         num_classes = len(classes)
-    model = model_cls(num_classes)
+    if is_multilabel:               
+        num_c = 5 #Todo: Zahl automatisch berechnen
+        model = model_cls(num_c = num_c, num_classes=num_classes) 
+    else: 
+        model = model_cls(num_classes)
     model.load_state_dict(model_state['model_state_dict'])
 
-    return model, classes, is_regression, valid_dataset
+    return model, classes, is_regression, is_multilabel, valid_dataset
 
 def save_predictions_json(predictions, saving_dir, saving_name):
     
@@ -159,6 +216,14 @@ def save_predictions_csv(df, saving_dir, saving_name):
     df.to_csv(saving_path, index=False)
 
     return saving_path
+
+def save_features(features_dict, saving_dir, saving_name):
+    
+    if not os.path.exists(saving_dir):
+        os.makedirs(saving_dir)
+
+    saving_path = os.path.join(saving_dir, saving_name)
+    torch.save(features_dict, saving_path)
 
 
 # def run_dataset_prediction_json(name, data_root, dataset, transform, model_root, model_dict, predict_dir, gpu_kernel, batch_size):

@@ -310,7 +310,7 @@ def create_train_validation_datasets(
     data_path = os.path.join(data_root, dataset)
 
     # flatten if level is flatten
-    if level == const.FLATTEN:
+    if level == const.FLATTEN or level == const.MULTILABEL:
         complete_dataset = FlattenFolders(data_path, selected_classes=selected_classes)
     # surface or smoothness for surface type if level is not flatten
     else:

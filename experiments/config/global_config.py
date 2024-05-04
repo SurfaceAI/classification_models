@@ -5,7 +5,7 @@ from src import constants
 ROOT_DIR = Path(__file__).parent.parent.parent
 
 global_config = dict(
-    gpu_kernel = 0,
+    gpu_kernel = 1,
     wandb_mode = constants.WANDB_MODE_ON,
     wandb_on=True,
     root_data = str(ROOT_DIR / "data" / "training"),
@@ -13,6 +13,7 @@ global_config = dict(
     root_predict = str(ROOT_DIR / "data" / "training" / "prediction"),
     data_testing_path = str(ROOT_DIR / "data" / "testing"),
     data_path = str(ROOT_DIR / "data"),
+    evaluation_path = str(ROOT_DIR / "evaluations"),
     selected_classes = {
         constants.ASPHALT: [
             constants.EXCELLENT,
@@ -50,5 +51,5 @@ global_config = dict(
     valid_batch_size = 128,
     checkpoint_top_n = 1,
     early_stop_thresh = 5,
-    save_state = False,
+    save_state = True,
 )

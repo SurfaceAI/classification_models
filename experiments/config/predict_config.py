@@ -27,8 +27,21 @@ rateke_CC = {
 vgg16_surface = {
     **global_config.global_config,
     "name": "surface_prediction",
-    "model_dict": {"trained_model": "surface-vgg16-20240215_122253-wgch26j7_epoch18.pt"},
+    "model_dict": {"trained_model": "surface-vgg16-20240202_125044-1uv8oow5.pt"},
     "dataset": "V5_c3",
+    "transform": {
+        "resize": const.H256_W256,
+        "crop": const.CROP_LOWER_MIDDLE_THIRD,
+        "normalize": (const.V6_ANNOTATED_MEAN, const.V6_ANNOTATED_SD),
+    },
+    "batch_size": 96,
+}
+
+B_CNN = {
+    **global_config.global_config,
+    "name": "multi_label_prediction",
+    "model_dict": {"trained_model": "multilabel-BCNN-20240503_141803_epoch0.pt"}, #Add model file
+    "dataset": "V5_c1/predicted",
     "transform": {
         "resize": const.H256_W256,
         "crop": const.CROP_LOWER_MIDDLE_THIRD,

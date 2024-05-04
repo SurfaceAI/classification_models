@@ -6,6 +6,7 @@ from experiments.config import train_config
 from src.utils import preprocessing
 from src import constants
 from src.architecture.vgg16_B_CNN_pretrained import VGG16_B_CNN
+from src.architecture.vgg16_B_CNN import B_CNN
 
 
 
@@ -74,10 +75,17 @@ def imshow(img):
     plt.show()
 
 # Define the neural network model
-class B_CNN(nn.Module):
+class Condition_CNN(nn.Module):
     def __init__(self, num_c, num_classes):
-        super(B_CNN, self).__init__()
+        super(Condition_CNN, self).__init__()
         
+        self.num_c = num_c
+        self.num_classes = num_classes
+        
+        self.x = torch.randn(3, 256, 256)
+        
+        self.true_coarse = torch.tensor([self.num_c]) #empty vector with dimensions of the true_label vector
+                
         
         ### Block 1
         self.block1_layer1 = nn.Sequential(
@@ -113,23 +121,6 @@ class B_CNN(nn.Module):
             nn.ReLU(),
             nn.MaxPool2d(kernel_size = 2, stride = 2))
         
-        ### Coarse branch
-        self.c_flat = nn.Flatten() 
-        self.c_fc = nn.Sequential(
-            nn.Linear(256 * 32 * 32, 512),
-            nn.ReLU(),
-            #nn.BatchNorm1d(256),
-            nn.Dropout(0.5))
-        self.c_fc1 = nn.Sequential(
-            nn.Linear(512, 512),
-            nn.ReLU(),
-            #nn.BatchNorm1d(256),
-            nn.Dropout(0.5))
-        self.c_fc2 = (
-            nn.Linear(512, num_c)
-        )
-        
-        
         ### Block 4
         self.block4_layer1 = nn.Sequential(
             nn.Conv2d(256, 512, kernel_size=3, stride=1, padding=1),
@@ -141,27 +132,75 @@ class B_CNN(nn.Module):
             nn.ReLU(),
             nn.MaxPool2d(kernel_size = 2, stride = 2))
         
+        ### Block 5 
+        self.block5_layer1 = nn.Sequential(
+            nn.Conv2d(512, 512, kernel_size=3, stride=1, padding=1),
+            nn.BatchNorm2d(512),
+            nn.ReLU())
+        self.block5_layer2 = nn.Sequential(
+            nn.Conv2d(512, 512, kernel_size=3, stride=1, padding=1),
+            nn.BatchNorm2d(512),
+            nn.ReLU())
+        self.block5_layer3 = nn.Sequential(
+            nn.Conv2d(512, 512, kernel_size=3, stride=1, padding=1),
+            nn.BatchNorm2d(512),
+            nn.ReLU())
+
+#--------------------------coarse--------------------------------------       
+         
+        ### Coarse branch prediction
+        self.c_fc = nn.Sequential(
+            nn.Linear(512 * 16 * 16, 256),
+            nn.ReLU(),
+            nn.BatchNorm1d(256),
+            nn.Dropout(0.5))
+        self.c_fc1 = nn.Sequential(
+            nn.Linear(256, 256),
+            nn.ReLU(),
+            nn.BatchNorm1d(256),
+            nn.Dropout(0.5))
+        self.c_fc2 = (
+            nn.Linear(256, num_c)
+        )
+        
+#--------------------------fine--------------------------------------       
+        
         ### Fine Block
         self.fc = nn.Sequential(
             nn.Linear(512 * 16 * 16, 1024),
             nn.ReLU(),
+            nn.BatchNorm1d(1024),
             nn.Dropout(0.5),
             )
         self.fc1 = nn.Sequential(
             nn.Linear(1024, 1024),
             nn.ReLU(),
+            nn.BatchNorm1d(1024),
             nn.Dropout(0.5),
             )
-        self.fc2 = (
-            nn.Linear(1024, num_classes)
-        )     
+        # self.fc2 = (
+        #     nn.Linear(1024, num_classes)
+        # )     
+        
+        
+#-------------------condition fine pred on coarse labels -------------------       
+        
+        self.coarse_condition = nn.Linear(self.true_coarse, self.num_classes, bias=False)
+        self.coarse_condition.weight.data = torch.zeros_like(self.coarse_condition.weight.data)
+        #self.coarse_condition.weight.requires_grad = True  Gradient=False -> no gradients for this layer
+        
+        self.fine_raw_layer =  nn.Sequential(
+            nn.Linear(1024, self.num_classes),
+            nn.ReLU()
+        )
+        
     
     @ staticmethod
     def get_class_probabilies(x):
          return nn.functional.softmax(x, dim=1)
     
-    def forward(self, x):
-        x = self.block1_layer1(x) #[batch_size, 64, 256, 256]
+    def forward(self, input):
+        x = self.block1_layer1(input[0]) #[batch_size, 64, 256, 256]
         x = self.block1_layer2(x) #[batch_size, 64, 128, 128]
         
         x = self.block2_layer1(x)#[batch_size, 64, 128, 128] 
@@ -170,18 +209,33 @@ class B_CNN(nn.Module):
         x = self.block3_layer1(x)
         x = self.block3_layer2(x)
         
-        flat = x.reshape(x.size(0), -1) 
+        x = self.block4_layer1(x)
+        x = self.block4_layer2(x)
+        
+        x = self.block5_layer1(x)
+        x = self.block5_layer2(x)
+        x = self.block5_layer3(x)
+        
+        #--- flatten layer
+        
+        flat = x.reshape(x.size(0), -1)
+        
+        #--- coarse branch
+         
         coarse_output = self.c_fc(flat) 
         coarse_output = self.c_fc1(coarse_output)
         coarse_output = self.c_fc2(coarse_output)
         
-        x = self.block4_layer1(x)
-        x = self.block4_layer2(x) # output: [batch_size, 512 #channels, 16, 16 #height&width]
+        #---fine
         
-        flat = x.reshape(x.size(0), -1) #([48, 131072])
-        fine_output = self.fc(flat) #([48, 4096])
-        fine_output = self.fc1(fine_output) #([48, 4096])
-        fine_output = self.fc2(fine_output) #[48, 18])
+        fine_raw = self.fc(flat) #([48, 4096])
+        fine_raw = self.fc1(fine_raw) #([48, 4096])
+        fine_raw = self.fine_raw_layer(fine_raw) #[48, 18])
+        
+        coarse_condition = self.coarse_condition(input[1]) #recode to one hot tensor 
+        
+        features = torch.add(coarse_condition, fine_raw)
+        fine_output = nn.Softmax(features, dim=-1)
         
         return coarse_output, fine_output
 
@@ -276,8 +330,8 @@ alpha = torch.tensor(0.98)
 beta = torch.tensor(0.02)
 
 # Initialize the model, loss function, and optimizer
-model = B_CNN(num_c=5, num_classes=18)
-model = VGG16_B_CNN(num_c=5, num_classes=18)
+model = Condition_CNN(num_c=5, num_classes=18)
+#model = VGG16_B_CNN(num_c=5, num_classes=18)
 criterion = nn.CrossEntropyLoss()
 optimizer = optim.SGD(model.parameters(), lr=config.get('learning_rate'), momentum=0.9)
 
@@ -311,8 +365,13 @@ for epoch in range(config.get('epochs')):
         optimizer.zero_grad()
         
         coarse_labels = parent[fine_labels]
+        coarse_inputs = to_one_hot_tensor(coarse_labels, num_c)
+        coarse_inputs = coarse_inputs.type(torch.LongTensor)
+        #, dtype=torch.float32
         
-        coarse_outputs, fine_outputs = model.forward(inputs)
+        model_inputs = [inputs, coarse_inputs]
+        
+        coarse_outputs, fine_outputs = model.forward(model_inputs)
         coarse_loss = criterion(coarse_outputs, coarse_labels)
         fine_loss = criterion(fine_outputs, fine_labels)
         loss = alpha * coarse_loss + beta * fine_loss  #weighted loss functions for different levels
@@ -379,7 +438,7 @@ for epoch in range(config.get('epochs')):
             
             inputs, fine_labels = inputs.to(device), fine_labels.to(device)
             coarse_labels = parent[fine_labels]
-            
+                        
             coarse_outputs, fine_outputs = model.forward(inputs)
             
             # if isinstance(criterion, nn.MSELoss):

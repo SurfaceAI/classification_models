@@ -1,13 +1,16 @@
+
 import sys
 sys.path.append('.')
 
 from experiments.config import train_config
-from src.utils import preprocessing
-from src import constants
-from src.architecture.vgg16_B_CNN_pretrained import VGG16_B_CNN
+from src.utils import preprocessing, helper, checkpointing
+from src.models import training
+from src import constants as const
+from src.architecture.vgg16_B_CNN_pretrained import VGG16_B_CNN_PRE
 from src.architecture.vgg16_B_CNN import B_CNN
 
-
+from datetime import datetime
+import time
 
 import torch
 import torch.nn as nn
@@ -29,7 +32,10 @@ import os
 
 
 
-config = train_config.B_CNN_multilabel
+config = train_config.B_CNN
+
+    
+torch.manual_seed(config.get("seed"))
 
 device = torch.device(
         f"cuda:{config.get('gpu_kernel')}" if torch.cuda.is_available() else "cpu"
@@ -53,18 +59,25 @@ def to_one_hot_tensor(y, num_classes):
 num_c = 5
 
 #--- fine classes ---
-num_classes = 18
+num_classes  = 18
 
-
-
-# other parameters
+model_cls = helper.string_to_object(config.get("model"))
+optimizer_cls = helper.string_to_object(config.get("optimizer"))
 
 #--- file paths ---
 
-weights_store_filepath = './B_CNN_weights/'
-train_id = '1'
-model_name = 'weights_B_CNN_surfaceai'+train_id+'.h5'
-model_path = os.path.join(weights_store_filepath, model_name)
+level = config.get("level").split("/", 1)
+type_class = None
+if len(level) == 2:
+    type_class = level[-1]
+
+start_time = datetime.fromtimestamp(
+        time.time() if not config.get('wandb_on') else run.start_time
+    ).strftime("%Y%m%d_%H%M%S")
+id = "" if not config.get('wandb_on') else "-" + run.id
+saving_name = (
+    config.get('level') + "-" + config.get("model") + "-" + start_time + id + ".pt"
+)
 
 
 #functions
@@ -73,6 +86,7 @@ def imshow(img):
     npimg = img.numpy()
     plt.imshow(np.transpose(npimg, (1, 2, 0)))
     plt.show()
+
 
 
 #learning rate scheduler manual, it returns the multiplier for our initial learning rate
@@ -118,16 +132,6 @@ train_data, valid_data = preprocessing.create_train_validation_datasets(data_roo
                                                                         )
 
 
-# mapping = {
-#     1: 0, 2: 1, 3: 2, 0: 3, 5: 4, 6: 5, 7: 6, 4: 7,
-#     9: 8, 10: 9, 11: 10, 8: 11, 13: 12, 14: 13, 12: 14,
-#     16: 15, 15: 16, 17: 17
-# }
-
-
-# train_data.targets = [mapping[target] for target in train_data.targets]
-
-
 #create train and valid loader
 train_loader = DataLoader(train_data, batch_size=config.get('batch_size'), shuffle=True)
 valid_loader = DataLoader(train_data, batch_size=config.get('batch_size'), shuffle=False)
@@ -145,9 +149,6 @@ parent = torch.tensor([0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 4, 4, 4])
 y_c_train = torch.zeros(y_train.size(0), num_c, dtype=torch.float32)
 y_c_valid = torch.zeros(y_train.size(0), num_c, dtype=torch.float32)
 
-# y_c_train = torch.tensor((y_train.shape[0], num_c))
-# y_c_valid = torch.tensor((y_valid.shape[0], num_c))
-
 
 # Transform labels for coarse level
 for i in range(y_train.shape[0]):
@@ -159,17 +160,14 @@ for j in range(y_valid.shape[0]):
 
 
 # Initialize the loss weights
-
 alpha = torch.tensor(0.98)
 beta = torch.tensor(0.02)
 
-num_classes=1
-
 # Initialize the model, loss function, and optimizer
-model = VGG16_B_CNN(num_c=num_c, num_classes=num_classes)
-fine_criterion = model.fine_criterion(reduction="sum")
-coarse_criterion = model.coarse_criterion(reduction="sum")
-
+model = B_CNN(num_c=5, num_classes=18)
+model.to(device)
+#model = VGG16_B_CNN(num_c=5, num_classes=18)
+criterion = nn.CrossEntropyLoss()
 optimizer = optim.SGD(model.parameters(), lr=config.get('learning_rate'), momentum=0.9)
 
 # Set up learning rate scheduler
@@ -177,15 +175,24 @@ optimizer = optim.SGD(model.parameters(), lr=config.get('learning_rate'), moment
 scheduler = lr_scheduler.LambdaLR(optimizer, lr_lambda)
 loss_weights_modifier = LossWeightsModifier(alpha, beta)
 
-# Train the model
-#writer = SummaryWriter('logs')
 
+checkpointer = checkpointing.CheckpointSaver(
+        dirpath=config.get("root_model"),
+        saving_name=saving_name,
+        decreasing=True,
+        config=config,
+        dataset=valid_loader.dataset,
+        top_n=config.get("checkpoint_top_n", const.CHECKPOINT_DEFAULT_TOP_N),
+        early_stop_thresh=config.get("early_stop_thresh", const.EARLY_STOPPING_DEFAULT),
+        save_state=config.get("save_state", True),
+    )
+
+# Train the model
 for epoch in range(config.get('epochs')):
     model.train()
     running_loss = 0.0
     coarse_correct = 0
     fine_correct = 0
-    eval_metric_value_fine = 0
     
     for batch_index, (inputs, fine_labels) in enumerate(train_loader):
         
@@ -205,36 +212,39 @@ for epoch in range(config.get('epochs')):
         coarse_labels = parent[fine_labels]
         
         coarse_outputs, fine_outputs = model.forward(inputs)
-        coarse_loss = coarse_criterion(coarse_outputs, coarse_labels)
-        fine_loss = fine_criterion(fine_outputs, fine_labels.float())
+        coarse_loss = criterion(coarse_outputs, coarse_labels)
+        fine_loss = criterion(fine_outputs, fine_labels)
         loss = alpha * coarse_loss + beta * fine_loss  #weighted loss functions for different levels
         
-        #fine_loss.backward()
         loss.backward()
         optimizer.step()
-        
+        running_loss += loss.item() 
         running_loss += loss.item()
+        
+        # if eval_metric == const.EVAL_METRIC_ACCURACY:
+        #     if isinstance(criterion, nn.MSELoss): # compare with is_regression for generalization?
+        #         predictions = outputs.round()
+        #     else:
+        #         probs = model.get_class_probabilies(outputs)
+        #         predictions = torch.argmax(probs, dim=1)
+        #     eval_metric_value += (predictions == labels).sum().item()
+
+        # elif eval_metric == const.EVAL_METRIC_MSE:
+        #     if not isinstance(criterion, nn.MSELoss): # compare with is_regression for generalization?
+        #         raise ValueError(
+        #             f"Criterion must be nn.MSELoss for eval_metric {eval_metric}"
+        #         )
+        #     eval_metric_value = running_loss
+        # else:
+        #     raise ValueError(f"Unknown eval_metric: {eval_metric}")
         
         coarse_probs = model.get_class_probabilies(coarse_outputs)
         coarse_predictions = torch.argmax(coarse_probs, dim=1)
         coarse_correct += (coarse_predictions == coarse_labels).sum().item()
         
-        if config.get('eval_metric') == constants.EVAL_METRIC_ACCURACY:
-            if isinstance(fine_criterion, nn.MSELoss): 
-                fine_predictions = fine_outputs.round()
-            else:
-                fine_probs = model.get_class_probabilies(fine_outputs)
-                fine_predictions = torch.argmax(fine_probs, dim=1)
-            eval_metric_value_fine += (fine_predictions == labels).sum().item()
-
-        elif config.get('eval_metric') == constants.EVAL_METRIC_MSE:
-            if not isinstance(fine_criterion, nn.MSELoss): 
-                raise ValueError(
-                    f"Criterion must be nn.MSELoss for eval_metric {config.get('eval_metric')}"
-                )
-            eval_metric_value_fine = fine_running_loss
-        else:
-            raise ValueError(f"Unknown eval_metric: {config.get('eval_metric')}")
+        fine_probs = model.get_class_probabilies(fine_outputs)
+        fine_predictions = torch.argmax(fine_probs, dim=1)
+        fine_correct += (fine_predictions == fine_labels).sum().item()
         
         # if batch_index == 0:
         #     break
@@ -252,20 +262,22 @@ for epoch in range(config.get('epochs')):
     # epoch_fine_accuracy = 100 * fine_correct / (len(inputs) * (batch_index + 1))
     epoch_loss = running_loss /  len(train_loader)
     epoch_coarse_accuracy = 100 * coarse_correct / len(train_loader.sampler)
-    epoch_fine_metric = eval_metric_value_fine / len(train_loader) #TODOshould be .sampler when accuracy, else without
-    
-    #writer.add_scalar('Training Loss', epoch_loss, epoch)
-    
+    epoch_fine_accuracy = 100 * fine_correct / len(train_loader.sampler)
+        
     # Validation
     model.eval()
     loss = 0.0
-    val_coarse_running_loss = 0.0
-    val_fine_running_loss = 0.0
     val_running_loss = 0.0
-    
     val_coarse_correct = 0
-    val_eval_metric_fine = 0
-   
+    val_fine_correct = 0
+    
+    #where we store intermediate outputs 
+    feature_maps = {}
+    
+    h_coarse = model.block3_layer2.register_forward_hook(helper.make_hook("coarse_flat", feature_maps)) #todo:add the number of coarse block 
+    h_fine = model.block4_layer2.register_forward_hook(helper.make_hook("fine_flat", feature_maps))
+    
+    h_coarse_list, h_fine_list = [], []
     
     with torch.no_grad():
         for batch_index, (inputs, fine_labels) in enumerate(valid_loader):
@@ -275,15 +287,16 @@ for epoch in range(config.get('epochs')):
             
             coarse_outputs, fine_outputs = model.forward(inputs)
             
-            if isinstance(fine_criterion, nn.MSELoss):
-                fine_outputs = fine_outputs.flatten()
-                fine_labels = fine_labels.float()
+            # if isinstance(criterion, nn.MSELoss):
+            #     coarse_outputs = coarse_outputs.flatten()
+            #     fine_outputs = fine_outputs.flatten()
+                
+            #     fine_labels = fine_labels.float()
+            #     coarse_labels = coarse_labels.float()
             
-            coarse_loss = coarse_criterion(coarse_outputs, coarse_labels)
-            fine_loss = fine_criterion(fine_outputs, fine_labels)
             
-            val_coarse_running_loss += coarse_loss.item()
-            val_fine_running_loss += fine_loss.item()
+            coarse_loss = criterion(coarse_outputs, coarse_labels)
+            fine_loss = criterion(fine_outputs, fine_labels)
             
             loss = (coarse_loss + fine_loss) / 2
             val_running_loss += loss.item() 
@@ -293,34 +306,30 @@ for epoch in range(config.get('epochs')):
             coarse_predictions = torch.argmax(coarse_probs, dim=1)
             val_coarse_correct += (coarse_predictions == coarse_labels).sum().item()
         
-        
-            if config.get('eval_metric' == constants.EVAL_METRIC_ACCURACY):
-                if isinstance(fine_criterion, nn.MSELoss): 
-                    fine_predictions = fine_outputs.round()
-                else:
-                    fine_probs = model.get_class_probabilies(fine_outputs)
-                    fine_predictions = torch.argmax(fine_probs, dim=1)
-                val_eval_metric_fine += (fine_predictions == labels).sum().item()
-
-            elif config.get('eval_metric' == constants.EVAL_METRIC_MSE):
-                if not isinstance(fine_criterion, nn.MSELoss): 
-                    raise ValueError(
-                        f"Criterion must be nn.MSELoss for eval_metric {config.get('eval_metric')}"
-                    )
-                val_eval_metric_fine = val_fine_running_loss
-            else:
-                raise ValueError(f"Unknown eval_metric: {config.get('eval_metric')}")
-
+            fine_probs = model.get_class_probabilies(fine_outputs)
+            fine_predictions = torch.argmax(fine_probs, dim=1)
+            val_fine_correct += (fine_predictions == fine_labels).sum().item()
             
-            # if batch_index == 1:
-            #     break
+            
+            h_coarse_list.append(feature_maps['coarse_flat'])
+            h_fine_list.append(feature_maps['fine_flat'])
+            
+    #         if batch_index == 0:
+    #             break
     
     # val_epoch_loss = val_running_loss /  (len(inputs) * (batch_index + 1))
     # val_epoch_coarse_accuracy = 100 * val_coarse_correct / (len(inputs) * (batch_index + 1))
     # val_epoch_fine_accuracy = 100 * val_fine_correct / (len(inputs) * (batch_index + 1))
     val_epoch_loss = val_running_loss /  len(valid_loader)
     val_epoch_coarse_accuracy = 100 * val_coarse_correct / len(valid_loader.sampler)
-    val_epoch_fine_metric = 100 * val_eval_metric_fine / len(valid_loader) #.sampler if accuracy Todo
+    val_epoch_fine_accuracy = 100 * val_fine_correct / len(valid_loader.sampler)#
+    
+    h_coarse.remove()
+    h_fine.remove()
+    
+    early_stop = checkpointer(
+            model=model, epoch=epoch, metric_val=val_epoch_loss, optimizer=optimizer
+        )
     
     if config.get('wandb_on'):
             wandb.log(
@@ -329,10 +338,10 @@ for epoch in range(config.get('epochs')):
                     "dataset": config.get('dataset'),
                     "train/loss": epoch_loss,
                     "train/accuracy/coarse": epoch_coarse_accuracy,
-                    "train/metric/fine": epoch_fine_metric, 
+                    "train/accuracy/fine": epoch_fine_accuracy , 
                     "eval/loss": val_epoch_loss,
                     "eval/accuracy/coarse": val_epoch_coarse_accuracy,
-                    "eval/metric/fine": val_epoch_fine_metric,
+                    "eval/accuracy/fine": val_epoch_fine_accuracy,
                 }
             )
     
@@ -343,11 +352,16 @@ for epoch in range(config.get('epochs')):
         Loss Weights: [alpha, beta] = [{alpha}, {beta}],
         Train loss: {epoch_loss:.3f}, 
         Train coarse accuracy: {epoch_coarse_accuracy:.3f}%, 
-        Train fine accuracy: {epoch_fine_metric:.3f}%,
+        Train fine accuracy: {epoch_fine_accuracy:.3f}%,
         Validation loss: {val_epoch_loss:.3f}, 
         Validation coarse accuracy: {val_epoch_coarse_accuracy:.3f}%, 
-        Validation fine accuracy: {val_epoch_fine_metric:.3f}% """)
+        Validation fine accuracy: {val_epoch_fine_accuracy:.3f}% """)
+    
+    if early_stop:
+            print(f"Early stopped training at epoch {epoch}")
+            break
+
 
 if config.get('wandb_on'):
         wandb.finish()
-#writer.close()
+

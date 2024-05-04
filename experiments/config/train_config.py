@@ -21,9 +21,9 @@ default_search_params = {
 vgg16_params = {
     **global_config.global_config,
     **default_params,
-    "batch_size": 96,
-    "epochs": 20,
-    "learning_rate": 0.00003,
+    "batch_size": 16,
+    "epochs": 1,
+    "learning_rate": 0.003,
     "project": const.PROJECT_SURFACE_FIXED,
     "name": "VGG16",
     "level": const.SURFACE,
@@ -216,22 +216,31 @@ effnet_asphalt_crophalf_regression_params = {
 
 }
 
-B_CNN_multilabel = {
+B_CNN = {
     **global_config.global_config,
     **default_params,
     "project": const.PROJECT_MULTI_LABEL_FIXED,
     "name": "B_CNN",
-    "level": const.FLATTEN,
-    #"model": const.RATEKE,
+    "level": const.MULTILABEL,
+    "model": const.BCNN,
 }
 
-B_CNN_multilabel_regression = {
+C_CNN = {
+    **global_config.global_config,
+    **default_params,
+    "project": const.PROJECT_MULTI_LABEL_FIXED,
+    "name": "C_CNN",
+    "level": const.MULTILABEL,
+    "model": const.CCNN,
+}
+
+B_CNN_regression = {
     **global_config.global_config,
     **default_params,
     "project": const.PROJECT_MULTI_LABEL_FIXED,
     #"coarse_eval_metric": const.EVAL_METRIC_ACCURACY,
     #"fine_eval_metric": const.EVAL_METRIC_MSE,
     "name": "B_CNN_Regression",
-    "level": const.FLATTEN,
-    #"model": const.RATEKE,
+    "level": const.MULTILABEL,
+    "model": const.BCNNREGRESSION,
 }

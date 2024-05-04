@@ -5,9 +5,9 @@ from collections import OrderedDict
 
 architecture = "VGG16"
 
-class VGG16_B_CNN(nn.Module):
+class VGG16_B_CNN_PRE(nn.Module):
     def __init__(self, num_c, num_classes):
-        super(VGG16_B_CNN, self).__init__()
+        super(VGG16_B_CNN_PRE, self).__init__()
         
         #Load pretrained weights
         model = models.vgg16(weights='VGG16_Weights.IMAGENET1K_V1')
