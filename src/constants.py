@@ -110,6 +110,7 @@ RATEKE = "rateke"
 # temporay onla
 VGG16REGRESSION = "vgg16Regression"
 BCNN = "BCNN"
+BCNN_PRE = "BCNN_pretrained"
 BCNNREGRESSION = "BCNNRegression"
 CCNN = "ConditionCNN"
 

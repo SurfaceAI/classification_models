@@ -32,7 +32,7 @@ import os
 
 
 
-config = train_config.B_CNN
+config = train_config.B_CNN_PRE
 
     
 torch.manual_seed(config.get("seed"))
@@ -164,7 +164,7 @@ alpha = torch.tensor(0.98)
 beta = torch.tensor(0.02)
 
 # Initialize the model, loss function, and optimizer
-model = B_CNN(num_c=5, num_classes=18)
+model = VGG16_B_CNN_PRE(num_c=5, num_classes=18)
 model.to(device)
 #model = VGG16_B_CNN(num_c=5, num_classes=18)
 criterion = nn.CrossEntropyLoss()

@@ -225,6 +225,15 @@ B_CNN = {
     "model": const.BCNN,
 }
 
+B_CNN_PRE = {
+    **global_config.global_config,
+    **default_params,
+    "project": const.PROJECT_MULTI_LABEL_FIXED,
+    "name": "B_CNN_pretrained",
+    "level": const.MULTILABEL,
+    "model": const.BCNN_PRE,
+}
+
 C_CNN = {
     **global_config.global_config,
     **default_params,
