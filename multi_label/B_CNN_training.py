@@ -272,12 +272,12 @@ for epoch in range(config.get('epochs')):
     val_fine_correct = 0
     
     #where we store intermediate outputs 
-    feature_maps = {}
+    # feature_maps = {}
     
-    h_coarse = model.block3_layer2.register_forward_hook(helper.make_hook("coarse_flat", feature_maps)) #todo:add the number of coarse block 
-    h_fine = model.block4_layer2.register_forward_hook(helper.make_hook("fine_flat", feature_maps))
+    # h_coarse = model.block3_layer2.register_forward_hook(helper.make_hook("coarse_flat", feature_maps)) #todo:add the number of coarse block 
+    # h_fine = model.block4_layer2.register_forward_hook(helper.make_hook("fine_flat", feature_maps))
     
-    h_coarse_list, h_fine_list = [], []
+    # h_coarse_list, h_fine_list = [], []
     
     with torch.no_grad():
         for batch_index, (inputs, fine_labels) in enumerate(valid_loader):
@@ -311,8 +311,8 @@ for epoch in range(config.get('epochs')):
             val_fine_correct += (fine_predictions == fine_labels).sum().item()
             
             
-            h_coarse_list.append(feature_maps['coarse_flat'])
-            h_fine_list.append(feature_maps['fine_flat'])
+            # h_coarse_list.append(feature_maps['coarse_flat'])
+            # h_fine_list.append(feature_maps['fine_flat'])
             
     #         if batch_index == 0:
     #             break
@@ -324,8 +324,8 @@ for epoch in range(config.get('epochs')):
     val_epoch_coarse_accuracy = 100 * val_coarse_correct / len(valid_loader.sampler)
     val_epoch_fine_accuracy = 100 * val_fine_correct / len(valid_loader.sampler)#
     
-    h_coarse.remove()
-    h_fine.remove()
+    # h_coarse.remove()
+    # h_fine.remove()
     
     early_stop = checkpointer(
             model=model, epoch=epoch, metric_val=val_epoch_loss, optimizer=optimizer
