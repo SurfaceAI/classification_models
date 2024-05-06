@@ -54,7 +54,7 @@ model_path = os.path.join(config.get('root_model'), config.get('model_dict')['tr
 
 
 # prepare data
-predict_data = prediction.prepare_data(config.get("data_testing_path"), config.get("dataset"), config.get("transform"))
+predict_data = prediction.prepare_data(config.get("root_data"), config.get("dataset"), config.get("transform"))
 
 level = 0
 columns = ['Image', 'Prediction', f'Level_{level}']
