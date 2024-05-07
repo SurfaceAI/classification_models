@@ -28,6 +28,7 @@ import pandas as pd
 
 from datetime import datetime
 import time
+import pickle
 
 import sys
 sys.path.append('.')
@@ -56,16 +57,16 @@ model_path = os.path.join(config.get('root_model'), config.get('model_dict')['tr
 # prepare data
 predict_data = prediction.prepare_data(config.get("root_data"), config.get("dataset"), config.get("transform"))
 
-level = 0
-columns = ['Image', 'Prediction', f'Level_{level}']
-df = pd.DataFrame(columns=columns)
+df = pd.DataFrame()
 feature_dict = {}
 
-prediction.recursive_predict_csv(model_dict=config.get("model_dict"), model_root=config.get("root_model"), data=predict_data, batch_size=config.get("batch_size"), device=device, df=df, level=level, feature_dict=feature_dict)
+pred_outputs, image_ids, features = prediction.recursive_predict_csv(model_dict=config.get("model_dict"), model_root=config.get("root_model"), data=predict_data, batch_size=config.get("batch_size"), device=device, df=df, feature_dict=feature_dict)
 
 # save features
-features_save_name = config.get("name") + '-' + config.get("dataset").replace('/', '_')
-prediction.save_features(feature_dict, os.path.join(config.get("evaluation_path"), 'feature_maps'), features_save_name)
+features_save_name = config.get("name") + '-' + config.get("dataset").replace('/', '_') + '-features'
+with open(os.path.join(config.get('evaluation_path'), 'feature_maps', features_save_name), 'wb') as f_out:
+    pickle.dump({'image_ids': image_ids, 'prediction': pred_outputs, 'coarse_features': features[0], 'fine_features': features[1]}, f_out, protocol=pickle.HIGHEST_PROTOCOL)
+#prediction.save_features(feature_dict, os.path.join(config.get("evaluation_path"), 'feature_maps'), features_save_name)
 
 # save predictions
 start_time = datetime.fromtimestamp(time.time()).strftime("%Y%m%d_%H%M%S")

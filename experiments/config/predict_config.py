@@ -41,7 +41,7 @@ B_CNN = {
     **global_config.global_config,
     "name": "multi_label_prediction",
     "model_dict": {"trained_model": "multilabel-BCNN-20240504_141652-jzr601kb_epoch39.pt"}, 
-    "dataset": "V5_c5/unsorted_images",
+    "dataset": "V11/annotated",
     "transform": {
         "resize": const.H256_W256,
         "crop": const.CROP_LOWER_MIDDLE_THIRD,
@@ -54,7 +54,7 @@ B_CNN_PRE = {
     **global_config.global_config,
     "name": "multi_label_prediction",
     "model_dict": {"trained_model": "multilabel-BCNN_pretrained-20240505_133427-c549if0b_epoch39.pt"}, 
-    "dataset": "V5_c5/unsorted_images",
+    "dataset": "V11/annotated", #V5_c5/unsorted_images",
     "transform": {
         "resize": const.H256_W256,
         "crop": const.CROP_LOWER_MIDDLE_THIRD,

@@ -16,6 +16,9 @@ from src.architecture import Rateke_CNN
 from PIL import Image
 import pandas as pd
 import argparse
+import pickle 
+from collections import OrderedDict
+
 
 
 def run_dataset_predict_csv(config):
@@ -46,7 +49,7 @@ def run_dataset_predict_csv(config):
 
     print(f'Images {config.get("dataset")} predicted and saved: {saving_path}')
 
-def recursive_predict_csv(model_dict, model_root, data, batch_size, device, df, level, feature_dict, pre_cls=None):
+def recursive_predict_csv(model_dict, model_root, data, batch_size, device, df, feature_dict, level=None, pre_cls=None):
 
     # base:
     if model_dict is None:
@@ -56,39 +59,62 @@ def recursive_predict_csv(model_dict, model_root, data, batch_size, device, df, 
         model_path = os.path.join(model_root, model_dict['trained_model'])
         model, classes, is_regression, is_multilabel, valid_dataset = load_model(model_path=model_path, device=device)
         
-        pred_outputs, image_ids, features = predict(model, data, batch_size, is_regression, is_multilabel, device, feature_dict)
-        
-        feature_dict = {image_id: feature for image_id, feature in zip(image_ids, features)}
+        pred_outputs, image_ids, features = predict(model, valid_dataset, batch_size, is_regression, is_multilabel, device, feature_dict) #todo change back to 'data'
         
         # compare valid dataset 
         # [image_id in valid_dataset ]
         valid_dataset_ids = [os.path.splitext(os.path.split(id[0])[-1])[0] for id in valid_dataset.samples]
         is_valid_data = [1 if image_id in valid_dataset_ids else 0 for image_id in image_ids]
-        
-        columns = ['Image', 'Prediction', 'is_in_validation', f'Level_{level}'] # is_in_valid_dataset / join
-        pre_cls_entry = []
-        if pre_cls is not None:
-            columns = columns + [f'Level_{level-1}']
-            pre_cls_entry = [pre_cls]
-        if is_regression:
-            pred_classes = ["outside" if str(pred.item()) not in classes.keys() else classes[str(pred.item())] for pred in pred_outputs.round().int()]
-            for image_id, pred, is_vd, cls in zip(image_ids, pred_outputs, is_valid_data, pred_classes):
+            
+        if is_multilabel: 
+            columns =  ['Image', 'Coarse_Prediction', 'Coarse_Probability', 'Fine_Prediction', 'Fine_Probability', 'is_in_validation']
+            #todo: add regression
+            pred_coarse_outputs = pred_outputs[0]
+            pred_fine_outputs = pred_outputs[1]
+            
+            coarse_classes = classes[0]
+            fine_classes = classes[1]
+            
+            pred_fine_classes = [fine_classes[idx.item()] for idx in torch.argmax(pred_fine_outputs, dim=1)]
+            pred_coarse_classes = [coarse_classes[idx.item()] for idx in torch.argmax(pred_coarse_outputs, dim=1)]
+            
+            coarse_probs, _ = torch.max(pred_coarse_outputs, dim=1)
+            fine_probs, _ = torch.max(pred_fine_outputs, dim=1)
+
+            for image_id, coarse_pred, coarse_prob, fine_pred, fine_prob, is_vd, in zip(image_ids, pred_coarse_classes, coarse_probs.tolist(), pred_fine_classes, fine_probs.tolist(), is_valid_data):
                 i = df.shape[0]
-                df.loc[i, columns] = [image_id, pred.item(), is_vd, cls] + pre_cls_entry
+                df.loc[i, columns] = [image_id, coarse_pred, coarse_prob, fine_pred, fine_prob, is_vd] 
+          
+          
+        #classifier chain  
         else:
-            pred_classes = [classes[idx.item()] for idx in torch.argmax(pred_outputs, dim=1)]
-            for image_id, pred, is_vd in zip(image_ids, pred_outputs, is_valid_data):
-                for cls, prob in zip(classes, pred.tolist()):
+            columns = ['Image', 'Prediction', 'is_in_validation', f'Level_{level}'] # is_in_valid_dataset / join
+            pre_cls_entry = []
+            if pre_cls is not None:
+                columns = columns + [f'Level_{level-1}']
+                pre_cls_entry = [pre_cls]
+                
+            if is_regression:
+                pred_classes = ["outside" if str(pred.item()) not in classes.keys() else classes[str(pred.item())] for pred in pred_outputs.round().int()]
+                for image_id, pred, is_vd, cls in zip(image_ids, pred_outputs, is_valid_data, pred_classes):
                     i = df.shape[0]
-                    df.loc[i, columns] = [image_id, prob, is_vd, cls] + pre_cls_entry
-            # subclasses not for regression implemented
-            for cls in classes:
-                sub_indices = [idx for idx, pred_cls in enumerate(pred_classes) if pred_cls == cls]
-                sub_model_dict = model_dict.get('submodels', {}).get(cls)
-                if not sub_indices or sub_model_dict is None:
-                    continue
-                sub_data = Subset(data, sub_indices)
-                recursive_predict_csv(model_dict=sub_model_dict, model_root=model_root, data=sub_data, batch_size=batch_size, device=device, df=df, level=level+1, pre_cls=cls)
+                    df.loc[i, columns] = [image_id, pred.item(), is_vd, cls] + pre_cls_entry
+            else:
+                pred_classes = [classes[idx.item()] for idx in torch.argmax(pred_outputs, dim=1)]
+                for image_id, pred, is_vd in zip(image_ids, pred_outputs, is_valid_data):
+                    for cls, prob in zip(classes, pred.tolist()):
+                        i = df.shape[0]
+                        df.loc[i, columns] = [image_id, prob, is_vd, cls] + pre_cls_entry
+                # subclasses not for regression implemented
+                for cls in classes:
+                    sub_indices = [idx for idx, pred_cls in enumerate(pred_classes) if pred_cls == cls]
+                    sub_model_dict = model_dict.get('submodels', {}).get(cls)
+                    if not sub_indices or sub_model_dict is None:
+                        continue
+                    sub_data = Subset(data, sub_indices)
+                    recursive_predict_csv(model_dict=sub_model_dict, model_root=model_root, data=sub_data, batch_size=batch_size, device=device, df=df, level=level+1, pre_cls=cls)
+                    
+        return pred_outputs, image_ids, features
 
 
 def predict(model, data, batch_size, is_regression, is_multilabel, device, feature_dict=None):
@@ -113,7 +139,8 @@ def predict(model, data, batch_size, is_regression, is_multilabel, device, featu
         h_1 = model.block3_layer2.register_forward_hook(helper.make_hook("h1_features", feature_dict))
         h_2 = model.block4_layer2.register_forward_hook(helper.make_hook("h2_features", feature_dict))
 
-        h_1_list, h_2_list = [], []    
+        all_coarse_features = []
+        all_fine_features = []
     
     with torch.no_grad():
         
@@ -133,7 +160,8 @@ def predict(model, data, batch_size, is_regression, is_multilabel, device, featu
                 
                 coarse_outputs.append(coarse_batch_outputs)
                 fine_outputs.append(fine_batch_outputs)
-                
+             
+            #Classifier Chain   
             else:
                 batch_outputs = model(batch_inputs)
                 
@@ -149,9 +177,9 @@ def predict(model, data, batch_size, is_regression, is_multilabel, device, featu
             #flatten to vector
             for feature in feature_dict:
                 feature_dict[feature] = feature_dict[feature].view(feature_dict[feature].size(0), -1)
-            
-            h_1_list.append(feature_dict['h1_features'])
-            h_2_list.append(feature_dict['h2_features'])
+                
+            all_coarse_features.append(feature_dict['h1_features'])
+            all_fine_features.append(feature_dict['h2_features'])
             
     h_1.remove()
     h_2.remove()
@@ -159,7 +187,10 @@ def predict(model, data, batch_size, is_regression, is_multilabel, device, featu
     if is_multilabel:
         pred_coarse_outputs = torch.cat(coarse_outputs, dim=0)
         pred_fine_outputs = torch.cat(fine_outputs, dim=0)
-        return (pred_coarse_outputs, pred_fine_outputs), ids, feature_dict
+        all_coarse_features = torch.cat(all_coarse_features, dim=0)
+        all_fine_features = torch.cat(all_fine_features, dim=0)
+        all_features = [all_coarse_features, all_fine_features]
+        return (pred_coarse_outputs, pred_fine_outputs), ids, all_features
 
     else:
         pred_outputs = torch.cat(outputs, dim=0)
@@ -179,22 +210,31 @@ def load_model(model_path, device):
     is_regression = model_state['config']["is_regression"]
     is_multilabel = model_state['config']["level"] == 'multilabel'
     valid_dataset = model_state['dataset']
-
-    if is_regression:
-        class_to_idx = valid_dataset.class_to_idx
-        classes = {str(i): cls for cls, i in class_to_idx.items()}
-        num_classes = 1
-    else:
-        classes = valid_dataset.classes
-        num_classes = len(classes)
-    if is_multilabel:               
-        num_c = 5 #Todo: Zahl automatisch berechnen
+    
+    #multilabel
+    if is_multilabel: 
+        fine_classes = valid_dataset.classes  
+        coarse_classes = list(OrderedDict.fromkeys(class_name.split('__')[0] for class_name in fine_classes))
+        num_c = len(coarse_classes)
+        num_classes = len(fine_classes)
         model = model_cls(num_c = num_c, num_classes=num_classes) 
-    else: 
-        model = model_cls(num_classes)
-    model.load_state_dict(model_state['model_state_dict'])
+        model.load_state_dict(model_state['model_state_dict'])
+        
+        return model, (coarse_classes, fine_classes), is_regression, is_multilabel, valid_dataset
 
-    return model, classes, is_regression, is_multilabel, valid_dataset
+    #CC    
+    else:    
+        if is_regression:
+            class_to_idx = valid_dataset.class_to_idx
+            classes = {str(i): cls for cls, i in class_to_idx.items()}
+            num_classes = 1
+        else:
+            classes = valid_dataset.classes
+            num_classes = len(classes)
+        model = model_cls(num_classes)
+        model.load_state_dict(model_state['model_state_dict'])
+        
+        return model, classes, is_regression, is_multilabel, valid_dataset
 
 def save_predictions_json(predictions, saving_dir, saving_name):
     
