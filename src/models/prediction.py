@@ -59,7 +59,7 @@ def recursive_predict_csv(model_dict, model_root, data, batch_size, device, df, 
         model_path = os.path.join(model_root, model_dict['trained_model'])
         model, classes, is_regression, is_multilabel, valid_dataset = load_model(model_path=model_path, device=device)
         
-        pred_outputs, image_ids, features = predict(model, valid_dataset, batch_size, is_regression, is_multilabel, device, feature_dict) #todo change back to 'data'
+        pred_outputs, image_ids, features = predict(model, data, batch_size, is_regression, is_multilabel, device, feature_dict) #todo change back to 'data'
         
         # compare valid dataset 
         # [image_id in valid_dataset ]
@@ -180,6 +180,8 @@ def predict(model, data, batch_size, is_regression, is_multilabel, device, featu
                 
             all_coarse_features.append(feature_dict['h1_features'])
             all_fine_features.append(feature_dict['h2_features'])
+            
+            break
             
     h_1.remove()
     h_2.remove()
