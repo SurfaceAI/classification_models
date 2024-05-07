@@ -180,8 +180,7 @@ def predict(model, data, batch_size, is_regression, is_multilabel, device, featu
                 
             all_coarse_features.append(feature_dict['h1_features'])
             all_fine_features.append(feature_dict['h2_features'])
-            
-            break
+        
             
     h_1.remove()
     h_2.remove()
