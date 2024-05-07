@@ -124,15 +124,28 @@ tsne_fine_train = TSNE(n_components=2, learning_rate='auto', init='random', perp
 
 # %%
 from sklearn.preprocessing import LabelEncoder
+import seaborn as sns
+
+def generate_color_palette(num_colors):
+    # Generate a set of distinguishable colors
+    colors = sns.color_palette("hsv", num_colors)
+    return colors
 
 def create_plot(tsne_data, tsne_label, flag):
     label_encoder = LabelEncoder()
     scatter_labels_encoded = label_encoder.fit_transform(tsne_label)
+    
+    num_labels = len(np.unique(scatter_labels_encoded))
+    
+    # Generate distinguishable colors
+    colors = generate_color_palette(num_labels)
 
     # Create a scatter plot
     plt.figure(figsize=(10, 8))
-    scatter = plt.scatter(tsne_data[:, 0], tsne_data[:, 1], c=scatter_labels_encoded, cmap='viridis', s=10)
-    plt.colorbar(scatter, ticks=range(len(label_encoder.classes_)), label='Surface Type').set_ticklabels(label_encoder.classes_)
+    for i, label in enumerate(np.unique(scatter_labels_encoded)):
+        indices = np.where(scatter_labels_encoded == label)
+        plt.scatter(tsne_data[indices, 0], tsne_data[indices, 1], c=[colors[i]], label=label_encoder.classes_[label], s=10)
+
     plt.title('t-SNE coarse features')
     plt.xlabel('t-SNE Dimension 1')
     plt.ylabel('t-SNE Dimension 2')
