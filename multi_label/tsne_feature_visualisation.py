@@ -73,8 +73,8 @@ stored_df = pd.merge(stored_df, all_labels, how="left", left_on="image_id",
 all_predictions = pd.read_csv(os.path.join(config.get('root_predict'), predictions_save_name))
 all_predictions = all_predictions.rename(columns = {"Image":"image_id"})
 all_predictions['image_id'] = all_predictions['image_id'].astype('int64')
-valid_predictions = all_predictions[all_predictions['is_in_validation'] == 1]
-train_predictions = all_predictions[all_predictions['is_in_validation'] == 0]
+valid_predictions = all_predictions[all_predictions['is_in_validation'] == 0]
+train_predictions = all_predictions[all_predictions['is_in_validation'] == 1]
 
 all_predictions
 
@@ -104,10 +104,10 @@ train_input_coarse_tsne = stored_coarse_features[train_df['position'].to_list()]
 train_labels_coarse_tsne = train_df['surface'].to_list()
 
 validation_input_fine_tsne = stored_fine_features[valid_df['position'].to_list()]
-validation_labels_fine_tsne = valid_df['surface'].to_list()
+validation_labels_fine_tsne = valid_df['smoothness'].to_list()
 
 train_input_fine_tsne = stored_fine_features[train_df['position'].to_list()]
-train_labels_fine_tsne = train_df['surface'].to_list()
+train_labels_fine_tsne = train_df['smoothness'].to_list()
 
 
 
