@@ -64,7 +64,7 @@ pred_outputs, image_ids, features = prediction.recursive_predict_csv(model_dict=
 
 # save features
 features_save_name = config.get("name") + '-' + config.get("dataset").replace('/', '_') + '-features'
-with open(os.path.join(config.get('evaluation_path'), 'feature_maps', features_save_name), 'wb') as f_out:
+with open(os.path.join(config.get('evaluation_path'), features_save_name), 'wb') as f_out:
     pickle.dump({'image_ids': image_ids, 'prediction': pred_outputs, 'coarse_features': features[0], 'fine_features': features[1]}, f_out, protocol=pickle.HIGHEST_PROTOCOL)
 #prediction.save_features(feature_dict, os.path.join(config.get("evaluation_path"), 'feature_maps'), features_save_name)
 

@@ -83,7 +83,7 @@ def recursive_predict_csv(model_dict, model_root, data, batch_size, device, df, 
 
             for image_id, coarse_pred, coarse_prob, fine_pred, fine_prob, is_vd, in zip(image_ids, pred_coarse_classes, coarse_probs.tolist(), pred_fine_classes, fine_probs.tolist(), is_valid_data):
                 i = df.shape[0]
-                df.loc[i, columns] = [image_id, coarse_pred, coarse_prob, fine_pred, fine_prob, is_vd] 
+                df.loc[i, columns] = [float(image_id), float(coarse_pred), float(coarse_prob), float(fine_pred), float(fine_prob), float(is_vd)]
           
           
         #classifier chain  
