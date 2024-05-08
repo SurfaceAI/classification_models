@@ -169,10 +169,10 @@ create_plot(tsne_fine_valid, validation_labels_fine_tsne, 'valid_fine')
 
 for surface in list(set(train_labels_coarse_tsne)):
     
-    train_input_surface = stored_coarse_features[train_df[train_df['surface'] == surface]['position'].to_list()]
+    train_input_surface = stored_fine_features[train_df[train_df['surface'] == surface]['position'].to_list()]
     train_labels_surface = train_df[train_df['surface'] == surface]['smoothness'].to_list() 
     
-    valid_input_surface = stored_coarse_features[valid_df[valid_df['surface'] == surface]['position'].to_list()]
+    valid_input_surface = stored_fine_features[valid_df[valid_df['surface'] == surface]['position'].to_list()]
     valid_labels_surface = valid_df[valid_df['surface'] == surface]['smoothness'].to_list()
     
     
