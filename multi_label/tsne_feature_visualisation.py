@@ -25,8 +25,8 @@ config = predict_config.B_CNN
 # %%
 #Load feature vecotrs
 features_save_name = 'multi_label_prediction-V11_annotated-features'
-#predictions_save_name = 'multi_label_prediction-V11_annotated-20240507_155238.csv'
-predictions_save_name = 'multi_label_prediction-V11_annotated-20240507_155324.csv'
+predictions_save_name = 'multi_label_prediction-V11_annotated-20240507_155238.csv'
+#predictions_save_name = 'multi_label_prediction-V11_annotated-20240507_155324.csv'
 
 
 with open(os.path.join(config.get('evaluation_path'), features_save_name), "rb") as f_in:
@@ -133,9 +133,15 @@ def generate_color_palette(num_colors):
     colors = sns.color_palette("hsv", num_colors)
     return colors
 
-def create_plot(tsne_data, tsne_label, save_name):
+def create_plot(tsne_data, tsne_label, save_name, labels_subset=None):
+    
     label_encoder = LabelEncoder()
     scatter_labels_encoded = label_encoder.fit_transform(tsne_label)
+    
+    if labels_subset is not None:
+        subset_indices = np.isin(tsne_label, labels_subset)
+        tsne_data = tsne_data[subset_indices]
+        scatter_labels_encoded = scatter_labels_encoded[subset_indices]
     
     num_labels = len(np.unique(scatter_labels_encoded))
     
@@ -156,10 +162,15 @@ def create_plot(tsne_data, tsne_label, save_name):
 
 # %%
 create_plot(tsne_coarse_train, train_labels_coarse_tsne, 'train_coarse')
-create_plot(tsne_coarse_valid, validation_labels_coarse_tsne, 'valid_coarse')
+create_plot(tsne_coarse_valid, validation_labels_coarse_tsne, 'valid_coarse', labels_subset=['asphalt', 'concrete', 'paving_stones', 'sett', 'unpaved'])
 
 create_plot(tsne_fine_train, train_labels_fine_tsne, 'train_fine')
-create_plot(tsne_fine_valid, validation_labels_fine_tsne, 'valid_fine')
+create_plot(tsne_fine_valid, validation_labels_fine_tsne, 'valid_fine', labels_subset=['asphalt__excellent','asphalt__good','asphalt__intermediate','asphalt__bad',
+                                                                                       'concrete__excellent','concrete__good','concrete__intermediate','concrete__bad',
+                                                                                       'paving_stones__excellent','paving_stones__good','paving_stones__intermediate','paving_stones__bad',
+                                                                                       'sett__good','sett__intermediate','sett__bad',
+                                                                                       'unpaved__intermediate','unpaved__bad','unpaved__very_bad',
+                                                                                       ])
 
 
 
