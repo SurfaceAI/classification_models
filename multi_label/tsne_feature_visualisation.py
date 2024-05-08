@@ -119,10 +119,10 @@ train_labels_fine_tsne = train_df['flatten_labels'].to_list()
 # %%
 
 
-tsne_coarse_valid = TSNE(n_components=2, learning_rate='auto', init='random', perplexity=15, random_state=config.get('seed')).fit_transform(validation_input_coarse_tsne)
+tsne_coarse_valid = TSNE(n_components=2, learning_rate='auto', init='random', perplexity=20, random_state=config.get('seed')).fit_transform(validation_input_coarse_tsne)
 tsne_coarse_train = TSNE(n_components=2, learning_rate='auto', init='random', perplexity=40, random_state=config.get('seed')).fit_transform(train_input_coarse_tsne)
 
-tsne_fine_valid = TSNE(n_components=2, learning_rate='auto', init='random', perplexity=15, random_state=config.get('seed')).fit_transform(validation_input_fine_tsne)
+tsne_fine_valid = TSNE(n_components=2, learning_rate='auto', init='random', perplexity=20, random_state=config.get('seed')).fit_transform(validation_input_fine_tsne)
 tsne_fine_train = TSNE(n_components=2, learning_rate='auto', init='random', perplexity=40, random_state=config.get('seed')).fit_transform(train_input_fine_tsne)
 
 
@@ -187,8 +187,8 @@ for surface in list(set(train_labels_coarse_tsne)):
     valid_labels_surface = valid_df[valid_df['surface'] == surface]['smoothness'].to_list()
     
     
-    tsne_surface_train = TSNE(n_components=2, learning_rate='auto', init='random', perplexity=10, random_state=config.get('seed')).fit_transform(train_input_surface)
-    tsne_surface_valid = TSNE(n_components=2, learning_rate='auto', init='random', perplexity=3, random_state=config.get('seed')).fit_transform(valid_input_surface)
+    tsne_surface_train = TSNE(n_components=2, learning_rate='auto', init='random', perplexity=20, random_state=config.get('seed')).fit_transform(train_input_surface)
+    tsne_surface_valid = TSNE(n_components=2, learning_rate='auto', init='random', perplexity=20, random_state=config.get('seed')).fit_transform(valid_input_surface)
     
     create_plot(tsne_surface_train, train_labels_surface, f'train_{surface}')
     create_plot(tsne_surface_valid, valid_labels_surface, f'valid_{surface}')
