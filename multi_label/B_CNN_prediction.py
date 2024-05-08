@@ -38,7 +38,7 @@ from src.architecture.vgg16 import CustomVGG16
 from experiments.config import predict_config
 import torchvision.models as models 
 
-config = predict_config.B_CNN
+config = predict_config.B_CNN_PRE
 
 
 
@@ -63,14 +63,14 @@ feature_dict = {}
 pred_outputs, image_ids, features = prediction.recursive_predict_csv(model_dict=config.get("model_dict"), model_root=config.get("root_model"), data=predict_data, batch_size=config.get("batch_size"), device=device, df=df, feature_dict=feature_dict)
 
 # save features
-features_save_name = config.get("name") + '-' + config.get("dataset").replace('/', '_') + '-features'
+features_save_name = config.get('model_dict')['trained_model'][:-3] + '-' + config.get("dataset").replace('/', '_') + '-features'
 with open(os.path.join(config.get('evaluation_path'), features_save_name), 'wb') as f_out:
     pickle.dump({'image_ids': image_ids, 'prediction': pred_outputs, 'coarse_features': features[0], 'fine_features': features[1]}, f_out, protocol=pickle.HIGHEST_PROTOCOL)
 #prediction.save_features(feature_dict, os.path.join(config.get("evaluation_path"), 'feature_maps'), features_save_name)
 
 # save predictions
 start_time = datetime.fromtimestamp(time.time()).strftime("%Y%m%d_%H%M%S")
-saving_name = config.get("name") + '-' + config.get("dataset").replace('/', '_') + '-' + start_time + '.csv'
+saving_name = config.get('model_dict')['trained_model'][:-3] + '-' + config.get("dataset").replace('/', '_') + '-' + start_time + '.csv'
 
 saving_path = prediction.save_predictions_csv(df=df, saving_dir=config.get("root_predict"), saving_name=saving_name)
 
