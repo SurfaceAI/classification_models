@@ -25,8 +25,8 @@ config = predict_config.B_CNN
 # %%
 #Load feature vecotrs
 features_save_name = 'multi_label_prediction-V11_annotated-features'
-predictions_save_name = 'multi_label_prediction-V11_annotated-20240507_155238.csv'
-#predictions_save_name = 'multi_label_prediction-V11_annotated-20240507_155324.csv'
+#predictions_save_name = 'multi_label_prediction-V11_annotated-20240507_155238.csv'
+predictions_save_name = 'multi_label_prediction-V11_annotated-20240507_155324.csv'
 
 
 with open(os.path.join(config.get('evaluation_path'), features_save_name), "rb") as f_in:
