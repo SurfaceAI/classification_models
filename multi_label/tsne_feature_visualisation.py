@@ -14,6 +14,9 @@ import numpy as np
 from sklearn.manifold import TSNE
 import matplotlib.pyplot as plt
 
+from sklearn.preprocessing import LabelEncoder
+import seaborn as sns
+
 
 # %%
 config = predict_config.B_CNN
@@ -58,8 +61,8 @@ stored_df = pd.DataFrame(all_encodings)
 all_labels = pd.read_csv(os.path.join(config.get('root_data'), f'V11/metadata/annotations_combined.csv'), usecols=['image_id', 'surface', 'smoothness'])
 all_labels = all_labels[~all_labels['smoothness'].isna()]
 all_labels = all_labels[~all_labels['surface'].isna()]
-
-
+#add a column with the flatten labels
+all_labels['flatten_labels'] = all_labels.apply(lambda row: f"{row['surface']}__{row['smoothness']}", axis=1)
 
 # %%
 #adding true labels to our stored_df
@@ -82,10 +85,10 @@ all_predictions
 
 # %%
 # merge all_predictions with stored_df
-valid_df = pd.merge(stored_df, all_predictions[all_predictions['is_in_validation'] == 1],
+valid_df = pd.merge(stored_df, all_predictions[all_predictions['is_in_validation'] == 0],
                      how='inner', on='image_id')
 
-train_df = pd.merge(stored_df, all_predictions[all_predictions['is_in_validation'] == 0],
+train_df = pd.merge(stored_df, all_predictions[all_predictions['is_in_validation'] == 1],
                      how='inner', on='image_id')
 
 # %%
@@ -104,10 +107,10 @@ train_input_coarse_tsne = stored_coarse_features[train_df['position'].to_list()]
 train_labels_coarse_tsne = train_df['surface'].to_list()
 
 validation_input_fine_tsne = stored_fine_features[valid_df['position'].to_list()]
-validation_labels_fine_tsne = valid_df['smoothness'].to_list()
+validation_labels_fine_tsne = valid_df['flatten_labels'].to_list()
 
 train_input_fine_tsne = stored_fine_features[train_df['position'].to_list()]
-train_labels_fine_tsne = train_df['smoothness'].to_list()
+train_labels_fine_tsne = train_df['flatten_labels'].to_list()
 
 
 
@@ -115,16 +118,14 @@ train_labels_fine_tsne = train_df['smoothness'].to_list()
 # %%
 
 
-tsne_coarse_valid = TSNE(n_components=2, learning_rate='auto', init='random', perplexity=30, random_state=config.get('seed')).fit_transform(validation_input_coarse_tsne)
-tsne_coarse_train = TSNE(n_components=2, learning_rate='auto', init='random', perplexity=5, random_state=config.get('seed')).fit_transform(train_input_coarse_tsne)
+tsne_coarse_valid = TSNE(n_components=2, learning_rate='auto', init='random', perplexity=5, random_state=config.get('seed')).fit_transform(validation_input_coarse_tsne)
+tsne_coarse_train = TSNE(n_components=2, learning_rate='auto', init='random', perplexity=30, random_state=config.get('seed')).fit_transform(train_input_coarse_tsne)
 
-tsne_fine_valid = TSNE(n_components=2, learning_rate='auto', init='random', perplexity=30, random_state=config.get('seed')).fit_transform(validation_input_fine_tsne)
-tsne_fine_train = TSNE(n_components=2, learning_rate='auto', init='random', perplexity=5, random_state=config.get('seed')).fit_transform(train_input_fine_tsne)
+tsne_fine_valid = TSNE(n_components=2, learning_rate='auto', init='random', perplexity=5, random_state=config.get('seed')).fit_transform(validation_input_fine_tsne)
+tsne_fine_train = TSNE(n_components=2, learning_rate='auto', init='random', perplexity=30, random_state=config.get('seed')).fit_transform(train_input_fine_tsne)
 
 
 # %%
-from sklearn.preprocessing import LabelEncoder
-import seaborn as sns
 
 def generate_color_palette(num_colors):
     # Generate a set of distinguishable colors
@@ -149,6 +150,7 @@ def create_plot(tsne_data, tsne_label, flag):
     plt.title('t-SNE coarse features')
     plt.xlabel('t-SNE Dimension 1')
     plt.ylabel('t-SNE Dimension 2')
+    plt.legend()
     plt.savefig(os.path.join(config.get('evaluation_path'), f'{flag}_tsne_plot_validation.jpeg'))
 
 # %%
