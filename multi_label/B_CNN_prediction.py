@@ -34,7 +34,6 @@ import sys
 sys.path.append('.')
 
 from src.models import prediction
-from src.architecture.vgg16 import CustomVGG16
 from experiments.config import predict_config
 import torchvision.models as models 
 
@@ -60,7 +59,8 @@ predict_data = prediction.prepare_data(config.get("root_data"), config.get("data
 df = pd.DataFrame()
 feature_dict = {}
 
-pred_outputs, image_ids, features = prediction.recursive_predict_csv(model_dict=config.get("model_dict"), model_root=config.get("root_model"), data=predict_data, batch_size=config.get("batch_size"), device=device, df=df, feature_dict=feature_dict)
+pred_outputs, image_ids, features = prediction.recursive_predict_csv(model_dict=config.get("model_dict"), model_root=config.get("root_model"),
+                                                                     data=predict_data, batch_size=config.get("batch_size"), device=device, df=df, feature_dict=feature_dict)
 
 # save features
 features_save_name = config.get('model_dict')['trained_model'][:-3] + '-' + config.get("dataset").replace('/', '_') + '-features'

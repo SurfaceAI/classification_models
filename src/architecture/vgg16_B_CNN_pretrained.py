@@ -3,7 +3,6 @@ import torch.nn as nn
 from torchvision import models
 from collections import OrderedDict
 
-architecture = "VGG16"
 
 class VGG16_B_CNN_PRE(nn.Module):
     def __init__(self, num_c, num_classes):
