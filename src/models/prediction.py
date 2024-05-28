@@ -30,16 +30,21 @@ def run_dataset_predict_csv(config):
     # prepare data
     predict_data = prepare_data(config.get("root_data"), config.get("dataset"), config.get("transform"))
 
-    level = 0
-    columns = ['Image', 'Prediction', f'Level_{level}']
-    df = pd.DataFrame(columns=columns)
-    feature_dict = {}
+    # level = 0
+    # columns = ['Image', 'Prediction', f'Level_{level}']
+    # df = pd.DataFrame(columns=columns)
 
-    recursive_predict_csv(model_dict=config.get("model_dict"), model_root=config.get("root_model"), data=predict_data, batch_size=config.get("batch_size"), device=device, df=df, level=level, feature_dict=feature_dict)
+    df, pred_outputs, image_ids, features = recursive_predict_csv(model_dict=config.get("model_dict"), 
+                          model_root=config.get("root_model"), 
+                          data=predict_data, 
+                          batch_size=config.get("batch_size"), 
+                          device=device, 
+                          level=level, 
+                          save_features=config.get('save_features'))
 
     # save features
     features_save_name = config.get("name") + '-' + config.get("dataset").replace('/', '_')
-    save_features(feature_dict, os.path.join(config.get("evaluation_path"), 'feature_maps'), features_save_name)
+    save_features(features, os.path.join(config.get("evaluation_path"), 'feature_maps'), features_save_name)
 
     # save predictions
     start_time = datetime.fromtimestamp(time.time()).strftime("%Y%m%d_%H%M%S")
@@ -49,7 +54,7 @@ def run_dataset_predict_csv(config):
 
     print(f'Images {config.get("dataset")} predicted and saved: {saving_path}')
 
-def recursive_predict_csv(model_dict, model_root, data, batch_size, device, df, feature_dict, level=None, pre_cls=None):
+def recursive_predict_csv(model_dict, model_root, data, batch_size, device, save_features, level=None, pre_cls=None):
 
     # base:
     if model_dict is None:
@@ -59,13 +64,15 @@ def recursive_predict_csv(model_dict, model_root, data, batch_size, device, df, 
         model_path = os.path.join(model_root, model_dict['trained_model'])
         model, classes, is_regression, is_multilabel, valid_dataset = load_model(model_path=model_path, device=device)
         
-        pred_outputs, image_ids, features = predict(model, data, batch_size, is_regression, is_multilabel, device, feature_dict) #todo change back to 'data'
+    
+        pred_outputs, image_ids, features = predict(model, data, batch_size, is_regression, is_multilabel, device, save_features) 
         
         # compare valid dataset 
         # [image_id in valid_dataset ]
         valid_dataset_ids = [os.path.splitext(os.path.split(id[0])[-1])[0] for id in valid_dataset.samples]
         is_valid_data = [1 if image_id in valid_dataset_ids else 0 for image_id in image_ids]
-            
+        
+        df = pd.DataFrame()        
         if is_multilabel: 
             columns =  ['Image', 'Coarse_Prediction', 'Coarse_Probability', 'Fine_Prediction', 'Fine_Probability', 'is_in_validation']
             #todo: add regression
@@ -114,10 +121,10 @@ def recursive_predict_csv(model_dict, model_root, data, batch_size, device, df, 
                     sub_data = Subset(data, sub_indices)
                     recursive_predict_csv(model_dict=sub_model_dict, model_root=model_root, data=sub_data, batch_size=batch_size, device=device, df=df, level=level+1, pre_cls=cls)
                     
-        return pred_outputs, image_ids, features
+        return df, pred_outputs, image_ids, features
 
 
-def predict(model, data, batch_size, is_regression, is_multilabel, device, feature_dict=None):
+def predict(model, data, batch_size, is_regression, is_multilabel, device, save_features):
     model.to(device)
     model.eval()
 
@@ -134,7 +141,9 @@ def predict(model, data, batch_size, is_regression, is_multilabel, device, featu
     ids = []
     
     #where we store intermediate outputs 
-    if feature_dict is not None:
+    if save_features is True:
+        
+        feature_dict = {}
 
         h_1 = model.block3_layer2.register_forward_hook(helper.make_hook("h1_features", feature_dict))
         h_2 = model.block4_layer2.register_forward_hook(helper.make_hook("h2_features", feature_dict))
@@ -144,7 +153,7 @@ def predict(model, data, batch_size, is_regression, is_multilabel, device, featu
     
     with torch.no_grad():
         
-        for batch_inputs, batch_ids in loader:
+        for index, (batch_inputs, batch_ids) in enumerate(loader):
             batch_inputs = batch_inputs.to(device)
 
     
@@ -174,28 +183,39 @@ def predict(model, data, batch_size, is_regression, is_multilabel, device, featu
             
             ids.extend(batch_ids)
             
-            #flatten to vector
-            for feature in feature_dict:
-                feature_dict[feature] = feature_dict[feature].view(feature_dict[feature].size(0), -1)
-                
-            all_coarse_features.append(feature_dict['h1_features'])
-            all_fine_features.append(feature_dict['h2_features'])
-        
-            
-    h_1.remove()
-    h_2.remove()
+            if save_features:
+                #flatten to vector
+                for feature in feature_dict:
+                    feature_dict[feature] = feature_dict[feature].view(feature_dict[feature].size(0), -1)
+                    
+                all_coarse_features.append(feature_dict['h1_features'])
+                all_fine_features.append(feature_dict['h2_features'])
+              
+            if index == 1:
+                break 
+    # h_1.remove()
+    # h_2.remove()
     
     if is_multilabel:
         pred_coarse_outputs = torch.cat(coarse_outputs, dim=0)
         pred_fine_outputs = torch.cat(fine_outputs, dim=0)
         all_coarse_features = torch.cat(all_coarse_features, dim=0)
         all_fine_features = torch.cat(all_fine_features, dim=0)
-        all_features = [all_coarse_features, all_fine_features]
-        return (pred_coarse_outputs, pred_fine_outputs), ids, all_features
+        
+        if save_features: 
+            h_1.remove()
+            h_2.remove()
+            all_features = [all_coarse_features, all_fine_features]
+            return (pred_coarse_outputs, pred_fine_outputs), ids, all_features
 
     else:
         pred_outputs = torch.cat(outputs, dim=0)
-        return pred_outputs, ids, feature_dict
+        if save_features:
+            h_1.remove()
+            h_2.remove()
+            return pred_outputs, ids, feature_dict
+        else:
+            return pred_outputs, ids,
 
 def prepare_data(data_root, dataset, transform):
 
