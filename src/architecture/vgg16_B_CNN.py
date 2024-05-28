@@ -36,6 +36,10 @@ class B_CNN(nn.Module):
         self.block3_layer2 = nn.Sequential(
             nn.Conv2d(256, 256, kernel_size=3, stride=1, padding=1),
             nn.BatchNorm2d(256),
+            nn.ReLU())
+        self.block3_layer3 = nn.Sequential(
+            nn.Conv2d(256, 256, kernel_size=3, stride=1, padding=1),
+            nn.BatchNorm2d(256),
             nn.ReLU(),
             nn.MaxPool2d(kernel_size = 2, stride = 2))
         
@@ -64,8 +68,27 @@ class B_CNN(nn.Module):
         self.block4_layer2 = nn.Sequential(
             nn.Conv2d(512, 512, kernel_size=3, stride=1, padding=1),
             nn.BatchNorm2d(512),
+            nn.ReLU())
+        self.block4_layer3 = nn.Sequential(
+            nn.Conv2d(512, 512, kernel_size=3, stride=1, padding=1),
+            nn.BatchNorm2d(512),
             nn.ReLU(),
             nn.MaxPool2d(kernel_size = 2, stride = 2))
+        
+        ### Block 5
+        self.block5_layer1 = nn.Sequential(
+            nn.Conv2d(512, 512, kernel_size=3, stride=1, padding=1),
+            nn.BatchNorm2d(512),
+            nn.ReLU())
+        self.block5_layer2 = nn.Sequential(
+            nn.Conv2d(512, 512, kernel_size=3, stride=1, padding=1),
+            nn.BatchNorm2d(512),
+            nn.ReLU())
+        self.block5_layer3 = nn.Sequential(
+            nn.Conv2d(512, 512, kernel_size=3, stride=1, padding=1),
+            nn.BatchNorm2d(512),
+            nn.ReLU(),
+            nn.MaxPool2d(kernel_size=2, stride=2))
         
         ### Fine Block
         self.fc = nn.Sequential(
@@ -103,6 +126,7 @@ class B_CNN(nn.Module):
         
         x = self.block3_layer1(x)
         x = self.block3_layer2(x)
+        x = self.block3_layer3(x)
         
         flat = x.reshape(x.size(0), -1) 
         coarse_output = self.c_fc(flat) 
@@ -111,6 +135,11 @@ class B_CNN(nn.Module):
         
         x = self.block4_layer1(x)
         x = self.block4_layer2(x) # output: [batch_size, 512 #channels, 16, 16 #height&width]
+        x = self.block4_layer3(x)
+        
+        x = self.block5_layer1(x)
+        x = self.block5_layer2(x)
+        x = self.block5_layer3(x)
         
         flat = x.reshape(x.size(0), -1) #([48, 131072])
         fine_output = self.fc(flat) #([48, 4096])
