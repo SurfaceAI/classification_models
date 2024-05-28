@@ -3,6 +3,7 @@ sys.path.append('.')
 
 import numpy as np
 import matplotlib.pyplot as plt
+import torch
 from torch import optim
 from src import constants as const
 from src.architecture import Rateke_CNN, efficientnet, vgg16, vgg16_B_CNN
@@ -119,3 +120,22 @@ def make_hook(key, feature_maps):
     def hook(model, input, output):
         feature_maps[key] = output.detach()
     return hook
+
+
+def to_one_hot_tensor(labels, num_classes):
+    labels = torch.tensor(labels)
+    one_hot = torch.zeros(labels.size(0), num_classes, dtype=torch.float32)
+    one_hot.scatter_(1, labels.unsqueeze(1), 1)
+    return one_hot
+
+
+class NonNegUnitNorm:
+    '''Enforces all weight elements to be non-negative and each column/row to be unit norm'''
+    def __init__(self, axis=1):
+        self.axis = axis
+    
+    def __call__(self, w):
+        w = w * (w >= 0).float()  # Set negative weights to zero
+        norm = torch.sqrt(torch.sum(w ** 2, dim=self.axis, keepdim=True))
+        w = w / (norm + 1e-8)  # Normalize each column/row to unit norm
+        return w

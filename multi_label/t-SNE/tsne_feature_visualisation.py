@@ -25,8 +25,8 @@ config = predict_config.B_CNN
 # %%
 #Load feature vecotrs
 features_save_name = 'multi_label_prediction-V11_annotated-features'
-#predictions_save_name = 'multi_label_prediction-V11_annotated-20240507_155238.csv'
-predictions_save_name = 'multi_label_prediction-V11_annotated-20240507_155324.csv'
+predictions_save_name = 'multi_label_prediction-V11_annotated-20240507_155238.csv'
+#predictions_save_name = 'multi_label_prediction-V11_annotated-20240507_155324.csv'
 
 
 with open(os.path.join(config.get('evaluation_path'), features_save_name), "rb") as f_in:
@@ -119,11 +119,11 @@ train_labels_fine_tsne = train_df['flatten_labels'].to_list()
 # %%
 
 
-tsne_coarse_valid = TSNE(n_components=2, learning_rate='auto', init='random', perplexity=20, random_state=config.get('seed')).fit_transform(validation_input_coarse_tsne)
-tsne_coarse_train = TSNE(n_components=2, learning_rate='auto', init='random', perplexity=40, random_state=config.get('seed')).fit_transform(train_input_coarse_tsne)
+tsne_coarse_valid = TSNE(n_components=2, learning_rate='auto', init='random', perplexity=2, random_state=config.get('seed')).fit_transform(validation_input_coarse_tsne)
+tsne_coarse_train = TSNE(n_components=2, learning_rate='auto', init='random', perplexity=5, random_state=config.get('seed')).fit_transform(train_input_coarse_tsne)
 
-tsne_fine_valid = TSNE(n_components=2, learning_rate='auto', init='random', perplexity=20, random_state=config.get('seed')).fit_transform(validation_input_fine_tsne)
-tsne_fine_train = TSNE(n_components=2, learning_rate='auto', init='random', perplexity=40, random_state=config.get('seed')).fit_transform(train_input_fine_tsne)
+tsne_fine_valid = TSNE(n_components=2, learning_rate='auto', init='random', perplexity=2, random_state=config.get('seed')).fit_transform(validation_input_fine_tsne)
+tsne_fine_train = TSNE(n_components=2, learning_rate='auto', init='random', perplexity=5, random_state=config.get('seed')).fit_transform(train_input_fine_tsne)
 
 
 # %%
@@ -133,7 +133,7 @@ def generate_color_palette(num_colors):
     colors = sns.color_palette("hsv", num_colors)
     return colors
 
-def create_plot(tsne_data, tsne_label, save_name, labels_subset=None):
+def create_and_save_plot(tsne_data, tsne_label, save_name, labels_subset=None):
     
     label_encoder = LabelEncoder()
     scatter_labels_encoded = label_encoder.fit_transform(tsne_label)
@@ -161,11 +161,11 @@ def create_plot(tsne_data, tsne_label, save_name, labels_subset=None):
     plt.savefig(os.path.join(config.get('evaluation_path'), f'{save_name}_tsne_plot_validation.jpeg'))
 
 # %%
-create_plot(tsne_coarse_train, train_labels_coarse_tsne, 'train_coarse')
-create_plot(tsne_coarse_valid, validation_labels_coarse_tsne, 'valid_coarse', labels_subset=['asphalt', 'concrete', 'paving_stones', 'sett', 'unpaved'])
+create_and_save_plot(tsne_coarse_train, train_labels_coarse_tsne, 'train_coarse')
+create_and_save_plot(tsne_coarse_valid, validation_labels_coarse_tsne, 'valid_coarse', labels_subset=['asphalt', 'concrete', 'paving_stones', 'sett', 'unpaved'])
 
-create_plot(tsne_fine_train, train_labels_fine_tsne, 'train_fine')
-create_plot(tsne_fine_valid, validation_labels_fine_tsne, 'valid_fine', labels_subset=['asphalt__excellent','asphalt__good','asphalt__intermediate','asphalt__bad',
+create_and_save_plot(tsne_fine_train, train_labels_fine_tsne, 'train_fine')
+create_and_save_plot(tsne_fine_valid, validation_labels_fine_tsne, 'valid_fine', labels_subset=['asphalt__excellent','asphalt__good','asphalt__intermediate','asphalt__bad',
                                                                                        'concrete__excellent','concrete__good','concrete__intermediate','concrete__bad',
                                                                                        'paving_stones__excellent','paving_stones__good','paving_stones__intermediate','paving_stones__bad',
                                                                                        'sett__good','sett__intermediate','sett__bad',
@@ -187,11 +187,11 @@ for surface in list(set(train_labels_coarse_tsne)):
     valid_labels_surface = valid_df[valid_df['surface'] == surface]['smoothness'].to_list()
     
     
-    tsne_surface_train = TSNE(n_components=2, learning_rate='auto', init='random', perplexity=20, random_state=config.get('seed')).fit_transform(train_input_surface)
-    tsne_surface_valid = TSNE(n_components=2, learning_rate='auto', init='random', perplexity=20, random_state=config.get('seed')).fit_transform(valid_input_surface)
+    tsne_surface_train = TSNE(n_components=2, learning_rate='auto', init='random', perplexity=2, random_state=config.get('seed')).fit_transform(train_input_surface)
+    tsne_surface_valid = TSNE(n_components=2, learning_rate='auto', init='random', perplexity=2, random_state=config.get('seed')).fit_transform(valid_input_surface)
     
-    create_plot(tsne_surface_train, train_labels_surface, f'train_{surface}')
-    create_plot(tsne_surface_valid, valid_labels_surface, f'valid_{surface}')
+    create_and_save_plot(tsne_surface_train, train_labels_surface, f'train_{surface}')
+    create_and_save_plot(tsne_surface_valid, valid_labels_surface, f'valid_{surface}')
 
 
 
