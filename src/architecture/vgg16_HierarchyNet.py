@@ -84,7 +84,7 @@ class HierarchyNet(nn.Module):
         
         #Here comes the flatten layer and then the dense ones for the coarse classes
         self.c_fc = nn.Sequential(
-            nn.Linear(512 * 16 * 16, 256),
+            nn.Linear(512 * 8 * 8, 256),
             nn.ReLU(),
             nn.BatchNorm1d(256),
             nn.Dropout(0.5))
@@ -107,7 +107,7 @@ class HierarchyNet(nn.Module):
     def get_class_probabilies(x):
          return nn.functional.softmax(x, dim=1)
      
-    def crop(x, dimension, start, end):
+    def crop(self, x, dimension, start, end):
         slices = [slice(None)] * x.dim()
         slices[dimension] = slice(start, end)
         return x[tuple(slices)]
