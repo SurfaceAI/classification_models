@@ -158,12 +158,12 @@ for epoch in range(config.get('epochs')):
         optimizer.zero_grad()
         
         coarse_labels = parent[fine_labels]
-        coarse_one_hot = to_one_hot_tensor(coarse_labels, num_c)
+        coarse_one_hot = to_one_hot_tensor(coarse_labels, num_c).to(device)
         #coarse_one_hot = coarse_one_hot.type(torch.LongTensor)
         #, dtype=torch.float32
         
         #we give the coarse true labels for the conditional prob weights matrix as input to the model
-        model_inputs = [inputs, coarse_one_hot]
+        model_inputs = (inputs, coarse_one_hot)
         
         coarse_outputs, fine_outputs = model.forward(model_inputs)
         coarse_loss = criterion(coarse_outputs, coarse_labels)
@@ -218,7 +218,6 @@ for epoch in range(config.get('epochs')):
     epoch_coarse_accuracy = 100 * coarse_correct / len(train_loader.sampler)
     epoch_fine_accuracy = 100 * fine_correct / len(train_loader.sampler)
     
-    #writer.add_scalar('Training Loss', epoch_loss, epoch)
     
     # Validation
     model.eval()
@@ -232,8 +231,10 @@ for epoch in range(config.get('epochs')):
             
             inputs, fine_labels = inputs.to(device), fine_labels.to(device)
             coarse_labels = parent[fine_labels]
-                        
-            coarse_outputs, fine_outputs = model.forward(inputs)
+            coarse_one_hot = to_one_hot_tensor(coarse_labels, num_c).to(device)
+            
+            model_inputs = (inputs, coarse_one_hot)           
+            coarse_outputs, fine_outputs = model.forward(model_inputs)
             
             # if isinstance(criterion, nn.MSELoss):
             #     coarse_outputs = coarse_outputs.flatten()
@@ -249,7 +250,6 @@ for epoch in range(config.get('epochs')):
             loss = (coarse_loss + fine_loss) / 2
             val_running_loss += loss.item() 
             
-            
             coarse_probs = model.get_class_probabilies(coarse_outputs)
             coarse_predictions = torch.argmax(coarse_probs, dim=1)
             val_coarse_correct += (coarse_predictions == coarse_labels).sum().item()
@@ -258,8 +258,8 @@ for epoch in range(config.get('epochs')):
             fine_predictions = torch.argmax(fine_probs, dim=1)
             val_fine_correct += (fine_predictions == fine_labels).sum().item()
             
-            if batch_index == 1:
-                break
+            # if batch_index == 1:
+            #     break
     
     # val_epoch_loss = val_running_loss /  (len(inputs) * (batch_index + 1))
     # val_epoch_coarse_accuracy = 100 * val_coarse_correct / (len(inputs) * (batch_index + 1))

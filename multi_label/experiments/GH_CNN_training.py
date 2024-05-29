@@ -14,7 +14,7 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader
 import torch.nn.functional as F
-from src.architecture.vgg16_HierarchyNet import HierarchyNet
+from src.architecture.vgg16_GH import HierarchyNet
 
 from datetime import datetime
 import time

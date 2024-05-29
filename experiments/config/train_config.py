@@ -3,7 +3,7 @@ from experiments.config  import global_config
 
 default_params = {
     "batch_size": 128, #16,  # 48
-    "epochs": 20,
+    "epochs": 40,
     "learning_rate": 0.001,
     "optimizer": const.OPTI_ADAM,
     "is_regression": False,
@@ -250,6 +250,15 @@ H_NET = {
     "name": "HiearchyNet",
     "level": const.MULTILABEL,
     "model": const.HNET,
+}
+
+GH_CNN = {
+    **global_config.global_config,
+    **default_params,
+    "project": const.PROJECT_MULTI_LABEL_FIXED,
+    "name": "GH_CNN",
+    "level": const.MULTILABEL,
+    "model": const.GH_CNN,
 }
 
 B_CNN_regression = {

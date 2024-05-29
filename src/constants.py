@@ -115,6 +115,7 @@ BCNN_PRE = "BCNN_pretrained"
 BCNNREGRESSION = "BCNNRegression"
 CCNN = "ConditionCNN"
 HNET = "HiearchyNet"
+GHCNN = "GHCNN"
 
 # sweep names
 
