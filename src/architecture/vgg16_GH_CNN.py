@@ -6,18 +6,25 @@ class CustomLayer(nn.Module):
         super(CustomLayer, self).__init__()
         
     def forward(self, parent_prob, subclass_probs):
+        y_subclass = torch.mul(parent_prob, subclass_probs) / torch.sum(subclass_probs, dim=1, keepdim=True)
+        return y_subclass
+        
         #iterate through all subclasses of one parent class
-        y_subclass = []
-        for i in range(0, len(subclass_probs)):
-            y_i_sublcass = torch.mul(parent_prob, subclass_probs[i]) / sum(subclass_probs)
-            y_subclass.append(y_i_sublcass)
-            return y_subclass
+        # y_subclass = []
+        # for i in range(subclass_probs.shape[1]):
+        #     y_i_subclass = torch.mul(parent_prob, subclass_probs[:, i]) / torch.sum(subclass_probs, dim=1, keepdim=True)
+        #     y_subclass.append(y_i_subclass.unsqueeze(1))  # Keep the dimension for concatenation
+        # return torch.cat(y_subclass, dim=1)
+    
     
     
 class GH_CNN(nn.Module):
     def __init__(self, num_c, num_classes):
         super(GH_CNN, self).__init__()
         
+        #Custom layer
+        self.custom_layer = CustomLayer()
+
         
         ### Block 1
         self.block1_layer1 = nn.Sequential(
@@ -89,7 +96,7 @@ class GH_CNN(nn.Module):
         
                 #Here comes the flatten layer and then the dense ones for the coarse classes
         self.c_fc = nn.Sequential(
-            nn.Linear(512 * 16 * 16, 256),
+            nn.Linear(512 * 8 * 8, 256),
             nn.ReLU(),
             nn.BatchNorm1d(256),
             nn.Dropout(0.5))
@@ -106,45 +113,44 @@ class GH_CNN(nn.Module):
         self.fine_branch = (
             nn.Linear(128, num_classes) #output layer for coarse prediction
         )          
-        
-        @ staticmethod
+                
+    @ staticmethod
     def get_class_probabilies(x):
          return nn.functional.softmax(x, dim=1)
      
-    def crop(x, dimension, start, end):
+    def crop(self, x, dimension, start, end):
         slices = [slice(None)] * x.dim()
         slices[dimension] = slice(start, end)
         return x[tuple(slices)]
 
-     
     
     def forward(self, x):
         x = self.block1_layer1(x)
         x = self.block1_layer2(x)
         
         x = self.block2_layer1(x)
-        x = self.block2_layer2(x) 
+        x = self.block2_layer2(x) #([16, 128, 64, 64])
         
         x = self.block3_layer1(x)
         x = self.block3_layer2(x)
-        x = self.block3_layer3(x)
+        x = self.block3_layer3(x) #([16, 256, 32, 32])
         
         x = self.block4_layer1(x)
         x = self.block4_layer2(x) 
-        x = self.block4_layer3(x)
+        x = self.block4_layer3(x) #([16, 512, 16, 16])
         
         x = self.block5_layer1(x)
         x = self.block5_layer2(x) 
-        x = self.block5_layer3(x)
+        x = self.block5_layer3(x) #([16, 512, 8, 8])
         
-        flat = x.reshape(x.size(0), -1) #torch.Size([16, 131072])
+        flat = x.reshape(x.size(0), -1) #torch.Size([16, 32.768])
         
         branch_output = self.c_fc(flat)
         branch_output = self.c_fc1(branch_output)
         
-        z_1 = self.coarse_branch(branch_output)
+        z_1 = self.coarse_branch(branch_output) #[16,5]
         
-        z_2 = self.fine_branch(branch_output)
+        z_2 = self.fine_branch(branch_output) #[16,18]
         
         #cropping coarse outputs: z_i_j, i=1: coarse branch
         z_1_1 = self.crop(z_1, 1, 0, 1) #raw prob asphalt
@@ -162,10 +168,10 @@ class GH_CNN(nn.Module):
         
         #FAFO
         y_2_1 = self.custom_layer(z_1_1, z_2_1)
-        y_2_2 = self.custom_layer(z_1_1, z_2_2)
-        y_2_3 = self.custom_layer(z_1_1, z_2_3)
-        y_2_4 = self.custom_layer(z_1_1, z_2_4)
-        y_2_5 = self.custom_layer(z_1_1, z_2_5)
+        y_2_2 = self.custom_layer(z_1_2, z_2_2)
+        y_2_3 = self.custom_layer(z_1_3, z_2_3)
+        y_2_4 = self.custom_layer(z_1_4, z_2_4)
+        y_2_5 = self.custom_layer(z_1_5, z_2_5)
 
         coarse_output = z_1
         fine_output = torch.cat([y_2_1, y_2_2, y_2_3, y_2_4, y_2_5], dim=1)

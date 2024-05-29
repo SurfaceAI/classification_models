@@ -14,7 +14,7 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader
 import torch.nn.functional as F
-from src.architecture.vgg16_GH import HierarchyNet
+from src.architecture.vgg16_GH_CNN import GH_CNN
 
 from datetime import datetime
 import time
@@ -22,7 +22,7 @@ import numpy as np
 import os
 
 
-config = train_config.C_CNN
+config = train_config.GH_CNN
 torch.manual_seed(config.get("seed"))
 
 device = torch.device(
@@ -107,7 +107,7 @@ alpha = torch.tensor(0.3)
 beta = torch.tensor(0.7)
 
 # Initialize the model, loss function, and optimizer
-model = HierarchyNet(num_c=num_c, num_classes=num_classes)
+model = GH_CNN(num_c=num_c, num_classes=num_classes)
 criterion = nn.CrossEntropyLoss(reduction='sum')
 optimizer = optim.SGD(model.parameters(), lr=config.get('learning_rate'), momentum=0.9)
 
@@ -131,7 +131,7 @@ checkpointer = checkpointing.CheckpointSaver(
         save_state=config.get("save_state", True),
     )
 
-for epoch in range(config.get('num_epochs')):
+for epoch in range(config.get('epochs')):
     model.train()
     running_loss = 0.0
     coarse_correct = 0
@@ -159,6 +159,10 @@ for epoch in range(config.get('num_epochs')):
         fine_probs = model.get_class_probabilies(fine_outputs)
         fine_predictions = torch.argmax(fine_probs, dim=1)
         fine_correct += (fine_predictions == fine_labels).sum().item()
+        
+        mismatched_indices = (coarse_predictions != parent[fine_predictions])
+        mismatched_coarse_loss = coarse_loss[mismatched_indices]
+        mismatched_fine_loss = fine_loss[mismatched_indices]
         
         if batch_index == 0:
             break
