@@ -139,3 +139,32 @@ class NonNegUnitNorm:
         norm = torch.sqrt(torch.sum(w ** 2, dim=self.axis, keepdim=True))
         w = w / (norm + 1e-8)  # Normalize each column/row to unit norm
         return w
+
+#learning rate scheduler manual, it returns the multiplier for our initial learning rate
+def lr_lambda(epoch):
+  learning_rate_multi = 1.0
+  if epoch > 22:
+    learning_rate_multi = (1/6) # 0.003/6 to get lr = 0.0005
+  if epoch > 32:
+    learning_rate_multi = (1/30) # 0.003/30 to get lr = 0.0001
+  return learning_rate_multi
+
+# Loss weights modifier
+class LossWeightsModifier():
+    def __init__(self, alpha, beta):
+        super(LossWeightsModifier, self).__init__()
+        self.alpha = alpha
+        self.beta = beta
+
+    def on_epoch_end(self, epoch):
+        if epoch >= 10:
+            self.alpha = torch.tensor(0.6)
+            self.beta = torch.tensor(0.4)
+        elif epoch >= 20:
+            self.alpha = torch.tensor(0.2)
+            self.beta = torch.tensor(0.8)
+        elif epoch >= 30:
+            self.alpha = torch.tensor(0.0)
+            self.beta = torch.tensor(1.0)
+            
+        return self.alpha, self.beta
