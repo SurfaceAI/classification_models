@@ -103,8 +103,8 @@ for j in range(y_valid.shape[0]):
 
 # Initialize the loss weights
 
-alpha = torch.tensor(0.3)
-beta = torch.tensor(0.7)
+alpha = torch.tensor(0.98)
+beta = torch.tensor(0.02)
 
 # Initialize the model, loss function, and optimizer
 model = HierarchyNet(num_c=num_c, num_classes=num_classes)
