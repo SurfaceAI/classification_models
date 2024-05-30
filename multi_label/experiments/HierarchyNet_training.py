@@ -131,7 +131,7 @@ checkpointer = checkpointing.CheckpointSaver(
         save_state=config.get("save_state", True),
     )
 
-for epoch in range(config.get('num_epochs')):
+for epoch in range(config.get('epochs')):
     model.train()
     running_loss = 0.0
     coarse_correct = 0
