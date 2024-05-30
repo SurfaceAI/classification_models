@@ -22,7 +22,7 @@ import numpy as np
 import os
 
 
-config = train_config.C_CNN
+config = train_config.H_NET
 torch.manual_seed(config.get("seed"))
 
 device = torch.device(
@@ -160,8 +160,8 @@ for epoch in range(config.get('num_epochs')):
         fine_predictions = torch.argmax(fine_probs, dim=1)
         fine_correct += (fine_predictions == fine_labels).sum().item()
         
-        if batch_index == 0:
-            break
+        # if batch_index == 0:
+        #     break
     
     #learning rate step        
     # before_lr = optimizer.param_groups[0]["lr"]
@@ -208,8 +208,8 @@ for epoch in range(config.get('num_epochs')):
             fine_predictions = torch.argmax(fine_probs, dim=1)
             val_fine_correct += (fine_predictions == fine_labels).sum().item()
             
-            if batch_index == 0:
-                break
+            # if batch_index == 0:
+            #     break
     
     # val_epoch_loss = val_running_loss /  (len(inputs) * (batch_index + 1))
     # val_epoch_coarse_accuracy = 100 * val_coarse_correct / (len(inputs) * (batch_index + 1))
