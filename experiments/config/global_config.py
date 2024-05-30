@@ -50,6 +50,6 @@ global_config = dict(
     validation_size = 0.2,
     valid_batch_size = 128,
     checkpoint_top_n = 1,
-    early_stop_thresh = 5,
+    early_stop_thresh = constants.EARLY_STOPPING_DEFAULT,
     save_state = True,
-)
+)   
