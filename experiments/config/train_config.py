@@ -258,7 +258,7 @@ GH_CNN = {
     "project": const.PROJECT_MULTI_LABEL_FIXED,
     "name": "GH_CNN",
     "level": const.MULTILABEL,
-    "model": const.GH_CNN,
+    "model": const.GHCNN,
 }
 
 B_CNN_regression = {
