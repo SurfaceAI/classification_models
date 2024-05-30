@@ -251,7 +251,7 @@ for epoch in range(config.get('epochs')):
         print(f"Early stopped training at epoch {epoch}")
         break
 
-    if config.get('wandb_on'):
-        wandb.finish()
+if config.get('wandb_on'):
+    wandb.finish()
 
 
