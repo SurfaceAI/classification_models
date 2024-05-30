@@ -4,7 +4,7 @@ from experiments.config  import global_config
 default_params = {
     "batch_size": 128, #16,  # 48
     "epochs": 40,
-    "learning_rate": 0.001,
+    "learning_rate": 0.0001,
     "optimizer": const.OPTI_ADAM,
     "is_regression": False,
     "eval_metric": const.EVAL_METRIC_ACCURACY,
@@ -258,7 +258,7 @@ GH_CNN = {
     "project": const.PROJECT_MULTI_LABEL_FIXED,
     "name": "GH_CNN",
     "level": const.MULTILABEL,
-    "model": const.GH_CNN,
+    "model": const.GHCNN,
 }
 
 B_CNN_regression = {
