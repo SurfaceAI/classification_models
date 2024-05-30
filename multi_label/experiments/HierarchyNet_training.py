@@ -24,6 +24,7 @@ import os
 
 config = train_config.H_NET
 torch.manual_seed(config.get("seed"))
+np.random.seed(config.get("seed"))
 
 device = torch.device(
         f"cuda:{config.get('gpu_kernel')}" if torch.cuda.is_available() else "cpu"
