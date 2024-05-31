@@ -14,6 +14,8 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader
 import torch.nn.functional as F
+from torch.optim import lr_scheduler
+
 from src.architecture.vgg16_HierarchyNet import HierarchyNet
 
 from datetime import datetime
@@ -76,7 +78,7 @@ num_c = len(Counter([entry.split('__')[0] for entry in train_data.classes]))
 
 #create train and valid loader
 train_loader = DataLoader(train_data, batch_size=config.get('batch_size'), shuffle=True)
-valid_loader = DataLoader(train_data, batch_size=config.get('batch_size'), shuffle=False)
+valid_loader = DataLoader(valid_data, batch_size=config.get('batch_size'), shuffle=False)
 
 #create one-hot encoded tensors with the fine class labels
 y_train = to_one_hot_tensor(train_data.targets, num_classes)
@@ -117,7 +119,7 @@ trainable_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
 
 # Set up learning rate scheduler
 #scheduler = lr_scheduler.StepLR(optimizer, step_size=3, gamma=0.1)
-#scheduler = lr_scheduler.LambdaLR(optimizer, lr_lambda)
+scheduler = lr_scheduler.LambdaLR(optimizer, lr_lambda)
 loss_weights_modifier = LossWeightsModifier(alpha, beta)
 
 # Train the model
@@ -165,9 +167,9 @@ for epoch in range(config.get('epochs')):
         #     break
     
     #learning rate step        
-    # before_lr = optimizer.param_groups[0]["lr"]
-    # scheduler.step()
-    # after_lr = optimizer.param_groups[0]["lr"]
+    before_lr = optimizer.param_groups[0]["lr"]
+    scheduler.step()
+    after_lr = optimizer.param_groups[0]["lr"]
     
     #loss weights step
     alpha, beta = loss_weights_modifier.on_epoch_end(epoch)
@@ -176,7 +178,7 @@ for epoch in range(config.get('epochs')):
     # epoch_coarse_accuracy = 100 * coarse_correct / (len(inputs) * (batch_index + 1))
     # epoch_fine_accuracy = 100 * fine_correct / (len(inputs) * (batch_index + 1))
     epoch_loss = running_loss /  len(train_loader.sampler)
-    epoch_coarse_accuracy = 100 *coarse_correct / len(train_loader.sampler)
+    epoch_coarse_accuracy = 100 * coarse_correct / len(train_loader.sampler)
     epoch_fine_accuracy = 100 * fine_correct / len(train_loader.sampler)
     
     #writer.add_scalar('Training Loss', epoch_loss, epoch)

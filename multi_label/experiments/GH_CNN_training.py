@@ -24,6 +24,8 @@ import os
 
 config = train_config.GH_CNN
 torch.manual_seed(config.get("seed"))
+np.random.seed(config.get("seed"))
+
 
 device = torch.device(
         f"cuda:{config.get('gpu_kernel')}" if torch.cuda.is_available() else "cpu"
@@ -75,7 +77,7 @@ num_c = len(Counter([entry.split('__')[0] for entry in train_data.classes]))
 
 #create train and valid loader
 train_loader = DataLoader(train_data, batch_size=config.get('batch_size'), shuffle=True)
-valid_loader = DataLoader(train_data, batch_size=config.get('batch_size'), shuffle=False)
+valid_loader = DataLoader(valid_data, batch_size=config.get('batch_size'), shuffle=False)
 
 #create one-hot encoded tensors with the fine class labels
 y_train = to_one_hot_tensor(train_data.targets, num_classes)
@@ -103,12 +105,12 @@ for j in range(y_valid.shape[0]):
 
 # Initialize the loss weights
 
-alpha = torch.tensor(0.3)
-beta = torch.tensor(0.7)
+alpha = torch.tensor(0.98)
+beta = torch.tensor(0.02)
 
 # Initialize the model, loss function, and optimizer
 model = GH_CNN(num_c=num_c, num_classes=num_classes)
-criterion = nn.CrossEntropyLoss(reduction='sum')
+criterion = nn.CrossEntropyLoss(reduction='none')
 optimizer = optim.SGD(model.parameters(), lr=config.get('learning_rate'), momentum=0.9)
 
 trainable_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
@@ -147,10 +149,6 @@ for epoch in range(config.get('epochs')):
         coarse_outputs, fine_outputs = model.forward(inputs)
         coarse_loss = criterion(coarse_outputs, coarse_labels)
         fine_loss = criterion(fine_outputs, fine_labels)
-        loss = alpha * coarse_loss + beta * fine_loss  #weighted loss functions for different levels
-        loss.backward()
-        optimizer.step()
-        running_loss += loss.item() 
         
         coarse_probs = model.get_class_probabilies(coarse_outputs)
         coarse_predictions = torch.argmax(coarse_probs, dim=1)
@@ -160,9 +158,32 @@ for epoch in range(config.get('epochs')):
         fine_predictions = torch.argmax(fine_probs, dim=1)
         fine_correct += (fine_predictions == fine_labels).sum().item()
         
-        mismatched_indices = (coarse_predictions != parent[fine_predictions])
-        mismatched_coarse_loss = coarse_loss[mismatched_indices]
-        mismatched_fine_loss = fine_loss[mismatched_indices]
+        #calculating the loss_v (greatest error on a prediction where coarse and subclass prediction dont match)
+        if epochs >= 40% of all epochs:
+            mismatched_indices = (coarse_predictions != parent[fine_predictions])
+            max_mismatched_coarse_loss = max(coarse_loss[mismatched_indices])
+            max_mismatched_fine_loss = max(fine_loss[mismatched_indices])
+            loss_v = max(max_mismatched_coarse_loss, max_mismatched_fine_loss)
+            
+        elif epochs >= 15% of all epochs:
+            #instead of computing fine predictions normally, we guide with the coarse true labels
+            #implement it in the architecture directly and use epoch numbers
+            #take code from Condition CNN
+            
+            
+        else:
+            alpha = 1
+            beta = 0
+            loss_v = 0
+        
+                #weighted loss function (similar to B-CNN)
+        loss_h = torch.sum(alpha * coarse_loss + beta * fine_loss)
+        
+        #combined loss function
+        loss = loss_h + loss_v
+        loss.backward()
+        optimizer.step()
+        running_loss += loss.item() 
         
         if batch_index == 0:
             break

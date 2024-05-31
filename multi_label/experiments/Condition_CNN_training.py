@@ -86,7 +86,7 @@ num_c = len(Counter([entry.split('__')[0] for entry in train_data.classes]))
 
 #create train and valid loader
 train_loader = DataLoader(train_data, batch_size=config.get('batch_size'), shuffle=True)
-valid_loader = DataLoader(train_data, batch_size=config.get('batch_size'), shuffle=False)
+valid_loader = DataLoader(valid_data, batch_size=config.get('batch_size'), shuffle=False)
 
 
 
