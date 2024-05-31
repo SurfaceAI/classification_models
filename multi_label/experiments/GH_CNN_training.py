@@ -219,7 +219,7 @@ for epoch in range(config.get('epochs')):
     after_lr = optimizer.param_groups[0]["lr"]
     
     #loss weights step
-    #alpha, beta = loss_weights_modifier.on_epoch_end(epoch)
+    alpha, beta = loss_weights_modifier.on_epoch_end(epoch)
     
     # epoch_loss = running_loss /  len(inputs) * (batch_index + 1) 
     # epoch_coarse_accuracy = 100 * coarse_correct / (len(inputs) * (batch_index + 1))
