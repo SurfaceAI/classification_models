@@ -45,11 +45,11 @@ global_config = dict(
         random_horizontal_flip=True,
         random_rotation=10,
     ),
-    dataset = "V11/annotated",
+    dataset = "V12/annotated",
     seed = 42,
     validation_size = 0.2,
     valid_batch_size = 128,
     checkpoint_top_n = 1,
     early_stop_thresh = constants.EARLY_STOPPING_DEFAULT,
-    save_state = True,
+    save_state = False,
 )   
