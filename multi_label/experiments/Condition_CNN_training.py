@@ -23,6 +23,8 @@ from src.architecture.vgg16_Condition_CNN import Condition_CNN
 
 config = train_config.C_CNN
 torch.manual_seed(config.get("seed"))
+np.random.seed(config.get("seed"))
+
 
 
 device = torch.device(

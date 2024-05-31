@@ -32,6 +32,7 @@ config = train_config.B_CNN_PRE
 
     
 torch.manual_seed(config.get("seed"))
+np.random.seed(config.get("seed"))
 
 device = torch.device(
         f"cuda:{config.get('gpu_kernel')}" if torch.cuda.is_available() else "cpu"
