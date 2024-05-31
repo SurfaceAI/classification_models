@@ -1,9 +1,12 @@
 import torch
 import torch.nn as nn
+from experiments.config import train_config
+config = train_config.GH_CNN
 
-class CustomLayer(nn.Module):
+
+class CustomBayesLayer(nn.Module):
     def __init__(self):
-        super(CustomLayer, self).__init__()
+        super(CustomBayesLayer, self).__init__()
         
     def forward(self, parent_prob, subclass_probs):
         y_subclass = torch.mul(parent_prob, subclass_probs) / torch.sum(subclass_probs, dim=1, keepdim=True)
@@ -16,15 +19,20 @@ class CustomLayer(nn.Module):
         #     y_subclass.append(y_i_subclass.unsqueeze(1))  # Keep the dimension for concatenation
         # return torch.cat(y_subclass, dim=1)
     
-    
+# class CustomMultLayer(nn.Module):
+#     def __init__(self):
+#         super(CustomMultLayer, self).__init__()
+        
+#     def forward(self, tensor_1, tensor_2):
+#         return torch.mul(tensor_1, tensor_2)   
     
 class GH_CNN(nn.Module):
     def __init__(self, num_c, num_classes):
         super(GH_CNN, self).__init__()
         
         #Custom layer
-        self.custom_layer = CustomLayer()
-
+        self.custom_bayes_layer = CustomBayesLayer()
+        #self.custom_mult_layer = CustomMultLayer()
         
         ### Block 1
         self.block1_layer1 = nn.Sequential(
@@ -124,8 +132,9 @@ class GH_CNN(nn.Module):
         return x[tuple(slices)]
 
     
-    def forward(self, x):
-        x = self.block1_layer1(x)
+    def forward(self, inputs):
+
+        x = self.block1_layer1(inputs)
         x = self.block1_layer2(x)
         
         x = self.block2_layer1(x)
@@ -152,6 +161,33 @@ class GH_CNN(nn.Module):
         
         z_2 = self.fine_branch(branch_output) #[16,18]
         
+        return z_1, z_2
+        
+    def teacher_forcing(self, z_1, z_2, true_coarse):
+        
+        true_coarse_1 = self.crop(true_coarse, 1, 0, 1)
+        true_coarse_2 = self.crop(true_coarse, 1, 1, 2)
+        true_coarse_3 = self.crop(true_coarse, 1, 2, 3)
+        true_coarse_4 = self.crop(true_coarse, 1, 3, 4)
+        true_coarse_5 = self.crop(true_coarse, 1, 4, 5)
+        
+        raw_fine_1 = self.crop(z_2, 1, 0, 4) #raw prob all asphalt subclasses (asphalt_excellent, asphalt_good, asphalt_intermediate, asphalt_bad)
+        raw_fine_2 = self.crop(z_2, 1, 4, 8)
+        raw_fine_3 = self.crop(z_2, 1, 8, 12)
+        raw_fine_4 = self.crop(z_2, 1, 12, 15)
+        raw_fine_5 = self.crop(z_2, 1, 15, 18)
+        
+        fine_1 = torch.mul(true_coarse_1, raw_fine_1)
+        fine_2 = torch.mul(true_coarse_2, raw_fine_2)
+        fine_3 = torch.mul(true_coarse_3, raw_fine_3)
+        fine_4 = torch.mul(true_coarse_4, raw_fine_4)
+        fine_5 = torch.mul(true_coarse_5, raw_fine_5)
+        
+        fine_output = torch.cat([fine_1, fine_2, fine_3, fine_4, fine_5], dim=1)
+        
+        return z_1, fine_output
+        
+    def bayesian_adjustment(self, z_1, z_2):
         #cropping coarse outputs: z_i_j, i=1: coarse branch
         z_1_1 = self.crop(z_1, 1, 0, 1) #raw prob asphalt
         z_1_2 = self.crop(z_1, 1, 1, 2)
@@ -165,15 +201,14 @@ class GH_CNN(nn.Module):
         z_2_3 = self.crop(z_2, 1, 8, 12)
         z_2_4 = self.crop(z_2, 1, 12, 15)
         z_2_5 = self.crop(z_2, 1, 15, 18)
-        
         #FAFO
-        y_2_1 = self.custom_layer(z_1_1, z_2_1)
-        y_2_2 = self.custom_layer(z_1_2, z_2_2)
-        y_2_3 = self.custom_layer(z_1_3, z_2_3)
-        y_2_4 = self.custom_layer(z_1_4, z_2_4)
-        y_2_5 = self.custom_layer(z_1_5, z_2_5)
+        y_2_1 = self.custom_bayes_layer(z_1_1, z_2_1)
+        y_2_2 = self.custom_bayes_layer(z_1_2, z_2_2)
+        y_2_3 = self.custom_bayes_layer(z_1_3, z_2_3)
+        y_2_4 = self.custom_bayes_layer(z_1_4, z_2_4)
+        y_2_5 = self.custom_bayes_layer(z_1_5, z_2_5)
 
         coarse_output = z_1
         fine_output = torch.cat([y_2_1, y_2_2, y_2_3, y_2_4, y_2_5], dim=1)
         
-        return coarse_output, fine_output
+        return coarse_output, fine_output 

@@ -102,11 +102,25 @@ for i in range(y_train.shape[0]):
 for j in range(y_valid.shape[0]):
     y_c_valid[j][parent[torch.argmax(y_valid[j])]] = 1.0
 
+class LossWeightsModifier_GH():
+    def __init__(self, alpha, beta):
+        self.alpha = alpha
+        self.beta = beta
+
+    def on_epoch_end(self, epoch):
+        if 0.15 * config.get('epochs') <= epoch < 0.25 * config.get('epochs'):
+            self.alpha = torch.tensor(0.5)
+            self.beta = torch.tensor(0.5)
+        elif epoch >= 0.25 * config.get('epochs'):
+            self.alpha = torch.tensor(0.0)
+            self.beta = torch.tensor(1.0)
+            
+        return self.alpha, self.beta
 
 # Initialize the loss weights
 
-alpha = torch.tensor(0.98)
-beta = torch.tensor(0.02)
+alpha = torch.tensor(1)
+beta = torch.tensor(0)
 
 # Initialize the model, loss function, and optimizer
 model = GH_CNN(num_c=num_c, num_classes=num_classes)
@@ -119,7 +133,7 @@ trainable_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
 # Set up learning rate scheduler
 #scheduler = lr_scheduler.StepLR(optimizer, step_size=3, gamma=0.1)
 #scheduler = lr_scheduler.LambdaLR(optimizer, lr_lambda)
-loss_weights_modifier = LossWeightsModifier(alpha, beta)
+loss_weights_modifier = LossWeightsModifier_GH(alpha, beta)
 
 # Train the model
 checkpointer = checkpointing.CheckpointSaver(
@@ -145,8 +159,22 @@ for epoch in range(config.get('epochs')):
         
         optimizer.zero_grad()
         coarse_labels = parent[fine_labels].to(device)
+        coarse_one_hot = to_one_hot_tensor(coarse_labels, num_c).to(device)
         
-        coarse_outputs, fine_outputs = model.forward(inputs)
+        #basic model
+        raw_coarse, raw_fine = model.forward(inputs)
+        
+        epoch = 30
+        #3 different training phases
+        if epoch < 0.15 * config.get('epochs'):
+            coarse_outputs, fine_outputs = raw_coarse, raw_fine
+            
+        elif 0.15 * config.get('epochs') <= epoch < 0.25 * config.get('epochs'): 
+            coarse_outputs, fine_outputs = model.teacher_forcing(raw_coarse, raw_fine, coarse_one_hot)
+            
+        else:
+            coarse_outputs, fine_outputs = model.bayesian_adjustment(raw_coarse, raw_fine)
+
         coarse_loss = criterion(coarse_outputs, coarse_labels)
         fine_loss = criterion(fine_outputs, fine_labels)
         
@@ -158,35 +186,31 @@ for epoch in range(config.get('epochs')):
         fine_predictions = torch.argmax(fine_probs, dim=1)
         fine_correct += (fine_predictions == fine_labels).sum().item()
         
-        #calculating the loss_v (greatest error on a prediction where coarse and subclass prediction dont match)
-        if epochs >= 40% of all epochs:
+        loss_h = torch.sum(alpha * coarse_loss + beta * fine_loss)
+        
+        #coarse only, weights should be (1,0)
+        if epoch < 0.15 * config.get('epochs'):
+            loss = loss_h   
+           
+        #teacher forcing 
+        elif 0.15 * config.get('epochs') <= epoch < 0.25 * config.get('epochs'):
+            loss = loss_h 
+            
+        #added calculating the loss_v (greatest error on a prediction where coarse and subclass prediction dont match)
+        else:
             mismatched_indices = (coarse_predictions != parent[fine_predictions])
             max_mismatched_coarse_loss = max(coarse_loss[mismatched_indices])
             max_mismatched_fine_loss = max(fine_loss[mismatched_indices])
             loss_v = max(max_mismatched_coarse_loss, max_mismatched_fine_loss)
+            loss = loss_h + loss_v
             
-        elif epochs >= 15% of all epochs:
-            #instead of computing fine predictions normally, we guide with the coarse true labels
-            #implement it in the architecture directly and use epoch numbers
-            #take code from Condition CNN
-            
-            
-        else:
-            alpha = 1
-            beta = 0
-            loss_v = 0
-        
-                #weighted loss function (similar to B-CNN)
-        loss_h = torch.sum(alpha * coarse_loss + beta * fine_loss)
-        
-        #combined loss function
-        loss = loss_h + loss_v
+        #backward step
         loss.backward()
         optimizer.step()
         running_loss += loss.item() 
         
-        if batch_index == 0:
-            break
+        # if batch_index == 0:
+        #     break
     
     #learning rate step        
     # before_lr = optimizer.param_groups[0]["lr"]
@@ -194,13 +218,13 @@ for epoch in range(config.get('epochs')):
     # after_lr = optimizer.param_groups[0]["lr"]
     
     #loss weights step
-    alpha, beta = loss_weights_modifier.on_epoch_end(epoch)
+    #alpha, beta = loss_weights_modifier.on_epoch_end(epoch)
     
     # epoch_loss = running_loss /  len(inputs) * (batch_index + 1) 
     # epoch_coarse_accuracy = 100 * coarse_correct / (len(inputs) * (batch_index + 1))
     # epoch_fine_accuracy = 100 * fine_correct / (len(inputs) * (batch_index + 1))
     epoch_loss = running_loss /  len(train_loader.sampler)
-    epoch_coarse_accuracy = 100 *coarse_correct / len(train_loader.sampler)
+    epoch_coarse_accuracy = 100 * coarse_correct / len(train_loader.sampler)
     epoch_fine_accuracy = 100 * fine_correct / len(train_loader.sampler)
     
     #writer.add_scalar('Training Loss', epoch_loss, epoch)
@@ -222,7 +246,7 @@ for epoch in range(config.get('epochs')):
             coarse_loss = criterion(coarse_outputs, coarse_labels)
             fine_loss = criterion(fine_outputs, fine_labels)
             
-            loss = alpha * coarse_loss + beta * fine_loss
+            loss = torch.sum(alpha * coarse_loss + beta * fine_loss)
             val_running_loss += loss.item() 
             
             coarse_probs = model.get_class_probabilies(coarse_outputs)
@@ -233,8 +257,8 @@ for epoch in range(config.get('epochs')):
             fine_predictions = torch.argmax(fine_probs, dim=1)
             val_fine_correct += (fine_predictions == fine_labels).sum().item()
             
-            if batch_index == 0:
-                break
+            # if batch_index == 0:
+            #     break
     
     # val_epoch_loss = val_running_loss /  (len(inputs) * (batch_index + 1))
     # val_epoch_coarse_accuracy = 100 * val_coarse_correct / (len(inputs) * (batch_index + 1))
@@ -276,7 +300,7 @@ for epoch in range(config.get('epochs')):
         print(f"Early stopped training at epoch {epoch}")
         break
 
-    if config.get('wandb_on'):
-        wandb.finish()
+if config.get('wandb_on'):
+    wandb.finish()
 
 
