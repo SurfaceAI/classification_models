@@ -84,22 +84,22 @@ class HierarchyNet(nn.Module):
         
         #Here comes the flatten layer and then the dense ones for the coarse classes
         self.c_fc = nn.Sequential(
-            nn.Linear(512 * 8 * 8, 256),
+            nn.Linear(512 * 8 * 8, 1024),
             nn.ReLU(),
-            nn.BatchNorm1d(256),
+            nn.BatchNorm1d(1024),
             nn.Dropout(0.5))
         self.c_fc1 = nn.Sequential(
-            nn.Linear(256, 128),
+            nn.Linear(1024, 1024),
             nn.ReLU(),
-            nn.BatchNorm1d(128),
+            nn.BatchNorm1d(1024),
             nn.Dropout(0.5))
         
         self.coarse_branch = (
-            nn.Linear(128, num_c) #output layer for coarse prediction
+            nn.Linear(1024, num_c) #output layer for coarse prediction
         )    
         
         self.fine_branch = (
-            nn.Linear(128, num_classes) #output layer for coarse prediction
+            nn.Linear(1024, num_classes) #output layer for coarse prediction
         )          
         
     
