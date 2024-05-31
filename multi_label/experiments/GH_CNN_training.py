@@ -14,6 +14,8 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader
 import torch.nn.functional as F
+from torch.optim import lr_scheduler
+
 from src.architecture.vgg16_GH_CNN import GH_CNN
 
 from datetime import datetime
@@ -132,7 +134,7 @@ trainable_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
 
 # Set up learning rate scheduler
 #scheduler = lr_scheduler.StepLR(optimizer, step_size=3, gamma=0.1)
-#scheduler = lr_scheduler.LambdaLR(optimizer, lr_lambda)
+scheduler = lr_scheduler.LambdaLR(optimizer, lr_lambda)
 loss_weights_modifier = LossWeightsModifier_GH(alpha, beta)
 
 # Train the model
@@ -213,9 +215,9 @@ for epoch in range(config.get('epochs')):
         #     break
     
     #learning rate step        
-    # before_lr = optimizer.param_groups[0]["lr"]
-    # scheduler.step()
-    # after_lr = optimizer.param_groups[0]["lr"]
+    before_lr = optimizer.param_groups[0]["lr"]
+    scheduler.step()
+    after_lr = optimizer.param_groups[0]["lr"]
     
     #loss weights step
     #alpha, beta = loss_weights_modifier.on_epoch_end(epoch)
