@@ -166,7 +166,6 @@ for epoch in range(config.get('epochs')):
         #basic model
         raw_coarse, raw_fine = model.forward(inputs)
         
-        epoch = 30
         #3 different training phases
         if epoch < 0.15 * config.get('epochs'):
             coarse_outputs, fine_outputs = raw_coarse, raw_fine
