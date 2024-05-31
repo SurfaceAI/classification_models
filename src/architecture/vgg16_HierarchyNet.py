@@ -1,9 +1,9 @@
 import torch
 import torch.nn as nn
 
-class CustomLayer(nn.Module):
+class CustomMultLayer(nn.Module):
     def __init__(self):
-        super(CustomLayer, self).__init__()
+        super(CustomMultLayer, self).__init__()
         
     def forward(self, tensor_1, tensor_2):
         return torch.mul(tensor_1, tensor_2)
@@ -12,7 +12,7 @@ class HierarchyNet(nn.Module):
     def __init__(self, num_c, num_classes):
         super(HierarchyNet, self).__init__()
         
-        self.custom_layer = CustomLayer()
+        self.custom_layer = CustomMultLayer()
         
         
         ### Block 1
