@@ -12,6 +12,7 @@ from collections import Counter
 import torch
 import torch.nn as nn
 import torch.optim as optim
+from torch.utils.data import DataLoader
 from torch.utils.data import DataLoader, Dataset
 import torch.nn.functional as F
 from torch.optim import lr_scheduler
@@ -22,6 +23,8 @@ from datetime import datetime
 import time
 import numpy as np
 import os
+from PIL import Image
+from torchvision import transforms
 
 
 class BreakHisDataset(Dataset):
@@ -37,15 +40,17 @@ class BreakHisDataset(Dataset):
             if not os.path.isdir(mag_path):
                 continue
 
-            for label, tumor_type in enumerate(os.listdir(mag_path)):
-                tumor_dir = os.path.join(mag_path, tumor_type)
-                if os.path.isdir(tumor_dir):
-                    for file_name in os.listdir(tumor_dir):
-                        if file_name.endswith(('.png', '.jpg', '.jpeg')):  # Add other image formats if necessary
-                            self.image_paths.append(os.path.join(tumor_dir, file_name))
-                            self.labels.append(label)
-                            if tumor_type not in self.classes:
-                                self.classes.append(tumor_type)
+            for file_name in os.listdir(mag_path):
+                if file_name.endswith(('.png', '.jpg', '.jpeg')):  # Add other image formats if necessary
+                    file_path = os.path.join(mag_path, file_name)
+                    label = file_name.split('_')[2]  # Extracting the label (e.g., 'A' from 'SOB_B_A-14-22549AB-40-001.png')
+                    self.image_paths.append(file_path)
+                    self.labels.append(label)
+                    if label not in self.classes:
+                        self.classes.append(label)
+
+        self.class_to_idx = {cls: idx for idx, cls in enumerate(self.classes)}
+        self.labels = [self.class_to_idx[label] for label in self.labels]
 
     def __len__(self):
         return len(self.image_paths)
@@ -61,6 +66,7 @@ class BreakHisDataset(Dataset):
         return image, label
 
 
+
 config = train_config.GH_CNN
 torch.manual_seed(config.get("seed"))
 np.random.seed(config.get("seed"))
@@ -71,6 +77,8 @@ device = torch.device(
     )
 
 print(device)
+
+root = r"C:\Users\esthe\Documents\GitHub\classification_models\data\standard_datasets\break_his"
 
 if config.get('wandb_on'):
     run = wandb.init(
@@ -102,8 +110,8 @@ transform = transforms.Compose([
 ])
 
 # Create datasets
-train_dir = os.path.join(config.get('root_data'), 'train')
-test_dir = os.path.join(config.get('root_data'), 'test')
+train_dir = os.path.join(root, 'train')
+test_dir = os.path.join(root, 'test')
 
 train_data = BreakHisDataset(root_dir=train_dir, transform=transform)
 valid_data = BreakHisDataset(root_dir=test_dir, transform=transform)
