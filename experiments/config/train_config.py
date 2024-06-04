@@ -3,8 +3,8 @@ from experiments.config  import global_config
 
 default_params = {
     "batch_size": 128, #16,  # 48
-    "epochs": 50,
-    "learning_rate": 0.003,
+    "epochs": 40,
+    "learning_rate": 0.001,
     "optimizer": const.OPTI_ADAM,
     "is_regression": False,
     "eval_metric": const.EVAL_METRIC_ACCURACY,
@@ -241,6 +241,15 @@ C_CNN = {
     "name": "Condition_CNN",
     "level": const.MULTILABEL,
     "model": const.CCNN,
+}
+
+C_CNN_PRE = {
+    **global_config.global_config,
+    **default_params,
+    "project": const.PROJECT_MULTI_LABEL_FIXED,
+    "name": "Condition_CNN_pretrained",
+    "level": const.MULTILABEL,
+    "model": const.CCNN_PRE,
 }
 
 H_NET = {

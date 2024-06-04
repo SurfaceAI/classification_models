@@ -19,9 +19,11 @@ import numpy as np
 import os
 
 from src.architecture.vgg16_Condition_CNN import Condition_CNN
+from src.architecture.vgg16_Condition_CNN_pretrained import Condition_CNN_PRE
 
 
-config = train_config.C_CNN
+
+config = train_config.C_CNN_PRE
 torch.manual_seed(config.get("seed"))
 np.random.seed(config.get("seed"))
 
@@ -120,7 +122,7 @@ for j in range(y_valid.shape[0]):
 
 
 # Initialize the model, loss function, and optimizer
-model = Condition_CNN(num_c=5, num_classes=18)
+model = Condition_CNN_PRE(num_c=5, num_classes=18)
 criterion = nn.CrossEntropyLoss()
 optimizer = optim.SGD(model.parameters(), lr=config.get('learning_rate'), momentum=0.9)
 
@@ -175,7 +177,6 @@ for epoch in range(config.get('epochs')):
         loss.backward()
         optimizer.step()
         running_loss += loss.item() 
-        running_loss += loss.item()
         
         # if eval_metric == const.EVAL_METRIC_ACCURACY:
         #     if isinstance(criterion, nn.MSELoss): # compare with is_regression for generalization?

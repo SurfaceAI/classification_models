@@ -114,6 +114,7 @@ BCNN = "BCNN"
 BCNN_PRE = "BCNN_pretrained"
 BCNNREGRESSION = "BCNNRegression"
 CCNN = "ConditionCNN"
+CCNN_PRE = "ConditionCNN_pretrained"
 HNET = "HiearchyNet"
 GHCNN = "GHCNN"
 
