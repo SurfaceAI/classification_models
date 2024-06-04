@@ -17,6 +17,8 @@ import torch.nn.functional as F
 from torch.optim import lr_scheduler
 
 from src.architecture.vgg16_HierarchyNet import HierarchyNet
+from src.architecture.vgg16_HierarchyNet_pretrained import HierarchyNet_Pre
+
 
 from datetime import datetime
 import time
@@ -24,7 +26,7 @@ import numpy as np
 import os
 
 
-config = train_config.H_NET
+config = train_config.H_NET_PRE
 torch.manual_seed(config.get("seed"))
 np.random.seed(config.get("seed"))
 
@@ -110,7 +112,7 @@ alpha = torch.tensor(0.98)
 beta = torch.tensor(0.02)
 
 # Initialize the model, loss function, and optimizer
-model = HierarchyNet(num_c=num_c, num_classes=num_classes)
+model = HierarchyNet_Pre(num_c=num_c, num_classes=num_classes)
 criterion = nn.CrossEntropyLoss(reduction='sum')
 optimizer = optim.SGD(model.parameters(), lr=config.get('learning_rate'), momentum=0.9)
 

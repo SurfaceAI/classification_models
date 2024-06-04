@@ -261,6 +261,15 @@ H_NET = {
     "model": const.HNET,
 }
 
+H_NET_PRE = {
+    **global_config.global_config,
+    **default_params,
+    "project": const.PROJECT_MULTI_LABEL_FIXED,
+    "name": "HiearchyNet",
+    "level": const.MULTILABEL,
+    "model": const.HNET_PRE,
+}
+
 GH_CNN = {
     **global_config.global_config,
     **default_params,
@@ -268,6 +277,15 @@ GH_CNN = {
     "name": "GH_CNN",
     "level": const.MULTILABEL,
     "model": const.GHCNN,
+}
+
+GH_CNN_PRE = {
+    **global_config.global_config,
+    **default_params,
+    "project": const.PROJECT_MULTI_LABEL_FIXED,
+    "name": "GH_CNN",
+    "level": const.MULTILABEL,
+    "model": const.GHCNN_PRE,
 }
 
 B_CNN_regression = {
