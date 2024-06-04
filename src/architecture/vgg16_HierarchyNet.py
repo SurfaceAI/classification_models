@@ -83,17 +83,18 @@ class HierarchyNet(nn.Module):
             nn.MaxPool2d(kernel_size=2, stride=2))
         
         #Here comes the flatten layer and then the dense ones for the coarse classes
-        self.c_fc = nn.Sequential(
+        self.fc = nn.Sequential(
             nn.Linear(512 * 8 * 8, 1024),
             nn.ReLU(),
             nn.BatchNorm1d(1024),
             nn.Dropout(0.5))
-        self.c_fc1 = nn.Sequential(
+        self.fc1 = nn.Sequential(
             nn.Linear(1024, 1024),
             nn.ReLU(),
             nn.BatchNorm1d(1024),
             nn.Dropout(0.5))
         
+        # coarse and fine prediction share two fully connected layers
         self.coarse_branch = (
             nn.Linear(1024, num_c) #output layer for coarse prediction
         )    
@@ -135,8 +136,8 @@ class HierarchyNet(nn.Module):
         
         flat = x.reshape(x.size(0), -1) #torch.Size([16, 131072])
         
-        branch_output = self.c_fc(flat)
-        branch_output = self.c_fc1(branch_output)
+        branch_output = self.fc(flat)
+        branch_output = self.fc1(branch_output)
         
         coarse_output = self.coarse_branch(branch_output)
         
