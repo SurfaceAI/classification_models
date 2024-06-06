@@ -10,10 +10,15 @@ wandb
 
 data
 
+embeddings
+
+visualizations
+
 trained_models
 
 tb_log_medium_dynamic
 
 Archive
 
+mapillary_token.txt
 
