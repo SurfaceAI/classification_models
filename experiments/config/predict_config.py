@@ -120,6 +120,24 @@ V11_type_V9_quality_CC = {
     "gpu_kernel": 1,
 }
 
+effnet_surface = {
+    **global_config.global_config,
+    "name": "effnet_surface_quality_prediction",
+    "model_dict": {
+        "trained_model": "surface-efficientNetV2SLinear-20240408_135216-sd61xphn_epoch5.pt",
+        "level": const.TYPE, 
+    },
+    "dataset": "V103/unsorted_images",
+    "transform": {
+        "resize": (384, 384),
+        "crop": const.CROP_LOWER_MIDDLE_HALF,
+        "normalize": (const.V11_ANNOTATED_MEAN, const.V11_ANNOTATED_SD),
+    },
+    "batch_size": 16,
+    "gpu_kernel": 1,
+    "save_state": True,
+}
+
 vgg16_surface = {
     **global_config.global_config,
     "name": "surface_prediction",
