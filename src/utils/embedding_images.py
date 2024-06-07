@@ -38,10 +38,10 @@ embedding_model_name = config.get('embedding_model_name')
 root_data = os.path.join(config.get('root_path'), config.get('root_data'))
 
 images_path = os.path.join(config.get('root_path'), config.get('root_data'), config.get('dataset'))
-output_path = os.path.join(config.get('root_path'), config.get('root_output'))
-if not os.path.exists(output_path):
-    os.mkdir(output_path)
-output_file = os.path.join(output_path, config.get('name_output'))
+embeddings_path = os.path.join(config.get('root_path'), config.get('root_output'))
+if not os.path.exists(embeddings_path):
+    os.mkdir(embeddings_path)
+embeddings_file = os.path.join(embeddings_path, config.get('name_output'))
 
 crop = config.get('crop')
 
@@ -103,6 +103,7 @@ class clip_embed():
 
     def embed(self, image):
         # run inference
+        image = preprocessing.custom_crop(image, crop_style=crop)
         embedding = self.model.encode(image, convert_to_tensor=True)
 
         return embedding
@@ -244,7 +245,7 @@ for image_path in images:
 
 result = torch.stack(embeddings).cpu()
 
-with open(output_file, "wb") as f_out:
+with open(embeddings_file, "wb") as f_out:
     pickle.dump({'images': images, 'embeddings': result}, f_out, protocol=pickle.HIGHEST_PROTOCOL)
 
 print('Done.')
