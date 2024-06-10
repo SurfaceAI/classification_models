@@ -1,6 +1,7 @@
 import sys
 sys.path.append('.')
 
+import os
 import numpy as np
 import matplotlib.pyplot as plt
 from torch import optim
@@ -97,6 +98,19 @@ def dict_type(arg):
         return json.loads(arg)
     except json.JSONDecodeError:
         raise argparse.ArgumentTypeError("The argument is no valid dict type.")
+
+def extract_type_and_quality_and_id_from_img_path(img_path):
+    #"no_street", "not_recognizable","revise"
+    valid_types = ["asphalt", "concrete", "paving_stones", "sett", "unpaved"]
+    path_split = img_path.split('/') #todo. change back to ('\\')'/'
+    extracted_type = path_split[-3]
+    if extracted_type in valid_types:
+        extracted_quality = path_split[-2]
+    else:
+        extracted_type = path_split[-2]
+        extracted_quality = None
+    extracted_id = os.path.splitext(path_split[-1])[0]
+    return extracted_type, extracted_quality, extracted_id
 
 
 # auxiliary visualization function

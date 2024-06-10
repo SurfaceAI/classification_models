@@ -464,6 +464,11 @@ def custom_crop(img, crop_style=None):
         left = im_width / 4
         height = im_height / 2
         width = im_width / 2
+    elif crop_style == "lower_half":
+        top = im_height / 2
+        left = 0
+        height = im_height / 2
+        width = im_width
     else:  # None, or not valid
         return img
 
