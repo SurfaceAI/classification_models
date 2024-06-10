@@ -19,6 +19,7 @@ import torch
 import pickle
 from umap import UMAP
 from hdbscan import HDBSCAN
+from sklearn.cluster import KMeans
 
 config = {
     'embedding_model': MultiModalBackend('clip-ViT-B-32', batch_size=32),
@@ -36,6 +37,7 @@ config = {
     'embeddings_path': "embeddings/img_cropped_scene_embeddings_new_path.pkl",
     'embeddings_path': "embeddings/effnet_feature_5_embeddings.pkl",
     'embeddings_path': "embeddings/efficientnet_v2_s_feature_embeddings.pkl",
+    'embeddings_path': "embeddings/dino_embeddings.pkl",
     'min_topic_size': 10,
     'hdbscan_metric': 'euclidean', # no 'cosine' implemented!
     'cluster_selection': 'leaf', # 'leaf, 'eom'
@@ -103,6 +105,8 @@ hdbscan_model = HDBSCAN(min_cluster_size=config.get('min_topic_size', 10),
                         metric=config.get('hdbscan_metric', 'euclidean'),
                         cluster_selection_method=config.get('cluster_selection'),
                         prediction_data=True)
+
+# hdbscan_model = KMeans(n_clusters=100)
 
 # for guided topic modeling only
 seed_topic_list = [["bikelane on road"],
