@@ -241,7 +241,13 @@ class PredictImageFolder(datasets.VisionDataset):
             for fname in sorted(fnames):
                 path = os.path.join(root, fname)
                 if is_valid_file(path):
-                    instances.append(path)
+                    try:
+                        Image.open(path)
+                    except:
+                        print(f'Corrupted image: {path}')
+                        continue
+                    else:
+                        instances.append(path)
 
         return instances
 

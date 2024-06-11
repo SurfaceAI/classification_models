@@ -222,14 +222,14 @@ effnet_quality_regression_params = {
     "transform": 
         {"resize": (384, 384),
         "crop": const.CROP_LOWER_MIDDLE_HALF,
-        "normalize": (const.V9_ANNOTATED_MEAN,const.V9_ANNOTATED_SD)},
+        "normalize": (const.V11_ANNOTATED_MEAN,const.V11_ANNOTATED_SD)},
     "batch_size": 16,
     "is_regression": True,
     # "eval_metric": const.EVAL_METRIC_MSE,
     "project": const.PROJECT_SMOOTHNESS_FIXED,
     "name": "all_train_optim_lf_effnet_Reg",
     "model": const.EFFNET_LINEAR,
-
+    "gpu_kernel": 0,
 }
 
 effnet_surface_params = {
