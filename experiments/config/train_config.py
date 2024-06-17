@@ -2,11 +2,11 @@ from src import constants as const
 from experiments.config  import global_config
 
 default_params = {
-    "batch_size": 128, #16,  # 48
-    "epochs": 40,
+    "batch_size": 48, #16,  # 48
+    "epochs": 20,
     "learning_rate": 0.001,
     "optimizer": const.OPTI_ADAM,
-    "is_regression": False,
+    "is_regression": True,
     "eval_metric": const.EVAL_METRIC_ACCURACY,
 }
 
@@ -291,10 +291,16 @@ GH_CNN_PRE = {
 B_CNN_regression = {
     **global_config.global_config,
     **default_params,
+    "batch_size": 48,
+    "epochs": 20,
+    "learning_rate": 0.0001,
+    "optimizer": const.OPTI_ADAM,
+    "is_regression": True,
+    "coarse_eval_metric": const.EVAL_METRIC_ACCURACY,
+    "fine_eval_metric": const.EVAL_METRIC_MSE,
     "project": const.PROJECT_MULTI_LABEL_FIXED,
-    #"coarse_eval_metric": const.EVAL_METRIC_ACCURACY,
-    #"fine_eval_metric": const.EVAL_METRIC_MSE,
     "name": "B_CNN_Regression",
     "level": const.MULTILABEL,
     "model": const.BCNNREGRESSION,
+    "hierarchy_method": const.WEIGHTEDSUM
 }

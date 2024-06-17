@@ -5,7 +5,7 @@ from src import constants
 ROOT_DIR = Path(__file__).parent.parent.parent
 
 global_config = dict(
-    gpu_kernel = 1,
+    gpu_kernel = 0,
     wandb_mode = constants.WANDB_MODE_ON,
     wandb_on=True,
     root_data = str(ROOT_DIR / "data" / "training"),
@@ -51,5 +51,5 @@ global_config = dict(
     valid_batch_size = 128,
     checkpoint_top_n = 1,
     early_stop_thresh = constants.EARLY_STOPPING_DEFAULT,
-    save_state = True,
+    save_state = False,
 )   
