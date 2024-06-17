@@ -168,3 +168,12 @@ class LossWeightsModifier():
             self.beta = torch.tensor(1.0)
             
         return self.alpha, self.beta
+    
+#this helps us adopt a regression on the second level for multi-label models  
+def map_quality_to_continuous(quality_label):
+    quality_mapping = {
+        0: 1.0, 1: 2.0, 2: 3.0, 3: 4.0, 4: 1.0, 5: 2.0,
+        6: 3.0, 7: 4.0, 8: 1.0, 9: 2.0, 10: 3.0, 11: 4.0,
+        12: 2.0, 13: 3.0, 14: 4.0, 15: 3.0, 16: 4.0, 17: 5.0
+    }
+    return quality_mapping[quality_label.item()]
