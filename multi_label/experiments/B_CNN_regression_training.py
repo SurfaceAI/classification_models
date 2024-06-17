@@ -243,7 +243,7 @@ for epoch in range(config.get('epochs')):
     # epoch_fine_accuracy = 100 * eval_metric_value_fine / (len(inputs) * (batch_index + 1))
     epoch_loss = running_loss /  len(train_loader)
     epoch_coarse_accuracy = 100 * coarse_correct / len(train_loader.sampler)
-    epoch_fine_accuracy = 100 * eval_metric_value_fine / len(train_loader.sampler)
+    epoch_fine_eval_metric = 100 * eval_metric_value_fine / len(train_loader.sampler)
         
     # Validation
     model.eval()
@@ -281,7 +281,7 @@ for epoch in range(config.get('epochs')):
             coarse_loss = coarse_criterion(coarse_outputs, coarse_labels)
             fine_loss = fine_criterion(fine_outputs, fine_labels)
             
-            loss = (coarse_loss + fine_loss) / 2
+            loss = coarse_loss + fine_loss
             val_running_loss += loss.item() 
             
             if fine_eval_metric == const.EVAL_METRIC_ACCURACY:
@@ -316,7 +316,7 @@ for epoch in range(config.get('epochs')):
     # val_epoch_fine_accuracy = 100 * val_fine_correct / (len(inputs) * (batch_index + 1))
     val_epoch_loss = val_running_loss /  len(valid_loader)
     val_epoch_coarse_accuracy = 100 * val_coarse_correct / len(valid_loader.sampler)
-    val_epoch_fine_accuracy = 100 * eval_metric_value_fine / len(valid_loader.sampler)#
+    val_epoch_fine_eval_metric = 100 * eval_metric_value_fine / len(valid_loader.sampler)#
     
     # h_coarse.remove()
     # h_fine.remove()
@@ -330,12 +330,12 @@ for epoch in range(config.get('epochs')):
                 {
                     "epoch": epoch + 1,
                     "dataset": config.get('dataset'),
-                    "train/loss": epoch_loss,
+                    "train/loss/mixed": epoch_loss,
                     "train/accuracy/coarse": epoch_coarse_accuracy,
-                    "train/accuracy/fine": epoch_fine_accuracy , 
-                    "eval/loss": val_epoch_loss,
+                    "train/mse/fine": epoch_fine_eval_metric,
+                    "eval/loss/mixed": val_epoch_loss,
                     "eval/accuracy/coarse": val_epoch_coarse_accuracy,
-                    "eval/accuracy/fine": val_epoch_fine_accuracy,
+                    "eval/mse/fine": val_epoch_fine_eval_metric,
                     "trainable_paramater": trainable_params
                 }
             )
@@ -345,12 +345,12 @@ for epoch in range(config.get('epochs')):
         Epoch: {epoch+1}: 
         Learning Rate: {before_lr} ->  {after_lr},
         Loss Weights: [alpha, beta] = [{alpha}, {beta}],
-        Train loss: {epoch_loss:.3f}, 
+        Train loss mixed: {epoch_loss:.3f}, 
         Train coarse accuracy: {epoch_coarse_accuracy:.3f}%, 
-        Train fine accuracy: {epoch_fine_accuracy:.3f}%,
-        Validation loss: {val_epoch_loss:.3f}, 
+        Train fine mse: {epoch_fine_eval_metric:.3f}%,
+        Validation loss mixed: {val_epoch_loss:.3f}, 
         Validation coarse accuracy: {val_epoch_coarse_accuracy:.3f}%, 
-        Validation fine accuracy: {val_epoch_fine_accuracy:.3f}% """)
+        Validation fine mse: {val_epoch_fine_eval_metric:.3f}% """)
     
     if early_stop:
             print(f"Early stopped training at epoch {epoch}")
