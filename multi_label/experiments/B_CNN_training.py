@@ -9,6 +9,7 @@ from src.models import training
 from src import constants as const
 from src.architecture.vgg16_B_CNN_pretrained import VGG16_B_CNN_PRE
 from src.architecture.vgg16_B_CNN import B_CNN
+from src.architecture.vgg16_B_CNN_Regression import B_CNN_Regression
 
 from datetime import datetime
 import time
@@ -28,7 +29,7 @@ import os
 
 
 
-config = train_config.B_CNN_PRE
+config = train_config.B_CNN_regression
 
     
 torch.manual_seed(config.get("seed"))
@@ -39,6 +40,10 @@ device = torch.device(
     )
 
 print(device)
+
+coarse_eval_metric = config.get('coarse_eval_metric')
+fine_eval_metric = config.get('fine_eval_metric')
+
 
 if config.get('wandb_on'):
     run = wandb.init(
@@ -118,11 +123,24 @@ for j in range(y_valid.shape[0]):
 alpha = torch.tensor(0.98)
 beta = torch.tensor(0.02)
 
+if config.get('is_regression'):
+    num_classes = 1
+    
+else:
+    num_classes = len(train_data.classes)
+
+    
 # Initialize the model, loss function, and optimizer
-model = VGG16_B_CNN_PRE(num_c=5, num_classes=18)
+model = B_CNN_Regression(num_c=num_c, num_classes=num_classes).to(device)
 model.to(device)
 #model = VGG16_B_CNN(num_c=5, num_classes=18)
-criterion = nn.CrossEntropyLoss()
+coarse_criterion = nn.CrossEntropyLoss(reduction='sum')
+
+if num_classes == 1:
+    fine_criterion = nn.MSELoss(reduction='sum')
+else:
+    fine_criterion = nn.CrossEntropyLoss(reduction='sum')
+    
 optimizer = optim.SGD(model.parameters(), lr=config.get('learning_rate'), momentum=0.9)
 
 trainable_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
@@ -150,7 +168,8 @@ for epoch in range(config.get('epochs')):
     model.train()
     running_loss = 0.0
     coarse_correct = 0
-    fine_correct = 0
+    #fine_correct = 0
+    eval_metric_value_fine = 0
     
     for batch_index, (inputs, fine_labels) in enumerate(train_loader):
         
@@ -164,45 +183,45 @@ for epoch in range(config.get('epochs')):
         #     plt.show()
 
         inputs, labels = inputs.to(device), fine_labels.to(device)
-        
         optimizer.zero_grad()
         
-        coarse_labels = parent[fine_labels]
+        coarse_labels = parent[fine_labels].to(device)
         
+        #this converts out 
+        if config.get('is_regression'):
+            fine_labels = torch.tensor([map_quality_to_continuous(label) for label in fine_labels], dtype=torch.float32).to(device)
+     
         coarse_outputs, fine_outputs = model.forward(inputs)
-        coarse_loss = criterion(coarse_outputs, coarse_labels)
-        fine_loss = criterion(fine_outputs, fine_labels)
+        coarse_loss = coarse_criterion(coarse_outputs, coarse_labels)
+        fine_outputs = fine_outputs.squeeze(1)
+        fine_loss = fine_criterion(fine_outputs, fine_labels)
         loss = alpha * coarse_loss + beta * fine_loss  #weighted loss functions for different levels
         
         loss.backward()
         optimizer.step()
         running_loss += loss.item() 
-        running_loss += loss.item()
-        
-        # if eval_metric == const.EVAL_METRIC_ACCURACY:
-        #     if isinstance(criterion, nn.MSELoss): # compare with is_regression for generalization?
-        #         predictions = outputs.round()
-        #     else:
-        #         probs = model.get_class_probabilies(outputs)
-        #         predictions = torch.argmax(probs, dim=1)
-        #     eval_metric_value += (predictions == labels).sum().item()
-
-        # elif eval_metric == const.EVAL_METRIC_MSE:
-        #     if not isinstance(criterion, nn.MSELoss): # compare with is_regression for generalization?
-        #         raise ValueError(
-        #             f"Criterion must be nn.MSELoss for eval_metric {eval_metric}"
-        #         )
-        #     eval_metric_value = running_loss
-        # else:
-        #     raise ValueError(f"Unknown eval_metric: {eval_metric}")
         
         coarse_probs = model.get_class_probabilies(coarse_outputs)
         coarse_predictions = torch.argmax(coarse_probs, dim=1)
         coarse_correct += (coarse_predictions == coarse_labels).sum().item()
         
-        fine_probs = model.get_class_probabilies(fine_outputs)
-        fine_predictions = torch.argmax(fine_probs, dim=1)
-        fine_correct += (fine_predictions == fine_labels).sum().item()
+        if fine_eval_metric == const.EVAL_METRIC_ACCURACY:
+            if isinstance(fine_criterion, nn.MSELoss): # compare with is_regression for generalization?
+                #predictions = fine_outputs.round()
+                eval_metric_value_fine += ((fine_outputs - fine_labels).abs() < 0.5).sum().item()  #we can adjust tolerance
+            else:
+                probs = model.get_class_probabilies(fine_outputs)
+                predictions = torch.argmax(probs, dim=1)
+                eval_metric_value_fine += (predictions == fine_labels).sum().item()
+
+        elif fine_eval_metric == const.EVAL_METRIC_MSE:
+            if not isinstance(fine_criterion, nn.MSELoss): # compare with is_regression for generalization?
+                raise ValueError(
+                    f"Criterion must be nn.MSELoss for eval_metric {fine_eval_metric}"
+                )
+            eval_metric_value_fine = running_loss
+        else:
+            raise ValueError(f"Unknown eval_metric: {fine_eval_metric}")
         
         # if batch_index == 0:
         #     break
@@ -220,7 +239,7 @@ for epoch in range(config.get('epochs')):
     # epoch_fine_accuracy = 100 * fine_correct / (len(inputs) * (batch_index + 1))
     epoch_loss = running_loss /  len(train_loader)
     epoch_coarse_accuracy = 100 * coarse_correct / len(train_loader.sampler)
-    epoch_fine_accuracy = 100 * fine_correct / len(train_loader.sampler)
+    epoch_fine_accuracy = 100 * eval_metric_value_fine / len(train_loader.sampler)
         
     # Validation
     model.eval()
@@ -228,6 +247,7 @@ for epoch in range(config.get('epochs')):
     val_running_loss = 0.0
     val_coarse_correct = 0
     val_fine_correct = 0
+    eval_metric_value_fine = 0
     
     #where we store intermediate outputs 
     # feature_maps = {}
@@ -245,30 +265,41 @@ for epoch in range(config.get('epochs')):
             
             coarse_outputs, fine_outputs = model.forward(inputs)
             
-            # if isinstance(criterion, nn.MSELoss):
-            #     coarse_outputs = coarse_outputs.flatten()
-            #     fine_outputs = fine_outputs.flatten()
+            if isinstance(fine_criterion, nn.MSELoss):
+                coarse_outputs = coarse_outputs.flatten()
+                fine_outputs = fine_outputs.flatten()
                 
-            #     fine_labels = fine_labels.float()
-            #     coarse_labels = coarse_labels.float()
+                fine_labels = fine_labels.float()
+                coarse_labels = coarse_labels.float()
             
             
-            coarse_loss = criterion(coarse_outputs, coarse_labels)
-            fine_loss = criterion(fine_outputs, fine_labels)
+            coarse_loss = coarse_criterion(coarse_outputs, coarse_labels)
+            fine_loss = fine_criterion(fine_outputs, fine_labels)
             
             loss = (coarse_loss + fine_loss) / 2
             val_running_loss += loss.item() 
             
+            if fine_eval_metric == const.EVAL_METRIC_ACCURACY:
+                if isinstance(fine_criterion, nn.MSELoss): # compare with is_regression for generalization?
+                    predictions = fine_outputs.round()
+                else:
+                    probs = model.get_class_probabilies(fine_outputs)
+                    predictions = torch.argmax(probs, dim=1)
+                eval_metric_value_fine += (predictions == labels).sum().item()
+
+            elif fine_eval_metric == const.EVAL_METRIC_MSE:
+                if not isinstance(fine_criterion, nn.MSELoss): # compare with is_regression for generalization?
+                    raise ValueError(
+                        f"Criterion must be nn.MSELoss for eval_metric {fine_eval_metric}"
+                    )
+                eval_metric_value_fine = running_loss
+            else:
+                raise ValueError(f"Unknown eval_metric: {fine_eval_metric}")
             
             coarse_probs = model.get_class_probabilies(coarse_outputs)
             coarse_predictions = torch.argmax(coarse_probs, dim=1)
             val_coarse_correct += (coarse_predictions == coarse_labels).sum().item()
         
-            fine_probs = model.get_class_probabilies(fine_outputs)
-            fine_predictions = torch.argmax(fine_probs, dim=1)
-            val_fine_correct += (fine_predictions == fine_labels).sum().item()
-            
-            
             # h_coarse_list.append(feature_maps['coarse_flat'])
             # h_fine_list.append(feature_maps['fine_flat'])
             
@@ -280,7 +311,7 @@ for epoch in range(config.get('epochs')):
     # val_epoch_fine_accuracy = 100 * val_fine_correct / (len(inputs) * (batch_index + 1))
     val_epoch_loss = val_running_loss /  len(valid_loader)
     val_epoch_coarse_accuracy = 100 * val_coarse_correct / len(valid_loader.sampler)
-    val_epoch_fine_accuracy = 100 * val_fine_correct / len(valid_loader.sampler)#
+    val_epoch_fine_accuracy = 100 * eval_metric_value_fine / len(valid_loader.sampler)#
     
     # h_coarse.remove()
     # h_fine.remove()
