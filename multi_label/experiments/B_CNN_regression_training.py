@@ -349,10 +349,10 @@ for epoch in range(config.get('epochs')):
         Loss Weights: [alpha, beta] = [{alpha}, {beta}],
         Train loss mixed: {epoch_loss:.3f}, 
         Train coarse accuracy: {epoch_coarse_accuracy:.3f}%, 
-        Train fine mse: {epoch_fine_eval_metric:.3f}%,
+        Train fine mse: {epoch_fine_eval_metric:.3f},
         Validation loss mixed: {val_epoch_loss:.3f}, 
         Validation coarse accuracy: {val_epoch_coarse_accuracy:.3f}%, 
-        Validation fine mse: {val_epoch_fine_eval_metric:.3f}% """)
+        Validation fine mse: {val_epoch_fine_eval_metric:.3f} """)
     
     if early_stop:
             print(f"Early stopped training at epoch {epoch}")
