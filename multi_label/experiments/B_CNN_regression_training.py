@@ -235,8 +235,6 @@ for epoch in range(config.get('epochs')):
     scheduler.step()
     after_lr = optimizer.param_groups[0]["lr"]
     
-    #loss weights step
-    alpha, beta = loss_weights_modifier.on_epoch_end(epoch)
     
     # epoch_loss = running_loss /  len(inputs) * (batch_index + 1) 
     # epoch_coarse_accuracy = 100 * coarse_correct / (len(inputs) * (batch_index + 1))
@@ -282,7 +280,7 @@ for epoch in range(config.get('epochs')):
             coarse_loss = coarse_criterion(coarse_outputs, coarse_labels)
             fine_loss = fine_criterion(fine_outputs, fine_labels)
             
-            loss = coarse_loss + fine_loss
+            loss = alpha * coarse_loss + beta * fine_loss
             val_running_loss += loss.item() 
             
             if fine_eval_metric == const.EVAL_METRIC_ACCURACY:
@@ -318,7 +316,7 @@ for epoch in range(config.get('epochs')):
     # val_epoch_fine_accuracy = 100 * val_fine_correct / (len(inputs) * (batch_index + 1))
     val_epoch_loss = val_running_loss /  len(valid_loader.sampler)
     val_epoch_coarse_accuracy = 100 * val_coarse_correct / len(valid_loader.sampler)
-    val_epoch_fine_eval_metric = eval_metric_value_fine / len(train_loader.sampler)
+    val_epoch_fine_eval_metric = eval_metric_value_fine / len(valid_loader.sampler)
     
     # h_coarse.remove()
     # h_fine.remove()
@@ -353,6 +351,10 @@ for epoch in range(config.get('epochs')):
         Validation loss mixed: {val_epoch_loss:.3f}, 
         Validation coarse accuracy: {val_epoch_coarse_accuracy:.3f}%, 
         Validation fine mse: {val_epoch_fine_eval_metric:.3f} """)
+    
+    
+    #loss weights step
+    alpha, beta = loss_weights_modifier.on_epoch_end(epoch)
     
     if early_stop:
             print(f"Early stopped training at epoch {epoch}")
