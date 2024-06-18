@@ -197,8 +197,13 @@ for epoch in range(config.get('epochs')):
      
         coarse_outputs, fine_outputs = model.forward(model_inputs)
         coarse_loss = coarse_criterion(coarse_outputs, coarse_labels)
+        
+        # if isinstance(fine_criterion, nn.MSELoss):
+        #         fine_outputs = fine_outputs.flatten()
+        #         fine_labels = fine_labels.float()
         fine_outputs = fine_outputs.squeeze(1)
         fine_loss = fine_criterion(fine_outputs, fine_labels)
+        
         loss = alpha * coarse_loss + beta * fine_loss  #weighted loss functions for different levels
         
         loss.backward()
@@ -269,15 +274,12 @@ for epoch in range(config.get('epochs')):
             model_inputs = (inputs, coarse_one_hot, config.get('hierarchy_method'))           
             coarse_outputs, fine_outputs = model.forward(model_inputs)
             
-            if isinstance(fine_criterion, nn.MSELoss):
-                #coarse_outputs = coarse_outputs.flatten()
-                fine_outputs = fine_outputs.flatten()
-                
-                fine_labels = fine_labels.float()
-                #coarse_labels = coarse_labels.float()
-            
-            
-            coarse_loss = coarse_criterion(coarse_outputs, coarse_labels)
+            coarse_loss = coarse_criterion(coarse_outputs, coarse_labels)     
+                   
+            # if isinstance(fine_criterion, nn.MSELoss):
+            #     fine_outputs = fine_outputs.flatten()
+            #     fine_labels = fine_labels.float()
+            fine_outputs = fine_outputs.squeeze(1)
             fine_loss = fine_criterion(fine_outputs, fine_labels)
             
             loss = alpha * coarse_loss + beta * fine_loss
