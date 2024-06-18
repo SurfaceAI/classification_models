@@ -182,7 +182,7 @@ for epoch in range(config.get('epochs')):
         #     plt.axis('off')
         #     plt.show()
 
-        inputs, labels = inputs.to(device), fine_labels.to(device)
+        inputs, fine_labels = inputs.to(device), fine_labels.to(device)
         optimizer.zero_grad()
         
         coarse_labels = parent[fine_labels].to(device)
@@ -291,7 +291,7 @@ for epoch in range(config.get('epochs')):
                 else:
                     probs = model.get_class_probabilies(fine_outputs)
                     predictions = torch.argmax(probs, dim=1)
-                eval_metric_value_fine += (predictions == labels).sum().item()
+                eval_metric_value_fine += (predictions == fine_labels).sum().item()
 
             elif fine_eval_metric == const.EVAL_METRIC_MSE:
                 if not isinstance(fine_criterion, nn.MSELoss): # compare with is_regression for generalization?
