@@ -132,7 +132,7 @@ else:
     
 # Initialize the model, loss function, and optimizer
 model = B_CNN_Regression(num_c=num_c, num_classes=num_classes).to(device)
-model.to(device)
+
 #model = VGG16_B_CNN(num_c=5, num_classes=18)
 coarse_criterion = nn.CrossEntropyLoss(reduction='sum')
 
@@ -223,7 +223,7 @@ for epoch in range(config.get('epochs')):
                 raise ValueError(
                     f"Criterion must be nn.MSELoss for eval_metric {fine_eval_metric}"
                 )
-            eval_metric_value_fine = fine_loss
+            eval_metric_value_fine += fine_loss.item()
         else:
             raise ValueError(f"Unknown eval_metric: {fine_eval_metric}")
         
@@ -241,9 +241,9 @@ for epoch in range(config.get('epochs')):
     # epoch_loss = running_loss /  len(inputs) * (batch_index + 1) 
     # epoch_coarse_accuracy = 100 * coarse_correct / (len(inputs) * (batch_index + 1))
     # epoch_fine_accuracy = 100 * eval_metric_value_fine / (len(inputs) * (batch_index + 1))
-    epoch_loss = running_loss /  len(train_loader)
+    epoch_loss = running_loss /  len(train_loader.sampler)
     epoch_coarse_accuracy = 100 * coarse_correct / len(train_loader.sampler)
-    epoch_fine_eval_metric = 100 * eval_metric_value_fine / len(train_loader.sampler)
+    epoch_fine_eval_metric = eval_metric_value_fine /  len(train_loader.sampler)
         
     # Validation
     model.eval()
@@ -265,7 +265,8 @@ for epoch in range(config.get('epochs')):
         for batch_index, (inputs, fine_labels) in enumerate(valid_loader):
             
             inputs, fine_labels = inputs.to(device), fine_labels.to(device)
-            coarse_labels = parent[fine_labels]
+            coarse_labels = parent[fine_labels].to(device)
+            coarse_one_hot = to_one_hot_tensor(coarse_labels, num_c).to(device)
             
             model_inputs = (inputs, coarse_one_hot, config.get('hierarchy_method'))           
             coarse_outputs, fine_outputs = model.forward(model_inputs)
@@ -297,13 +298,14 @@ for epoch in range(config.get('epochs')):
                     raise ValueError(
                         f"Criterion must be nn.MSELoss for eval_metric {fine_eval_metric}"
                     )
-                eval_metric_value_fine = running_loss
+                eval_metric_value_fine += fine_loss.item()
             else:
                 raise ValueError(f"Unknown eval_metric: {fine_eval_metric}")
             
             coarse_probs = model.get_class_probabilies(coarse_outputs)
             coarse_predictions = torch.argmax(coarse_probs, dim=1)
             val_coarse_correct += (coarse_predictions == coarse_labels).sum().item()
+
         
             # h_coarse_list.append(feature_maps['coarse_flat'])
             # h_fine_list.append(feature_maps['fine_flat'])
@@ -314,9 +316,9 @@ for epoch in range(config.get('epochs')):
     # val_epoch_loss = val_running_loss /  (len(inputs) * (batch_index + 1))
     # val_epoch_coarse_accuracy = 100 * val_coarse_correct / (len(inputs) * (batch_index + 1))
     # val_epoch_fine_accuracy = 100 * val_fine_correct / (len(inputs) * (batch_index + 1))
-    val_epoch_loss = val_running_loss /  len(valid_loader)
+    val_epoch_loss = val_running_loss /  len(valid_loader.sampler)
     val_epoch_coarse_accuracy = 100 * val_coarse_correct / len(valid_loader.sampler)
-    val_epoch_fine_eval_metric = 100 * eval_metric_value_fine / len(valid_loader.sampler)#
+    val_epoch_fine_eval_metric = eval_metric_value_fine / len(train_loader.sampler)
     
     # h_coarse.remove()
     # h_fine.remove()
