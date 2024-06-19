@@ -308,8 +308,8 @@ for epoch in range(config.get('epochs')):
             # h_coarse_list.append(feature_maps['coarse_flat'])
             # h_fine_list.append(feature_maps['fine_flat'])
             
-    #         if batch_index == 0:
-    #             break
+            # if batch_index == 0:
+            #     break
     
     # val_epoch_loss = val_running_loss /  (len(inputs) * (batch_index + 1))
     # val_epoch_coarse_accuracy = 100 * val_coarse_correct / (len(inputs) * (batch_index + 1))
@@ -332,10 +332,10 @@ for epoch in range(config.get('epochs')):
                     "dataset": config.get('dataset'),
                     "train/loss/mixed": epoch_loss,
                     "train/accuracy/coarse": epoch_coarse_accuracy,
-                    "train/mse/fine": epoch_fine_eval_metric,
+                    "train/accuracy/fine": epoch_fine_eval_metric,
                     "eval/loss/mixed": val_epoch_loss,
                     "eval/accuracy/coarse": val_epoch_coarse_accuracy,
-                    "eval/mse/fine": val_epoch_fine_eval_metric,
+                    "eval/accuracy/fine": val_epoch_fine_eval_metric,
                     "trainable_paramater": trainable_params
                 }
             )
@@ -347,10 +347,10 @@ for epoch in range(config.get('epochs')):
         Loss Weights: [alpha, beta] = [{alpha}, {beta}],
         Train loss mixed: {epoch_loss:.3f}, 
         Train coarse accuracy: {epoch_coarse_accuracy:.3f}%, 
-        Train fine mse: {epoch_fine_eval_metric:.3f},
+        Train fine eval metric: {epoch_fine_eval_metric:.3f},
         Validation loss mixed: {val_epoch_loss:.3f}, 
         Validation coarse accuracy: {val_epoch_coarse_accuracy:.3f}%, 
-        Validation fine mse: {val_epoch_fine_eval_metric:.3f} """)
+        Validation fine eval metric: {val_epoch_fine_eval_metric:.3f} """)
     
     
     #loss weights step
