@@ -291,7 +291,7 @@ GH_CNN_PRE = {
 B_CNN_regression = {
     **global_config.global_config,
     **default_params,
-    "batch_size": 48,
+    "batch_size": 16,
     "epochs": 20,
     "learning_rate": 0.001,
     "optimizer": const.OPTI_ADAM,

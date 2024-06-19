@@ -216,12 +216,12 @@ for epoch in range(config.get('epochs')):
         
         if fine_eval_metric == const.EVAL_METRIC_ACCURACY:
             if isinstance(fine_criterion, nn.MSELoss): # compare with is_regression for generalization?
-                #predictions = fine_outputs.round()
-                eval_metric_value_fine += ((fine_outputs - fine_labels).abs() < 0.5).sum().item()  #we can adjust tolerance
+                predictions = fine_outputs.round()
+                #eval_metric_value_fine += ((fine_outputs - fine_labels).abs() < 0.5).sum().item()  #we can adjust tolerance
             else:
                 probs = model.get_class_probabilies(fine_outputs)
                 predictions = torch.argmax(probs, dim=1)
-                eval_metric_value_fine += (predictions == fine_labels).sum().item()
+            eval_metric_value_fine += (predictions == fine_labels).sum().item()
 
         elif fine_eval_metric == const.EVAL_METRIC_MSE:
             if not isinstance(fine_criterion, nn.MSELoss): # compare with is_regression for generalization?
@@ -246,7 +246,10 @@ for epoch in range(config.get('epochs')):
     # epoch_fine_accuracy = 100 * eval_metric_value_fine / (len(inputs) * (batch_index + 1))
     epoch_loss = running_loss /  len(train_loader.sampler)
     epoch_coarse_accuracy = 100 * coarse_correct / len(train_loader.sampler)
-    epoch_fine_eval_metric = eval_metric_value_fine /  len(train_loader.sampler)
+    if fine_eval_metric == const.EVAL_METRIC_ACCURACY:
+        epoch_fine_eval_metric = 100 * eval_metric_value_fine /  len(train_loader.sampler)
+    else:
+        epoch_fine_eval_metric = eval_metric_value_fine /  len(train_loader.sampler)
         
     # Validation
     model.eval()
@@ -310,15 +313,18 @@ for epoch in range(config.get('epochs')):
             # h_coarse_list.append(feature_maps['coarse_flat'])
             # h_fine_list.append(feature_maps['fine_flat'])
             
-            # if batch_index == 0:
-            #     break
+            if batch_index == 0:
+                break
     
     # val_epoch_loss = val_running_loss /  (len(inputs) * (batch_index + 1))
     # val_epoch_coarse_accuracy = 100 * val_coarse_correct / (len(inputs) * (batch_index + 1))
     # val_epoch_fine_accuracy = 100 * val_fine_correct / (len(inputs) * (batch_index + 1))
     val_epoch_loss = val_running_loss /  len(valid_loader.sampler)
     val_epoch_coarse_accuracy = 100 * val_coarse_correct / len(valid_loader.sampler)
-    val_epoch_fine_eval_metric = eval_metric_value_fine / len(valid_loader.sampler)
+    if fine_eval_metric == const.EVAL_METRIC_ACCURACY:
+        val_epoch_fine_eval_metric = 100 * eval_metric_value_fine / len(valid_loader.sampler)
+    else:
+        val_epoch_fine_eval_metric = eval_metric_value_fine / len(valid_loader.sampler)
     
     # h_coarse.remove()
     # h_fine.remove()
@@ -328,6 +334,7 @@ for epoch in range(config.get('epochs')):
         )
     
     if config.get('wandb_on'):
+        if fine_eval_metric == const.EVAL_METRIC_ACCURACY:
             wandb.log(
                 {
                     "epoch": epoch + 1,
@@ -338,6 +345,21 @@ for epoch in range(config.get('epochs')):
                     "eval/loss/mixed": val_epoch_loss,
                     "eval/accuracy/coarse": val_epoch_coarse_accuracy,
                     "eval/accuracy/fine": val_epoch_fine_eval_metric,
+                    "trainable_paramater": trainable_params
+                }
+            )
+            
+        else:
+            wandb.log(
+                {
+                    "epoch": epoch + 1,
+                    "dataset": config.get('dataset'),
+                    "train/loss/mixed": epoch_loss,
+                    "train/accuracy/coarse": epoch_coarse_accuracy,
+                    "train/mse/fine": epoch_fine_eval_metric,
+                    "eval/loss/mixed": val_epoch_loss,
+                    "eval/accuracy/coarse": val_epoch_coarse_accuracy,
+                    "eval/mse/fine": val_epoch_fine_eval_metric,
                     "trainable_paramater": trainable_params
                 }
             )
