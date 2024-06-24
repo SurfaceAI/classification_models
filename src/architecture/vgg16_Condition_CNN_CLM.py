@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 from src.utils.helper import NonNegUnitNorm
+from multi_label.CLM import CLM
 
 class Condition_CNN(nn.Module):
     def __init__(self, num_c, num_classes):
@@ -100,22 +101,16 @@ class Condition_CNN(nn.Module):
         
 #--------------------------fine--------------------------------------       
         
-        ### Fine Block
-        self.fc = nn.Sequential(
-            nn.Linear(512 * 8 * 8, 1024),
-            nn.ReLU(),
-            nn.BatchNorm1d(1024),
-            nn.Dropout(0.5),
-            )
-        self.fc1 = nn.Sequential(
-            nn.Linear(1024, 1024),
-            nn.ReLU(),
-            nn.BatchNorm1d(1024),
-            nn.Dropout(0.5),
-            )
-        self.fc2 = (
-            nn.Linear(1024, num_classes)
-        )     
+        self.CLM_4 = CLM(num_classes = 4, link_function='logit', min_distance=0.0, use_slope=False, fixed_thresholds=False)
+        self.CLM_3 = CLM(num_classes = 3, link_function='logit', min_distance=0.0, use_slope=False, fixed_thresholds=False)
+
+        
+        self.quality_fc_asphalt = self._create_quality_fc()
+        self.quality_fc_concrete = self._create_quality_fc()
+        self.quality_fc_sett = self._create_quality_fc()
+        self.quality_fc_paving_stones = self._create_quality_fc()
+        self.quality_fc_unpaved = self._create_quality_fc()
+  
         
         
 #-------------------condition fine pred on coarse labels -------------------       
