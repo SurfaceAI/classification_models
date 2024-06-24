@@ -20,9 +20,10 @@ import os
 
 from src.architecture.vgg16_Condition_CNN import Condition_CNN
 from src.architecture.vgg16_Condition_CNN_pretrained import Condition_CNN_PRE
+from src.architecture.vgg16_Condition_CNN_CLM import Condition_CNN_CLM
 
 
-config = train_config.C_CNN_PRE
+config = train_config.C_CNN_CLM
 torch.manual_seed(config.get("seed"))
 np.random.seed(config.get("seed"))
 
@@ -117,12 +118,29 @@ for j in range(y_valid.shape[0]):
     y_c_valid[j][parent[torch.argmax(y_valid[j])]] = 1.0
 
 
-
+if config.get('is_regression'):
+    num_classes = 1
+    
+    if config.get('ordinal_method') == "clm":
+        num_classes = 4
+    
+else:
+    num_classes = len(train_data.classes)
 
 
 # Initialize the model, loss function, and optimizer
-model = Condition_CNN_PRE(num_c=5, num_classes=18)
-criterion = nn.CrossEntropyLoss()
+model = Condition_CNN_CLM(num_c=num_c, num_classes=num_classes)
+coarse_criterion = nn.CrossEntropyLoss()
+
+if num_classes == 1:
+    if config.get('ordinal_method') == "clm":
+        fine_criterion = nn.CrossEntropyLoss(reduction='sum')
+    else:
+        fine_criterion = nn.MSELoss(reduction='sum')
+else:
+    fine_criterion = nn.CrossEntropyLoss(reduction='sum')
+
+
 optimizer = optim.SGD(model.parameters(), lr=config.get('learning_rate'), momentum=0.9)
 
 trainable_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
@@ -165,12 +183,15 @@ for epoch in range(config.get('epochs')):
         #coarse_one_hot = coarse_one_hot.type(torch.LongTensor)
         #, dtype=torch.float32
         
+        if config.get('is_regression'):
+            fine_labels_mapped = torch.tensor([map_quality_to_continuous(label) for label in fine_labels], dtype=torch.long).to(device)
+        
         #we give the coarse true labels for the conditional prob weights matrix as input to the model
         model_inputs = (inputs, coarse_one_hot)
         
         coarse_outputs, fine_outputs = model.forward(model_inputs)
-        coarse_loss = criterion(coarse_outputs, coarse_labels)
-        fine_loss = criterion(fine_outputs, fine_labels)
+        coarse_loss = coarse_criterion(coarse_outputs, coarse_labels)
+        fine_loss = fine_criterion(fine_outputs, fine_labels)
         loss = coarse_loss + fine_loss  #weighted loss functions for different levels
         
         loss.backward()
@@ -198,8 +219,8 @@ for epoch in range(config.get('epochs')):
         coarse_predictions = torch.argmax(coarse_probs, dim=1)
         coarse_correct += (coarse_predictions == coarse_labels).sum().item()
         
-        fine_probs = model.get_class_probabilies(fine_outputs)
-        fine_predictions = torch.argmax(fine_probs, dim=1)
+        #fine_probs = model.get_class_probabilies(fine_outputs)
+        fine_predictions = torch.argmax(fine_outputs, dim=1)
         fine_correct += (fine_predictions == fine_labels).sum().item()
         
         # if batch_index == 0:
@@ -246,8 +267,8 @@ for epoch in range(config.get('epochs')):
             #     coarse_labels = coarse_labels.float()
             
             
-            coarse_loss = criterion(coarse_outputs, coarse_labels)
-            fine_loss = criterion(fine_outputs, fine_labels)
+            coarse_loss = coarse_criterion(coarse_outputs, coarse_labels)
+            fine_loss = fine_criterion(fine_outputs, fine_labels)
             
             loss = (coarse_loss + fine_loss) / 2
             val_running_loss += loss.item() 
@@ -256,11 +277,11 @@ for epoch in range(config.get('epochs')):
             coarse_predictions = torch.argmax(coarse_probs, dim=1)
             val_coarse_correct += (coarse_predictions == coarse_labels).sum().item()
         
-            fine_probs = model.get_class_probabilies(fine_outputs)
-            fine_predictions = torch.argmax(fine_probs, dim=1)
+            #fine_probs = model.get_class_probabilies(fine_outputs)
+            fine_predictions = torch.argmax(fine_outputs, dim=1)
             val_fine_correct += (fine_predictions == fine_labels).sum().item()
             
-            # if batch_index == 1:
+            # if batch_index == 0:
             #     break
     
     # val_epoch_loss = val_running_loss /  (len(inputs) * (batch_index + 1))
