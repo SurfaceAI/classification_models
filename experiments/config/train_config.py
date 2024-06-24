@@ -317,7 +317,7 @@ B_CNN_CLM = {
     "coarse_eval_metric": const.EVAL_METRIC_ACCURACY,
     "fine_eval_metric": const.EVAL_METRIC_ACCURACY,
     "project": const.PROJECT_MULTI_LABEL_FIXED,
-    "name": "B_CNN_Regression",
+    "name": "B_CNN_CLM",
     "level": const.MULTILABEL,
     "model": const.BCNNREGRESSION,
     "hierarchy_method": const.WEIGHTEDSUM
