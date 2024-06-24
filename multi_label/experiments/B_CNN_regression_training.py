@@ -10,6 +10,8 @@ from src import constants as const
 from src.architecture.vgg16_B_CNN_pretrained import VGG16_B_CNN_PRE
 from src.architecture.vgg16_B_CNN import B_CNN
 from src.architecture.vgg16_B_CNN_Regression import B_CNN_Regression
+from src.architecture.vgg16_B_CNN_CLM import B_CNN_CLM
+
 
 from datetime import datetime
 import time
@@ -29,7 +31,7 @@ import os
 
 
 
-config = train_config.B_CNN_regression
+config = train_config.B_CNN_CLM
 
     
 torch.manual_seed(config.get("seed"))
@@ -126,18 +128,24 @@ beta = torch.tensor(0.02)
 if config.get('is_regression'):
     num_classes = 1
     
+    if config.get('ordinal_method') == "clm":
+        num_classes = 4
+    
 else:
     num_classes = len(train_data.classes)
 
     
 # Initialize the model, loss function, and optimizer
-model = B_CNN_Regression(num_c=num_c, num_classes=num_classes).to(device)
+model = B_CNN_CLM(num_c=num_c, num_classes=num_classes).to(device)
 
 #model = VGG16_B_CNN(num_c=5, num_classes=18)
 coarse_criterion = nn.CrossEntropyLoss(reduction='sum')
 
 if num_classes == 1:
-    fine_criterion = nn.MSELoss(reduction='sum')
+    if config.get('ordinal_method') == "clm":
+        fine_criterion = nn.CrossEntropyLoss(reduction='sum')
+    else:
+        fine_criterion = nn.MSELoss(reduction='sum')
 else:
     fine_criterion = nn.CrossEntropyLoss(reduction='sum')
     
@@ -193,12 +201,28 @@ for epoch in range(config.get('epochs')):
         
         #this converts out 
         if config.get('is_regression'):
-            fine_labels = torch.tensor([map_quality_to_continuous(label) for label in fine_labels], dtype=torch.float32).to(device)
+            fine_labels_mapped = torch.tensor([map_quality_to_continuous(label) for label in fine_labels], dtype=torch.long).to(device)
      
         coarse_outputs, fine_outputs = model.forward(model_inputs)
         coarse_loss = coarse_criterion(coarse_outputs, coarse_labels)
+        
+        # if isinstance(fine_criterion, nn.MSELoss):
+        #         fine_outputs = fine_outputs.flatten()
+        #         fine_labels = fine_labels.float
+        
         fine_outputs = fine_outputs.squeeze(1)
         fine_loss = fine_criterion(fine_outputs, fine_labels)
+        
+        #fine_output_asphalt, fine_output_concrete, fine_output_sett, fine_output_paving_stones, fine_output_unpaved = fine_outputs
+        
+        # fine_loss_asphalt = fine_criterion(fine_output_asphalt.squeeze(1), true_fine_asphalt)
+        # fine_loss_concrete = fine_criterion(fine_output_concrete.squeeze(1), true_fine_concrete)
+        # fine_loss_sett = fine_criterion(fine_output_sett.squeeze(1), true_fine_sett)
+        # fine_loss_paving_stones = fine_criterion(fine_output_paving_stones.squeeze(1), true_fine_paving_stones)
+        # fine_loss_unpaved = fine_criterion(fine_output_unpaved.squeeze(1), true_fine_unpaved)
+
+        #total_fine_loss = fine_loss_asphalt + fine_loss_concrete + fine_loss_sett + fine_loss_paving_stones + fine_loss_unpaved
+        
         loss = alpha * coarse_loss + beta * fine_loss  #weighted loss functions for different levels
         
         loss.backward()
@@ -212,11 +236,16 @@ for epoch in range(config.get('epochs')):
         if fine_eval_metric == const.EVAL_METRIC_ACCURACY:
             if isinstance(fine_criterion, nn.MSELoss): # compare with is_regression for generalization?
                 predictions = fine_outputs.round()
+                eval_metric_value_fine += (predictions == fine_labels).sum().item()
                 #eval_metric_value_fine += ((fine_outputs - fine_labels).abs() < 0.5).sum().item()  #we can adjust tolerance
             else:
-                probs = model.get_class_probabilies(fine_outputs)
-                predictions = torch.argmax(probs, dim=1)
-            eval_metric_value_fine += (predictions == fine_labels).sum().item()
+                if config.get('ordinal_method') == "clm":
+                    predictions = torch.argmax(fine_outputs, dim=1)
+                    eval_metric_value_fine += (predictions == fine_labels).sum().item()
+                else:
+                    probs = model.get_class_probabilies(fine_outputs)
+                    predictions = torch.argmax(probs, dim=1)
+                    eval_metric_value_fine += (predictions == fine_labels_mapped).sum().item()
 
         elif fine_eval_metric == const.EVAL_METRIC_MSE:
             if not isinstance(fine_criterion, nn.MSELoss): # compare with is_regression for generalization?
@@ -272,27 +301,32 @@ for epoch in range(config.get('epochs')):
             model_inputs = (inputs, coarse_one_hot, config.get('hierarchy_method'))           
             coarse_outputs, fine_outputs = model.forward(model_inputs)
             
-            if isinstance(fine_criterion, nn.MSELoss):
-                #coarse_outputs = coarse_outputs.flatten()
-                fine_outputs = fine_outputs.flatten()
-                
-                fine_labels = fine_labels.float()
-                #coarse_labels = coarse_labels.float()
-            
-            
-            coarse_loss = coarse_criterion(coarse_outputs, coarse_labels)
+            coarse_loss = coarse_criterion(coarse_outputs, coarse_labels)     
+                   
+            # if isinstance(fine_criterion, nn.MSELoss):
+            #     fine_outputs = fine_outputs.flatten()
+            #     fine_labels = fine_labels.float()
+            fine_outputs = fine_outputs.squeeze(1)
             fine_loss = fine_criterion(fine_outputs, fine_labels)
             
             loss = alpha * coarse_loss + beta * fine_loss
             val_running_loss += loss.item() 
             
+            
+            
             if fine_eval_metric == const.EVAL_METRIC_ACCURACY:
                 if isinstance(fine_criterion, nn.MSELoss): # compare with is_regression for generalization?
                     predictions = fine_outputs.round()
+                    eval_metric_value_fine += (predictions == fine_labels).sum().item()
                 else:
-                    probs = model.get_class_probabilies(fine_outputs)
-                    predictions = torch.argmax(probs, dim=1)
-                eval_metric_value_fine += (predictions == fine_labels).sum().item()
+                    if config.get('ordinal_method') == "clm":
+                        predictions = torch.argmax(fine_outputs, dim=1)
+                        eval_metric_value_fine += (predictions == fine_labels).sum().item()
+                    else:
+                        probs = model.get_class_probabilies(fine_outputs)
+                        predictions = torch.argmax(probs, dim=1)
+                        eval_metric_value_fine += (predictions == fine_labels_mapped).sum().item()
+
 
             elif fine_eval_metric == const.EVAL_METRIC_MSE:
                 if not isinstance(fine_criterion, nn.MSELoss): # compare with is_regression for generalization?
@@ -311,8 +345,8 @@ for epoch in range(config.get('epochs')):
             # h_coarse_list.append(feature_maps['coarse_flat'])
             # h_fine_list.append(feature_maps['fine_flat'])
             
-            if batch_index == 0:
-                break
+            # if batch_index == 0:
+            #     break
     
     # val_epoch_loss = val_running_loss /  (len(inputs) * (batch_index + 1))
     # val_epoch_coarse_accuracy = 100 * val_coarse_correct / (len(inputs) * (batch_index + 1))
