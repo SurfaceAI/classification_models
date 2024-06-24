@@ -38,6 +38,7 @@ FLATTEN = "flatten"
 
 TYPE = "type"
 QUALITY = "quality"
+# SCENERY = "scenery"
 
 # dataset
 V0 = "V0"
@@ -56,7 +57,7 @@ PROJECT_SMOOTHNESS_FIXED = "road-surface-classification-quality"
 PROJECT_SMOOTHNESS_SWEEP = "sweep-road-surface-classification-quality"
 PROJECT_FLATTEN_FIXED = "road-surface-classification-flatten"
 PROJECT_FLATTEN_SWEEP = "sweep-road-surface-classification-flatten"
-
+PROJECT_SCENERY_FIXED = "road-scenery-classification"
 
 # model names
 EFFICIENTNET = "efficientNetV2SLogsoftmax"
@@ -89,6 +90,8 @@ H256_W256 = (256, 256)
 # crop
 CROP_LOWER_MIDDLE_THIRD = "lower_middle_third"
 CROP_LOWER_MIDDLE_HALF = "lower_middle_half"
+CROP_LOWER_MIDDLE_HALF_PANO = "lower_middle_half_pano"
+CROP_LOWER_HALF = "lower_half"
 
 # normalization
 NORM_IMAGENET = "imagenet"
@@ -114,3 +117,6 @@ V9_ANNOTATED_SD = [0.2301570326089859, 0.23571978509426117, 0.26122480630874634]
 
 V11_ANNOTATED_MEAN = [0.423864483833313, 0.44273582100868225, 0.4323558807373047]
 V11_ANNOTATED_SD = [0.23039115965366364, 0.23605570197105408, 0.26162344217300415]
+
+V1_0_ANNOTATED_MEAN = [0.42834484577178955, 0.4461250305175781, 0.4350937306880951]
+V1_0_ANNOTATED_SD = [0.22991590201854706, 0.23555299639701843, 0.26348039507865906]

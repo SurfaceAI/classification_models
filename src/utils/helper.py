@@ -124,7 +124,7 @@ def imshow(image, ax=None, title=None, normalize=True):
 
     return ax
 
-def multi_imshow(images, labels):
+def multi_imshow(images, labels, save_file=None):
 
     fig, axes = plt.subplots(figsize=(20,4), ncols=8)
 
@@ -133,3 +133,5 @@ def multi_imshow(images, labels):
         label = labels[ii]
         ax.set_title(f'Label: {label}')
         imshow(images[ii], ax=ax, normalize=True)
+    if save_file is not None:
+        fig.savefig(save_file)
