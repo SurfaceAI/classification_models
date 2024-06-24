@@ -186,6 +186,7 @@ class FlattenFolders(datasets.ImageFolder):
         class_to_idx=None,
         extensions=None,
         is_valid_file=None,
+        allow_empty=False,
     ):
         if class_to_idx is None:
             # prevent potential bug since make_dataset() would use the class_to_idx logic of the
@@ -363,8 +364,8 @@ def create_test_dataset(data_root, dataset, general_transform, random_state):
 
 
 def load_normalization(normalization, data_root, dataset):
-    if isinstance(normalization, tuple):
-        tuple_mean_sd = normalization
+    if isinstance(normalization, (tuple, list)):
+        tuple_mean_sd = tuple(normalization)
     elif normalization == "imagenet":
         tuple_mean_sd = (const.IMAGNET_MEAN, const.IMAGNET_SD)
     elif normalization == "from_data":
@@ -469,6 +470,16 @@ def custom_crop(img, crop_style=None):
         top = im_height / 2
         left = im_width / 4
         height = im_height / 2
+        width = im_width / 2
+    elif crop_style == "lower_half":
+        top = im_height / 2
+        left = 0
+        height = im_height / 2
+        width = im_width
+    elif crop_style == "lower_middle_half_pano":
+        top = im_height / 2
+        left = im_width / 4
+        height = im_height * 0.35
         width = im_width / 2
     else:  # None, or not valid
         return img

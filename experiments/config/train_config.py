@@ -255,46 +255,142 @@ effnet_surface_params = {
 effnet_surface_sweep_params = {
     **global_config.global_config,
     **default_params,
-    # 'gpu_kernel': 0,
+    'gpu_kernel': 1,
     "epochs": 20,
     "eval_metric": const.EVAL_METRIC_ACCURACY,
     'model': const.EFFNET_LINEAR,
-    "dataset": "V9/annotated",
+    "dataset": "V1_0/annotated",
     "method": "bayes",
     "metric": {"name": f"eval/{const.EVAL_METRIC_ACCURACY}", "goal": "maximize"},
     "search_params":
         {"batch_size": {"values": [16]},
-        "learning_rate": {"distribution": "log_uniform_values", "min": 1e-05, "max": 0.001},},
+        "learning_rate": {"distribution": "log_uniform_values", "min": 1e-04, "max": 0.001},},
     "project": const.PROJECT_SURFACE_SWEEP,
-    "name": "optim_lf_effnet",
+    "name": "effnet",
     "level": const.SURFACE,
-    "sweep_counts": 5,
+    "sweep_counts": 2,
     "transform":
         {"resize": (384, 384),
         "crop": const.CROP_LOWER_MIDDLE_HALF,    
-        "normalize": const.NORM_DATA,},  
+        "normalize": const.NORM_DATA,},    
+    "save_state": True,
  }
 
 effnet_quality_sweep_params = {
     **global_config.global_config,
     **default_params,
-    # 'gpu_kernel': 0,
+    'gpu_kernel': 1,
     "epochs": 20,
     "eval_metric": const.EVAL_METRIC_MSE,
     'model': const.EFFNET_LINEAR,
-    "dataset": "V9/annotated",
+    "dataset": "V1_0/annotated",
     "method": "bayes",
     "is_regression": True,
     "metric": {"name": f"eval/{const.EVAL_METRIC_MSE}", "goal": "minimize"},
     "search_params":
         {"batch_size": {"values": [16]},
-        "learning_rate": {"distribution": "log_uniform_values", "min": 1e-05, "max": 0.001},},
+        # "learning_rate": {"distribution": "log_uniform_values", "min": 1e-04, "max": 0.001},},
+        "learning_rate": {"values": [0.0006]},},
     "project": const.PROJECT_SMOOTHNESS_SWEEP,
-    "name": "optim_lf_effnet_reg",
+    "name": "effnet_reg",
     "level": const.SMOOTHNESS,
-    "sweep_counts": 5,
+    "sweep_counts": 1,
     "transform": 
         {"resize": (384, 384),
         "crop": const.CROP_LOWER_MIDDLE_HALF,
         "normalize": const.NORM_DATA,},  
+    "save_state": True,
 }
+
+road_scenery_params = {
+    **global_config.global_config,
+    **default_params,
+    'gpu_kernel': 1,
+    "epochs": 20,
+    "batch_size": 16,  # 48
+    "learning_rate": 0.0003,
+    'model': const.EFFNET_LINEAR,
+    "dataset": "road_scenery",
+    "project": const.PROJECT_SCENERY_FIXED,
+    "name": "effnet_scenery",
+    "level": const.FLATTEN,
+    "transform":
+        {"resize": (384, 384),
+        "crop": const.CROP_LOWER_HALF,    
+        "normalize": (const.V1_0_ANNOTATED_MEAN, const.V1_0_ANNOTATED_SD),},   
+    "selected_classes": {
+        '1_1_road': [
+            '1_1_parking_area',
+            '1_1_rails_on_road',
+            '1_1_road_general',
+        ],
+        '1_2_cycleway': [
+            '1_2_hochbord',
+            '1_2_lane',
+        ],
+        '1_3_pedestrian': [
+            '1_3_pedestrian_area',
+            '1_3_railway_platform',
+            '1_3_sidewalk',
+        ],
+        '1_4_path': [
+            '1_4_path_unspecified',
+            '1_4_trampling_trail',
+        ],
+        '2_1_no_focus': [
+            '2_1_other',
+            '2_1_vertical',
+        ],
+        '2_2_no_street': [
+            '2_2_all'
+        ],
+    },
+    "save_state": True,
+ }
+
+road_scenery_focus_params = {
+    **global_config.global_config,
+    **default_params,
+    'gpu_kernel': 1,
+    "epochs": 20,
+    "batch_size": 16,  # 48
+    "learning_rate": 0.0003,
+    'model': const.EFFNET_LINEAR,
+    "dataset": "road_scenery",
+    "project": const.PROJECT_SCENERY_FIXED,
+    "name": "effnet_scenery_focus",
+    "level": const.FLATTEN,
+    "transform":
+        {"resize": (384, 384),
+        "crop": const.CROP_LOWER_HALF,    
+        "normalize": (const.V1_0_ANNOTATED_MEAN, const.V1_0_ANNOTATED_SD),},   
+    "selected_classes": {
+        '1_1_road': [
+            '1_1_parking_area',
+            '1_1_rails_on_road',
+            '1_1_road_general',
+        ],
+        '1_2_cycleway': [
+            '1_2_hochbord',
+            '1_2_lane',
+        ],
+        '1_3_pedestrian': [
+            '1_3_pedestrian_area',
+            '1_3_railway_platform',
+            '1_3_sidewalk',
+        ],
+        '1_4_path': [
+            '1_4_path_unspecified',
+            '1_4_trampling_trail',
+        ],
+        # '2_1_no_focus': [
+        #     '2_1_other',
+        #     '2_1_vertical',
+        # ],
+        # '2_2_no_street': [
+        #     '2_2_all'
+        # ],
+    },
+    "save_state": True,
+ }
+
