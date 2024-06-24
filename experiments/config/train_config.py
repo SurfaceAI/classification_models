@@ -2,8 +2,8 @@ from src import constants as const
 from experiments.config  import global_config
 
 default_params = {
-    "batch_size": 48, #16,  # 48
-    "epochs": 20,
+    "batch_size": 128, #16,  # 48
+    "epochs": 40,
     "learning_rate": 0.001,
     "optimizer": const.OPTI_ADAM,
     "is_regression": True,
@@ -322,3 +322,22 @@ B_CNN_CLM = {
     "model": const.BCNNREGRESSION,
     "hierarchy_method": const.WEIGHTEDSUM
 }
+
+C_CNN_CLM = {
+    **global_config.global_config,
+    **default_params,
+    "batch_size": 128,
+    "epochs": 40,
+    "learning_rate": 0.001,
+    "optimizer": const.OPTI_ADAM,
+    "is_regression": True,
+    "ordinal_method": const.CLM,
+    "coarse_eval_metric": const.EVAL_METRIC_ACCURACY,
+    "fine_eval_metric": const.EVAL_METRIC_ACCURACY,
+    "project": const.PROJECT_MULTI_LABEL_FIXED,
+    "name": "C_CNN_CLM",
+    "level": const.MULTILABEL,
+    "model": const.CCNNREGRESSION,
+    "hierarchy_method": const.WEIGHTEDSUM
+}
+
