@@ -164,6 +164,7 @@ class FlattenFolders(datasets.ImageFolder):
     def __init__(
         self,
         root,
+        is_regression,
         transform=None,
         target_transform=None,
         loader=datasets.folder.default_loader,
@@ -171,7 +172,8 @@ class FlattenFolders(datasets.ImageFolder):
         selected_classes=None,
     ):
         self.selected_classes = selected_classes
-
+        self.is_regression = is_regression
+        
         super(FlattenFolders, self).__init__(
             root,
             transform=transform,
@@ -181,7 +183,7 @@ class FlattenFolders(datasets.ImageFolder):
         )
 
     def find_classes(self, directory):
-        # find type classes
+        
         return find_flatten_classes(directory, self.selected_classes)
 
     @staticmethod
@@ -197,8 +199,6 @@ class FlattenFolders(datasets.ImageFolder):
             # is potentially overridden and thus could have a different logic.
             raise ValueError("The class_to_idx parameter cannot be None.")
         return make_flatten_dataset(directory, class_to_idx, extensions=extensions, is_valid_file=is_valid_file)
-
-
 
 # VisionDataset instead of Dataset only used due to __repr__
 class PredictImageFolder(datasets.VisionDataset):
@@ -311,7 +311,9 @@ def create_train_validation_datasets(
 
     # flatten if level is flatten
     if level == const.FLATTEN or level == const.MULTILABEL:
-        complete_dataset = FlattenFolders(data_path, selected_classes=selected_classes)
+        complete_dataset = FlattenFolders(data_path,
+                                          is_regression,
+                                          selected_classes=selected_classes)
     # surface or smoothness for surface type if level is not flatten
     else:
         if type_class is not None:

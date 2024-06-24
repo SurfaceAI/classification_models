@@ -172,8 +172,8 @@ class LossWeightsModifier():
 #this helps us adopt a regression on the second level for multi-label models  
 def map_quality_to_continuous(quality_label):
     quality_mapping = {
-        0: 1.0, 1: 2.0, 2: 3.0, 3: 4.0, 4: 1.0, 5: 2.0,
-        6: 3.0, 7: 4.0, 8: 1.0, 9: 2.0, 10: 3.0, 11: 4.0,
-        12: 2.0, 13: 3.0, 14: 4.0, 15: 3.0, 16: 4.0, 17: 5.0
+        0: 0.0, 1: 1.0, 2: 2.0, 3: 3.0, 4: 0.0, 5: 1.0,
+        6: 2.0, 7: 3.0, 8: 0.0, 9: 1.0, 10: 2.0, 11: 3.0,
+        12: 1.0, 13: 2.0, 14: 3.0, 15: 2.0, 16: 3.0, 17: 4.0
     }
     return quality_mapping[quality_label.item()]
