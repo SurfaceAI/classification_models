@@ -304,3 +304,21 @@ B_CNN_regression = {
     "model": const.BCNNREGRESSION,
     "hierarchy_method": const.WEIGHTEDSUM
 }
+
+B_CNN_CLM = {
+    **global_config.global_config,
+    **default_params,
+    "batch_size": 48,
+    "epochs": 20,
+    "learning_rate": 0.001,
+    "optimizer": const.OPTI_ADAM,
+    "is_regression": True,
+    "ordinal_method": const.CLM,
+    "coarse_eval_metric": const.EVAL_METRIC_ACCURACY,
+    "fine_eval_metric": const.EVAL_METRIC_ACCURACY,
+    "project": const.PROJECT_MULTI_LABEL_FIXED,
+    "name": "B_CNN_Regression",
+    "level": const.MULTILABEL,
+    "model": const.BCNNREGRESSION,
+    "hierarchy_method": const.WEIGHTEDSUM
+}
