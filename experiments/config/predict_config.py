@@ -40,6 +40,65 @@ CC = {
     "batch_size": 16,
 }
 
+CC_V1_0 = {
+    **global_config.global_config,
+    "name": "effnet_surface_quality_prediction",
+    "model_dict": {
+        "trained_model": "surface-efficientNetV2SLinear-20240610_185408-j3ob3p5o_epoch6.pt",
+        # with blur augmentation
+        # "trained_model": "surface-efficientNetV2SLinear-20240614_120022-k5dko7ax_epoch10.pt",
+        # with higher blur augmentation
+        # "trained_model": "surface-efficientNetV2SLinear-20240617_105759-nh5vboqz_epoch16.pt",
+        "level": const.TYPE,
+        "submodels": {
+            const.ASPHALT: {
+                "trained_model": "smoothness-asphalt-efficientNetV2SLinear-20240610_235740-h8r4ubgv_epoch17.pt",
+                # with blur augmentation
+                # "trained_model": "smoothness-asphalt-efficientNetV2SLinear-20240617_140426-orcs8ch9_epoch16.pt",
+                "level": const.QUALITY,
+            },
+            const.CONCRETE: {
+                "trained_model": "smoothness-concrete-efficientNetV2SLinear-20240611_003637-o35q8be6_epoch12.pt",
+                # with blur augmentation
+                # "trained_model": "smoothness-concrete-efficientNetV2SLinear-20240617_143238-mbbiz38y_epoch18.pt",
+                "level": const.QUALITY,
+            },
+            const.PAVING_STONES: {
+                "trained_model": "smoothness-paving_stones-efficientNetV2SLinear-20240611_011325-t3y17ezx_epoch17.pt",
+                # with blur augmentation
+                # "trained_model": "smoothness-paving_stones-efficientNetV2SLinear-20240617_144050-2t761f6f_epoch17.pt",
+                "level": const.QUALITY,
+            },
+            const.SETT: {
+                "trained_model": "smoothness-sett-efficientNetV2SLinear-20240611_021327-s77xoig3_epoch15.pt",
+                # with blur augmentation
+                # "trained_model": "smoothness-sett-efficientNetV2SLinear-20240617_145801-wjlhdxyh_epoch7.pt",
+                "level": const.QUALITY,
+            },
+            const.UNPAVED: {
+                "trained_model": "smoothness-unpaved-efficientNetV2SLinear-20240611_032059-19660tlf_epoch17.pt",
+                # with blur augmentation
+                # "trained_model": "smoothness-unpaved-efficientNetV2SLinear-20240617_150619-derdvtjr_epoch8.pt",
+                "level": const.QUALITY,
+            },
+        },
+    },
+    "root_data": str(global_config.ROOT_DIR / "data"),
+    # "dataset": "weseraue/imgs_2048",
+    # "dataset": "weseraue/original",
+    # "dataset": "weseraue/paving_stones",
+    # "dataset": "V1_0/s_1024",
+    "dataset": "lndw",
+    "transform": {
+        "resize": (384, 384),
+        # "crop": const.CROP_LOWER_MIDDLE_HALF_PANO,
+        "crop": const.CROP_LOWER_MIDDLE_HALF,
+        "normalize": (const.V1_0_ANNOTATED_MEAN, const.V1_0_ANNOTATED_SD),
+    },
+    "gpu_kernel": 1,
+    "batch_size": 16,
+}
+
 all_train_CC = {
     **global_config.global_config,
     "name": "all_train_effnet_surface_quality_prediction",
@@ -158,13 +217,36 @@ cam_surface = {
     **global_config.global_config,
     "name": "cam_surface_prediction",
     # "model_dict": {"trained_model": "surface-efficientNetV2SLinear-20240312_090721-iia9tei2_epoch14.pt"},
-    "model_dict": {"trained_model": "surface-efficientNetV2SLinear-20240314_164055-mi0872lh_epoch6.pt"},
+    # "model_dict": {"trained_model": "surface-efficientNetV2SLinear-20240314_164055-mi0872lh_epoch6.pt"},
+    "model_dict": {"trained_model": "surface-efficientNetV2SLinear-20240610_185408-j3ob3p5o_epoch6.pt"},
     # "dataset": "V9/annotated",
-    "dataset": "V9/metadata/model_predictions/misclassified_images/surface",
+    # "dataset": "V9/metadata/model_predictions/misclassified_images/surface",
+    "root_data": str(global_config.ROOT_DIR / "data"),
+    "dataset": "lndw",
     "transform": {
         "resize": (384, 384),
         "crop": const.CROP_LOWER_MIDDLE_HALF,
-        "normalize": (const.V9_ANNOTATED_MEAN, const.V9_ANNOTATED_SD),
+        "normalize": (const.V1_0_ANNOTATED_MEAN, const.V1_0_ANNOTATED_SD),
     },
-    "batch_size": 8,
+    "gpu_kernel": 1,
+    "batch_size": 16,
+}
+
+effnet_scenery = {
+    **global_config.global_config,
+    "name": "effnet_scenery_prediction",
+    "model_dict": {
+        # "trained_model": "flatten-efficientNetV2SLinear-20240613_095915-81nd24pa_epoch12.pt",
+        "trained_model": "flatten-efficientNetV2SLinear-20240613_103053-033v1uet_epoch17.pt",
+        "level": "scenery", 
+    },
+    "dataset": "road_scenery",
+    "transform": {
+        "resize": (384, 384),
+        "crop": const.CROP_LOWER_HALF,
+        "normalize": (const.V1_0_ANNOTATED_MEAN, const.V1_0_ANNOTATED_SD),
+    },
+    "batch_size": 16,
+    "gpu_kernel": 1,
+    "save_state": True,
 }
