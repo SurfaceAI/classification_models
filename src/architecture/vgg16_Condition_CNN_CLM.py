@@ -3,9 +3,9 @@ import torch.nn as nn
 from src.utils.helper import NonNegUnitNorm
 from multi_label.CLM import CLM
 
-class Condition_CNN(nn.Module):
+class Condition_CNN_CLM(nn.Module):
     def __init__(self, num_c, num_classes):
-        super(Condition_CNN, self).__init__()
+        super(Condition_CNN_CLM, self).__init__()
         
         self.num_c = num_c
         self.num_classes = num_classes
@@ -105,17 +105,17 @@ class Condition_CNN(nn.Module):
         self.CLM_3 = CLM(num_classes = 3, link_function='logit', min_distance=0.0, use_slope=False, fixed_thresholds=False)
 
         
-        self.quality_fc_asphalt = self._create_quality_fc()
-        self.quality_fc_concrete = self._create_quality_fc()
-        self.quality_fc_sett = self._create_quality_fc()
-        self.quality_fc_paving_stones = self._create_quality_fc()
-        self.quality_fc_unpaved = self._create_quality_fc()
-  
+        self.quality_fc_asphalt = self.create_quality_fc()
+        self.quality_fc_concrete = self.create_quality_fc()
+        self.quality_fc_sett = self.create_quality_fc()
+        self.quality_fc_paving_stones = self.create_quality_fc()
+        self.quality_fc_unpaved = self.create_quality_fc()
         
+
         
 #-------------------condition fine pred on coarse labels -------------------       
         
-        self.coarse_condition = nn.Linear(num_c, num_classes, bias=False)
+        self.coarse_condition = nn.Linear(num_c, 18, bias=False)
         self.coarse_condition.weight.data.fill_(0)  # Initialize weights to zero
         self.constraint = NonNegUnitNorm(axis=0)  # Define the constraint
         #self.coarse_condition.weight.requires_grad = True  Gradient=False -> no gradients for this layer
@@ -125,7 +125,18 @@ class Condition_CNN(nn.Module):
         #     nn.ReLU()
         # )
         
-    
+    def create_quality_fc(self):
+        return nn.Sequential(
+            nn.Linear(512 * 16 * 16, 1024),
+            nn.ReLU(),
+            nn.Dropout(0.5),
+            nn.Linear(1024, 1024),
+            nn.ReLU(),
+            nn.Dropout(0.5),
+            nn.Linear(1024, 1)
+        )
+  
+        
     @ staticmethod
     def get_class_probabilies(x):
          return nn.functional.softmax(x, dim=1)
@@ -163,20 +174,36 @@ class Condition_CNN(nn.Module):
         coarse_output = self.c_fc2(coarse_output)
         
         #---fine
+        fine_raw_asphalt = self.quality_fc_asphalt(flat) #([batch_size, 1024])
+        clm_fine_output_asphalt = self.CLM_4(fine_raw_asphalt)
         
-        fine_raw = self.fc(flat) #([batch_size, 1024])
-        fine_raw = self.fc1(fine_raw) #([batch_size, 1024])
-        fine_raw = self.fc2(fine_raw) #[batch_size, 18])
+        fine_raw_concrete = self.quality_fc_concrete(flat)
+        clm_fine_output_concrete = self.CLM_4(fine_raw_concrete)
+        
+        fine_raw_sett = self.quality_fc_sett(flat)
+        clm_fine_output_sett = self.CLM_4(fine_raw_sett)
+        
+        fine_raw_paving_stones = self.quality_fc_paving_stones(flat)
+        clm_fine_output_paving_stones = self.CLM_3(fine_raw_paving_stones)
+        
+        fine_raw_unpaved = self.quality_fc_unpaved(flat)
+        clm_fine_output_unpaved = self.CLM_3(fine_raw_unpaved)
+
         
         if self.training:
             coarse_condition = self.coarse_condition(true_coarse) 
         else:
             coarse_condition = self.coarse_condition(coarse_output) 
             
-        
+        fine_clm_combined = torch.cat([clm_fine_output_asphalt, 
+                                       clm_fine_output_concrete, 
+                                       clm_fine_output_sett, 
+                                       clm_fine_output_paving_stones, 
+                                       clm_fine_output_unpaved], 
+                                      dim=1)
         #features = torch.add(coarse_condition, fine_raw)#
         #Adding the conditional probabilities to the dense features
-        fine_output = coarse_condition + fine_raw
+        fine_output = coarse_condition + fine_clm_combined
         self.coarse_condition.weight.data = self.constraint(self.coarse_condition.weight.data)
         
         return coarse_output, fine_output
