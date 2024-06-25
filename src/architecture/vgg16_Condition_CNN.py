@@ -102,7 +102,7 @@ class Condition_CNN(nn.Module):
         
         ### Fine Block
         self.fc = nn.Sequential(
-            nn.Linear(512 * 8 * 8, 1024),
+            nn.Linear(512 * 16 * 16, 1024),
             nn.ReLU(),
             nn.BatchNorm1d(1024),
             nn.Dropout(0.5),
