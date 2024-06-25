@@ -130,15 +130,15 @@ else:
 
 # Initialize the model, loss function, and optimizer
 model = Condition_CNN_CLM(num_c=num_c, num_classes=num_classes)
-coarse_criterion = nn.CrossEntropyLoss()
+criterion = nn.CrossEntropyLoss()
 
-if num_classes == 1:
-    if config.get('ordinal_method') == "clm":
-        fine_criterion = nn.CrossEntropyLoss(reduction='sum')
-    else:
-        fine_criterion = nn.MSELoss(reduction='sum')
-else:
-    fine_criterion = nn.CrossEntropyLoss(reduction='sum')
+# if num_classes == 1:
+#     if config.get('ordinal_method') == "clm":
+#         fine_criterion = nn.CrossEntropyLoss()
+#     else:
+#         fine_criterion = nn.MSELoss()
+# else:
+#     fine_criterion = nn.CrossEntropyLoss()
 
 
 optimizer = optim.SGD(model.parameters(), lr=config.get('learning_rate'), momentum=0.9)
@@ -190,8 +190,8 @@ for epoch in range(config.get('epochs')):
         model_inputs = (inputs, coarse_one_hot)
         
         coarse_outputs, fine_outputs = model.forward(model_inputs)
-        coarse_loss = coarse_criterion(coarse_outputs, coarse_labels)
-        fine_loss = fine_criterion(fine_outputs, fine_labels)
+        coarse_loss = criterion(coarse_outputs, coarse_labels)
+        fine_loss = criterion(fine_outputs, fine_labels)
         loss = coarse_loss + fine_loss  #weighted loss functions for different levels
         
         loss.backward()
@@ -267,10 +267,10 @@ for epoch in range(config.get('epochs')):
             #     coarse_labels = coarse_labels.float()
             
             
-            coarse_loss = coarse_criterion(coarse_outputs, coarse_labels)
-            fine_loss = fine_criterion(fine_outputs, fine_labels)
+            coarse_loss = criterion(coarse_outputs, coarse_labels)
+            fine_loss = criterion(fine_outputs, fine_labels)
             
-            loss = (coarse_loss + fine_loss) / 2
+            loss = coarse_loss + fine_loss
             val_running_loss += loss.item() 
             
             coarse_probs = model.get_class_probabilies(coarse_outputs)
