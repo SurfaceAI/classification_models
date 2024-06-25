@@ -11,6 +11,7 @@ import torch
 from torch import nn
 from torch.utils.data import DataLoader, WeightedRandomSampler, Subset
 import random
+from tqdm import tqdm
 
 import wandb
 from src import constants as const
@@ -105,6 +106,8 @@ def _run_training(project=None, name=None, config=None, wandb_on=True):
         augment=config.get("augment"),
         dataset=config.get("dataset"),
         data_root=config.get("root_data"),
+        metadata = config.get("metadata"),
+        train_valid_split_list = config.get("train_valid_split_list"),
         level=level[0],
         type_class=type_class,
         selected_classes=config.get("selected_classes"),
@@ -154,6 +157,8 @@ def prepare_train(
     augment,
     dataset,
     data_root,
+    metadata,
+    train_valid_split_list,
     level,
     type_class,
     selected_classes,
@@ -168,6 +173,8 @@ def prepare_train(
     train_data, valid_data = preprocessing.create_train_validation_datasets(
         data_root=data_root,
         dataset=dataset,
+        metadata=metadata,
+        train_valid_split_list=train_valid_split_list,
         selected_classes=selected_classes,
         validation_size=validation_size,
         general_transform=transform,
@@ -337,8 +344,8 @@ def train_epoch(model, dataloader, optimizer, device, eval_metric):
     running_loss = 0.0
     eval_metric_value = 0
 
-    for inputs, labels in dataloader:
-        # helper.multi_imshow(inputs, labels)
+    for inputs, labels in tqdm(dataloader, desc="train batches"):
+        # helper.multi_imshow(inputs, labels, "test_blur")
 
         inputs, labels = inputs.to(device), labels.to(device)
 

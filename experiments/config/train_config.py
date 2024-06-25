@@ -245,7 +245,9 @@ effnet_surface_params = {
     "learning_rate": 0.00037,
     "project": const.PROJECT_SURFACE_FIXED,
     "name": "all_train_optim_lr_effnet_linear",
-    "dataset": "V9/annotated",
+    "dataset": "V12/annotated",
+    "metadata": "V12/metadata",
+    "train_valid_split_list": "train_valid_split.csv",
     "level": const.SURFACE,
     "model": const.EFFNET_LINEAR,
     "gpu_kernel": 0,
@@ -266,6 +268,41 @@ effnet_surface_sweep_params = {
         {"batch_size": {"values": [16]},
         "learning_rate": {"distribution": "log_uniform_values", "min": 1e-04, "max": 0.001},},
     "project": const.PROJECT_SURFACE_SWEEP,
+    "name": "effnet",
+    "level": const.SURFACE,
+    "sweep_counts": 2,
+    "transform":
+        {"resize": (384, 384),
+        "crop": const.CROP_LOWER_MIDDLE_HALF,    
+        "normalize": const.NORM_DATA,},    
+    "save_state": True,
+ }
+
+effnet_surface_blur_sweep_params = {
+    **global_config.global_config,
+    **default_params,
+    'gpu_kernel': 1,
+    "epochs": 20,
+    "eval_metric": const.EVAL_METRIC_ACCURACY,
+    'model': const.EFFNET_LINEAR,
+    "dataset": "V1_0/annotated",
+    "metadata": "V1_0/metadata",
+    "train_valid_split_list": "train_valid_split.csv",
+    "method": "grid",
+    "metric": {"name": f"eval/{const.EVAL_METRIC_ACCURACY}", "goal": "maximize"},
+    "search_params":{
+        "batch_size": {"values": [16]},
+        "learning_rate": {"values": [0.0003, 0.0007]},
+        "augment": {
+            "parameters": {
+                **{key: {"value": value} for key, value in global_config.global_config.get("augment").items()},
+                "gaussian_blur_kernel": {"values": [5, 11]},
+                "gaussian_blur_sigma": {"values": [2, 5]},
+            }
+        },
+        },
+    # "project": const.PROJECT_SURFACE_SWEEP,
+    "project": "test_sweep-road-surface-classification-type",
     "name": "effnet",
     "level": const.SURFACE,
     "sweep_counts": 2,
@@ -394,3 +431,10 @@ road_scenery_focus_params = {
     "save_state": True,
  }
 
+train_valid_split_params = {
+    **global_config.global_config,
+    "root_data": str(global_config.ROOT_DIR / "data" / "training"),
+    "dataset": "V12/annotated",
+    "metadata": "V12/metadata",
+    "train_valid_split_list": "train_valid_split.csv",
+}
