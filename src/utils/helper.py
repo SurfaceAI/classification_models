@@ -9,6 +9,9 @@ from src import constants as const
 from src.architecture import Rateke_CNN, efficientnet, vgg16, vgg16_B_CNN
 import json
 import argparse
+from matplotlib.lines import Line2D
+from torch.utils.data import Dataset
+
 
 def string_to_object(string):
 
@@ -174,6 +177,51 @@ def map_quality_to_continuous(quality_label):
     quality_mapping = {
         0: 0.0, 1: 1.0, 2: 2.0, 3: 3.0, 4: 0.0, 5: 1.0,
         6: 2.0, 7: 3.0, 8: 0.0, 9: 1.0, 10: 2.0, 11: 3.0,
-        12: 1.0, 13: 2.0, 14: 3.0, 15: 2.0, 16: 3.0, 17: 4.0
+        12: 0.0, 13: 1.0, 14: 2.0, 15: 0.0, 16: 1.0, 17: 2.0
     }
     return quality_mapping[quality_label.item()]
+
+def plot_grad_flow(named_parameters):
+    '''Plots the gradients flowing through different layers in the net during training.
+    Can be used for checking for possible gradient vanishing / exploding problems.
+    
+    Usage: Plug this function in Trainer class after loss.backwards() as 
+    "plot_grad_flow(self.model.named_parameters())" to visualize the gradient flow'''
+    ave_grads = []
+    max_grads= []
+    layers = []
+    for n, p in named_parameters:
+        if(p.requires_grad) and ("bias" not in n):
+            layers.append(n)
+            ave_grads.append(p.grad.abs().mean())
+            max_grads.append(p.grad.abs().max())
+    plt.bar(np.arange(len(max_grads)), max_grads, alpha=0.1, lw=1, color="c")
+    plt.bar(np.arange(len(max_grads)), ave_grads, alpha=0.1, lw=1, color="b")
+    plt.hlines(0, 0, len(ave_grads)+1, lw=2, color="k" )
+    plt.xticks(range(0,len(ave_grads), 1), layers, rotation="vertical")
+    plt.xlim(left=0, right=len(ave_grads))
+    plt.ylim(bottom = -0.001, top=0.02) # zoom in on the lower gradient regions
+    plt.xlabel("Layers")
+    plt.ylabel("average gradient")
+    plt.title("Gradient flow")
+    plt.grid(True)
+    plt.legend([Line2D([0], [0], color="c", lw=4),
+                Line2D([0], [0], color="b", lw=4),
+                Line2D([0], [0], color="k", lw=4)], ['max-gradient', 'mean-gradient', 'zero-gradient'])
+    
+    
+class Custom_Subset(Dataset):
+    def __init__(self, dataset, indices):
+        self.dataset = dataset
+        self.indices = indices
+        self.targets = [dataset.targets[i] for i in indices]
+    
+    def __getitem__(self, idx):
+        image, _ = self.dataset[self.indices[idx]]
+        target = self.targets[idx]
+        return image, target
+    
+    def __len__(self):
+        return len(self.indices)
+    
+    
