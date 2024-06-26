@@ -9,7 +9,7 @@ from src import constants
 import torch
 import torch.nn as nn
 import torch.optim as optim
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, WeightedRandomSampler, Subset
 
 from collections import Counter
 from datetime import datetime
@@ -87,6 +87,29 @@ num_c = len(Counter([entry.split('__')[0] for entry in train_data.classes]))
 
 # train_data.targets = [mapping[target] for target in train_data.targets]
 
+#limit class size
+    # limit max class size
+if config.get('max_class_size') is not None:
+    # define indices with max number of class size
+    indices = []
+    class_counts = {}
+    # TODO: randomize sample picking?
+    for i, label in enumerate(train_data.targets):
+        if label not in class_counts:
+            class_counts[label] = 0
+        if class_counts[label] < config.get('max_class_size'):
+            indices.append(i)
+            class_counts[label] += 1
+        # stop if all classes are filled
+        if all(count >= config.get('max_class_size') for count in class_counts.values()):
+            break
+
+    # create a) (Subset with indices + WeightedRandomSampler) or b) (SubsetRandomSampler) (no weighting, if max class size larger than smallest class size!)
+    # b) SubsetRandomSampler ? 
+    #    Samples elements randomly from a given list of indices, without replacement.
+    # a):
+    train_data = Custom_Subset(train_data, indices)
+
 
 #create train and valid loader
 train_loader = DataLoader(train_data, batch_size=config.get('batch_size'), shuffle=True)
@@ -161,7 +184,21 @@ for epoch in range(config.get('epochs')):
     model.train()
     running_loss = 0.0
     coarse_correct = 0
-    fine_correct = 0
+    
+    fine_correct_asphalt = 0
+    fine_correct_concrete = 0
+    fine_correct_sett = 0
+    fine_correct_paving_stones = 0
+    fine_correct_unpaved = 0
+        
+    fine_loss_total = 0.0
+    coarse_loss_total = 0.0
+    
+    fine_loss_asphalt_total = 0.0
+    fine_loss_concrete_total = 0.0
+    fine_loss_sett_total = 0.0
+    fine_loss_paving_stones_total = 0.0
+    fine_loss_unpaved_total = 0.0
     
     for batch_index, (inputs, fine_labels) in enumerate(train_loader):
               
@@ -185,19 +222,56 @@ for epoch in range(config.get('epochs')):
         
         if config.get('is_regression'):
             fine_labels_mapped = torch.tensor([map_quality_to_continuous(label) for label in fine_labels], dtype=torch.long).to(device)
+            
+            asphalt_mask = (coarse_labels == 0)
+            concrete_mask = (coarse_labels == 1)
+            sett_mask = (coarse_labels == 2)
+            paving_stones_mask = (coarse_labels == 3)
+            unpaved_mask = (coarse_labels == 4)
+            
+            fine_labels_mapped_aspahlt = fine_labels_mapped[asphalt_mask]
+            fine_labels_mapped_concrete = fine_labels_mapped[concrete_mask]
+            fine_labels_mapped_sett = fine_labels_mapped[sett_mask]
+            fine_labels_mapped_paving_stones = fine_labels_mapped[paving_stones_mask]
+            fine_labels_mapped_unpaved = fine_labels_mapped[unpaved_mask]
         
         #we give the coarse true labels for the conditional prob weights matrix as input to the model
-        model_inputs = (inputs, coarse_one_hot)
+        model_inputs = (inputs, coarse_one_hot, config.get('hierarchy_method'))
         
-        coarse_outputs, fine_outputs = model.forward(model_inputs)
+        coarse_outputs, fine_probs_asphalt, fine_probs_concrete, fine_probs_sett, fine_probs_paving_stones, fine_probs_unpaved = model.forward(model_inputs)
         coarse_loss = criterion(coarse_outputs, coarse_labels)
-        fine_loss = criterion(fine_outputs, fine_labels)
+        
+        
+        fine_loss_asphalt = criterion(fine_probs_asphalt, fine_labels_mapped_aspahlt)
+        fine_loss_concrete = criterion(fine_probs_concrete, fine_labels_mapped_concrete)
+        fine_loss_sett = criterion(fine_probs_sett, fine_labels_mapped_sett)
+        fine_loss_paving_stones = criterion(fine_probs_paving_stones, fine_labels_mapped_paving_stones)
+        fine_loss_unpaved = criterion(fine_probs_unpaved, fine_labels_mapped_unpaved)
+        
+        fine_loss_asphalt = torch.nan_to_num(fine_loss_asphalt, nan=0.0)
+        fine_loss_concrete = torch.nan_to_num(fine_loss_concrete, nan=0.0)
+        fine_loss_sett = torch.nan_to_num(fine_loss_sett, nan=0.0)
+        fine_loss_paving_stones = torch.nan_to_num(fine_loss_paving_stones, nan=0.0)
+        fine_loss_unpaved = torch.nan_to_num(fine_loss_unpaved, nan=0.0)
+        
+        fine_loss = 1/5 * fine_loss_asphalt + 1/5 * fine_loss_concrete + 1/5 * fine_loss_sett + 1/5 * fine_loss_paving_stones + 1/5 * fine_loss_unpaved
+        
         loss = coarse_loss + fine_loss  #weighted loss functions for different levels
         
         loss.backward()
+        #plot_grad_flow(model.named_parameters())
         optimizer.step()
-        running_loss += loss.item() 
+        running_loss += loss.item()
+         
+        coarse_loss_total += coarse_loss.item()
+        fine_loss_total += fine_loss.item()
         
+        fine_loss_asphalt_total += fine_loss_asphalt.item()
+        fine_loss_concrete_total += fine_loss_concrete.item()
+        fine_loss_sett_total += fine_loss_sett.item()
+        fine_loss_paving_stones_total += fine_loss_paving_stones.item()
+        fine_loss_unpaved_total += fine_loss_unpaved.item()
+                
         # if eval_metric == const.EVAL_METRIC_ACCURACY:
         #     if isinstance(criterion, nn.MSELoss): # compare with is_regression for generalization?
         #         predictions = outputs.round()
@@ -220,9 +294,21 @@ for epoch in range(config.get('epochs')):
         coarse_correct += (coarse_predictions == coarse_labels).sum().item()
         
         #fine_probs = model.get_class_probabilies(fine_outputs)
-        fine_predictions = torch.argmax(fine_outputs, dim=1)
-        fine_correct += (fine_predictions == fine_labels).sum().item()
+        fine_predictions_asphalt = torch.argmax(fine_probs_asphalt, dim=1)
+        fine_correct_asphalt += (fine_predictions_asphalt == fine_labels_mapped_aspahlt).sum().item()
         
+        fine_predictions_concrete = torch.argmax(fine_probs_concrete, dim=1)
+        fine_correct_concrete += (fine_predictions_concrete == fine_labels_mapped_concrete).sum().item()
+
+        fine_predictions_sett = torch.argmax(fine_probs_sett, dim=1)
+        fine_correct_sett += (fine_predictions_sett == fine_labels_mapped_sett).sum().item()
+
+        fine_predictions_paving_stones = torch.argmax(fine_probs_paving_stones, dim=1)
+        fine_correct_paving_stones += (fine_predictions_paving_stones == fine_labels_mapped_paving_stones).sum().item()
+
+        fine_predictions_unpaved = torch.argmax(fine_probs_unpaved, dim=1)
+        fine_correct_unpaved += (fine_predictions_unpaved == fine_labels_mapped_unpaved).sum().item()
+
         # if batch_index == 0:
         #     break
             
@@ -237,17 +323,43 @@ for epoch in range(config.get('epochs')):
     # epoch_loss = running_loss /  len(inputs) * (batch_index + 1) 
     # epoch_coarse_accuracy = 100 * coarse_correct / (len(inputs) * (batch_index + 1))
     # epoch_fine_accuracy = 100 * fine_correct / (len(inputs) * (batch_index + 1))
+    fine_correct = fine_correct_asphalt + fine_correct_concrete + fine_correct_sett + fine_correct_paving_stones + fine_correct_unpaved
+    
     epoch_loss = running_loss /  len(train_loader)
     epoch_coarse_accuracy = 100 * coarse_correct / len(train_loader.sampler)
     epoch_fine_accuracy = 100 * fine_correct / len(train_loader.sampler)
     
+    coarse_epoch_loss = coarse_loss_total / len(train_loader)
+    fine_epoch_loss = fine_loss_total / len(train_loader)
     
+    asphalt_fine_epoch_loss = fine_loss_asphalt_total / len(train_loader)
+    concrete_fine_epoch_loss = fine_loss_concrete_total / len(train_loader)
+    sett_fine_epoch_loss = fine_loss_sett_total / len(train_loader)
+    paving_stones_fine_epoch_loss = fine_loss_paving_stones_total / len(train_loader)
+    unpaved_fine_epoch_loss = fine_loss_unpaved_total / len(train_loader)
+
+
     # Validation
     model.eval()
     loss = 0.0
     val_running_loss = 0.0
     val_coarse_correct = 0
     val_fine_correct = 0
+    
+    # val_fine_correct_asphalt = 0
+    # val_fine_correct_concrete = 0
+    # val_fine_correct_sett = 0
+    # val_fine_correct_paving_stones = 0
+    # val_fine_correct_unpaved = 0
+    
+    val_fine_loss_total = 0.0
+    val_coarse_loss_total = 0.0
+    
+    val_fine_loss_asphalt_total = 0.0
+    val_fine_loss_concrete_total = 0.0
+    val_fine_loss_sett_total = 0.0
+    val_fine_loss_paving_stones_total = 0.0
+    val_fine_loss_unpaved_total = 0.0
     
     with torch.no_grad():
         for batch_index, (inputs, fine_labels) in enumerate(valid_loader):
@@ -256,8 +368,10 @@ for epoch in range(config.get('epochs')):
             coarse_labels = parent[fine_labels]
             coarse_one_hot = to_one_hot_tensor(coarse_labels, num_c).to(device)
             
-            model_inputs = (inputs, coarse_one_hot)           
-            coarse_outputs, fine_outputs = model.forward(model_inputs)
+            model_inputs = (inputs, coarse_one_hot, config.get('hierarchy_method'))           
+            coarse_outputs, fine_probs_asphalt, fine_probs_concrete, fine_probs_sett, fine_probs_paving_stones, fine_probs_unpaved = model.forward(model_inputs)
+            
+            fine_outputs = torch.cat([fine_probs_asphalt, fine_probs_concrete, fine_probs_sett, fine_probs_paving_stones, fine_probs_unpaved], dim=1)
             
             # if isinstance(criterion, nn.MSELoss):
             #     coarse_outputs = coarse_outputs.flatten()
@@ -268,11 +382,35 @@ for epoch in range(config.get('epochs')):
             
             
             coarse_loss = criterion(coarse_outputs, coarse_labels)
+            
             fine_loss = criterion(fine_outputs, fine_labels)
+            
+            # fine_loss_asphalt = criterion(fine_probs_asphalt, fine_labels_mapped_aspahlt)
+            # fine_loss_concrete = criterion(fine_probs_concrete, fine_labels_mapped_concrete)
+            # fine_loss_sett = criterion(fine_probs_sett, fine_labels_mapped_sett)
+            # fine_loss_paving_stones = criterion(fine_probs_paving_stones, fine_labels_mapped_paving_stones)
+            # fine_loss_unpaved = criterion(fine_probs_unpaved, fine_labels_mapped_unpaved)
+            
+            # fine_loss_asphalt = torch.nan_to_num(fine_loss_asphalt, nan=0.0)
+            # fine_loss_concrete = torch.nan_to_num(fine_loss_concrete, nan=0.0)
+            # fine_loss_sett = torch.nan_to_num(fine_loss_sett, nan=0.0)
+            # fine_loss_paving_stones = torch.nan_to_num(fine_loss_paving_stones, nan=0.0)
+            # fine_loss_unpaved = torch.nan_to_num(fine_loss_unpaved, nan=0.0)
+            
+            #fine_loss = 1/5 * fine_loss_asphalt + 1/5 * fine_loss_concrete + 1/5 * fine_loss_sett + 1/5 * fine_loss_paving_stones + 1/5 * fine_loss_unpaved
             
             loss = coarse_loss + fine_loss
             val_running_loss += loss.item() 
             
+            val_coarse_loss_total += coarse_loss.item()
+            val_fine_loss_total += fine_loss.item()
+            
+            # val_fine_loss_asphalt_total += fine_loss_asphalt.item()
+            # val_fine_loss_concrete_total += fine_loss_concrete.item()
+            # val_fine_loss_sett_total += fine_loss_sett.item()
+            # val_fine_loss_paving_stones_total += fine_loss_paving_stones.item()
+            # val_fine_loss_unpaved_total += fine_loss_unpaved.item()
+                
             coarse_probs = model.get_class_probabilies(coarse_outputs)
             coarse_predictions = torch.argmax(coarse_probs, dim=1)
             val_coarse_correct += (coarse_predictions == coarse_labels).sum().item()
@@ -280,6 +418,21 @@ for epoch in range(config.get('epochs')):
             #fine_probs = model.get_class_probabilies(fine_outputs)
             fine_predictions = torch.argmax(fine_outputs, dim=1)
             val_fine_correct += (fine_predictions == fine_labels).sum().item()
+            # fine_predictions_asphalt = torch.argmax(fine_probs_asphalt, dim=1)
+            # val_fine_correct_asphalt += (fine_predictions_asphalt == fine_labels_mapped_aspahlt).sum().item()
+            
+            # fine_predictions_concrete = torch.argmax(fine_probs_concrete, dim=1)
+            # val_fine_correct_concrete += (fine_predictions_concrete == fine_labels_mapped_concrete).sum().item()
+
+            # fine_predictions_sett = torch.argmax(fine_probs_sett, dim=1)
+            # val_fine_correct_sett += (fine_predictions_sett == fine_labels_mapped_sett).sum().item()
+
+            # fine_predictions_paving_stones = torch.argmax(fine_probs_paving_stones, dim=1)
+            # val_fine_correct_paving_stones += (fine_predictions_paving_stones == fine_labels_mapped_paving_stones).sum().item()
+
+            # fine_predictions_unpaved = torch.argmax(fine_probs_unpaved, dim=1)
+            # val_fine_correct_unpaved += (fine_predictions_unpaved == fine_labels_mapped_unpaved).sum().item()
+
             
             # if batch_index == 0:
             #     break
@@ -287,9 +440,21 @@ for epoch in range(config.get('epochs')):
     # val_epoch_loss = val_running_loss /  (len(inputs) * (batch_index + 1))
     # val_epoch_coarse_accuracy = 100 * val_coarse_correct / (len(inputs) * (batch_index + 1))
     # val_epoch_fine_accuracy = 100 * val_fine_correct / (len(inputs) * (batch_index + 1))
+    #val_fine_correct = val_fine_correct_asphalt + val_fine_correct_concrete + val_fine_correct_sett + val_fine_correct_paving_stones + val_fine_correct_unpaved
+    
     val_epoch_loss = val_running_loss /  len(valid_loader)
     val_epoch_coarse_accuracy = 100 * val_coarse_correct / len(valid_loader.sampler)
     val_epoch_fine_accuracy = 100 * val_fine_correct / len(valid_loader.sampler)
+    
+    val_coarse_epoch_loss = val_coarse_loss_total / len(valid_loader)
+    val_fine_epoch_loss = val_fine_loss_total / len(valid_loader)
+    
+    val_asphalt_fine_epoch_loss = val_fine_loss_asphalt_total / len(valid_loader)
+    val_concrete_fine_epoch_loss = val_fine_loss_concrete_total / len(valid_loader)
+    val_sett_fine_epoch_loss = val_fine_loss_sett_total / len(valid_loader)
+    val_paving_stones_fine_epoch_loss = val_fine_loss_paving_stones_total / len(valid_loader)
+    val_unpaved_fine_epoch_loss = val_fine_loss_unpaved_total / len(valid_loader)
+
     
     early_stop = checkpointer(
             model=model, epoch=epoch, metric_val=val_epoch_loss, optimizer=optimizer

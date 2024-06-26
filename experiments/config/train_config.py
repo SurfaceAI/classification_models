@@ -6,8 +6,9 @@ default_params = {
     "epochs": 40,
     "learning_rate": 0.001,
     "optimizer": const.OPTI_ADAM,
-    "is_regression": False,
+    "is_regression": True,
     "eval_metric": const.EVAL_METRIC_ACCURACY,
+    "max_class_size": 100
 }
 
 default_search_params = {
@@ -338,6 +339,6 @@ C_CNN_CLM = {
     "name": "C_CNN_CLM",
     "level": const.MULTILABEL,
     "model": const.CCNNREGRESSION,
-    "hierarchy_method": const.WEIGHTEDSUM
+    "hierarchy_method": 'use_ground_truth',
 }
 
