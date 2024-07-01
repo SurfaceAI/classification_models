@@ -22,13 +22,22 @@ BAD = "bad"
 VERY_BAD = "very_bad"
 HORRIBLE = "horrible"
 
+# SMOOTHNESS_INT = {
+#     EXCELLENT: 1,
+#     GOOD: 2,
+#     INTERMEDIATE: 3,
+#     BAD: 4,
+#     VERY_BAD: 5,
+#     HORRIBLE: 6,
+# }
+
 SMOOTHNESS_INT = {
-    EXCELLENT: 1,
-    GOOD: 2,
-    INTERMEDIATE: 3,
-    BAD: 4,
-    VERY_BAD: 5,
-    HORRIBLE: 6,
+    EXCELLENT: 0,
+    GOOD: 1,
+    INTERMEDIATE: 2,
+    BAD: 3,
+    VERY_BAD: 4,
+    HORRIBLE: 5,
 }
 
 
@@ -101,6 +110,8 @@ PROJECT_SMOOTHNESS_SWEEP = "sweep-road-surface-classification-quality"
 PROJECT_FLATTEN_FIXED = "road-surface-classification-flatten"
 PROJECT_FLATTEN_SWEEP = "sweep-road-surface-classification-flatten"
 PROJECT_MULTI_LABEL_FIXED = "road-surface-classification-multi-label"
+PROJECT_ORDINAL_REGRESSION_FIXED = "road-surface-classification-ordinal-regression"
+
 
 
 # model names
@@ -108,6 +119,7 @@ EFFICIENTNET = "efficientNetV2SLogsoftmax"
 EFFNET_LINEAR = "efficientNetV2SLinear"
 VGG16 = "vgg16"
 RATEKE = "rateke"
+VGG16_CLM = "vgg16_CLM"
 # temporay onla
 VGG16REGRESSION = "vgg16Regression"
 BCNN = "BCNN"
@@ -182,3 +194,6 @@ WEIGHTEDSUM = "weighted_sum"
 FILTERBYPROBS = "filter_by_probs"
 CLM = "clm"
 OBD = "obd"
+
+V12_ANNOTATED_ASPHALT_MEAN = [0.4181784987449646, 0.44584745168685913, 0.4459141194820404]
+V12_ANNOTATED_ASPHALT_SD = [0.23218706250190735, 0.2414448857307434, 0.27008959650993347]

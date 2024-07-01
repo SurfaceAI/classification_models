@@ -2,11 +2,12 @@ import sys
 sys.path.append('.')
 
 import numpy as np
+import random
 import matplotlib.pyplot as plt
 import torch
 from torch import optim
 from src import constants as const
-from src.architecture import Rateke_CNN, efficientnet, vgg16, vgg16_B_CNN
+from src.architecture import Rateke_CNN, efficientnet, vgg16, vgg16_B_CNN, vgg16_CLM
 import json
 import argparse
 from matplotlib.lines import Line2D
@@ -23,6 +24,7 @@ def string_to_object(string):
         const.EFFNET_LINEAR: efficientnet.CustomEfficientNetV2SLinear,
         const.OPTI_ADAM: optim.Adam,
         const.BCNN: vgg16_B_CNN.B_CNN,
+        const.VGG16_CLM: vgg16_CLM.CustomVGG16_CLM
     }
 
     return string_dict.get(string)
@@ -223,5 +225,12 @@ class Custom_Subset(Dataset):
     
     def __len__(self):
         return len(self.indices)
-    
+
+
+def set_seed(seed):
+    random.seed(seed)
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed)
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
     

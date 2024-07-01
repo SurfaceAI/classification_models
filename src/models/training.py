@@ -90,7 +90,7 @@ def _run_training(project=None, name=None, config=None, wandb_on=True):
         "-".join(level) + "-" + config.get("model") + "-" + start_time + id + ".pt"
     )
 
-    torch.manual_seed(config.get("seed"))
+    helper.set_seed(config.get("seed"))
 
     # TODO: testing gpu_kernel = None
     device = torch.device(
@@ -125,6 +125,7 @@ def _run_training(project=None, name=None, config=None, wandb_on=True):
         validloader=validloader,
         optimizer=optimizer,
         eval_metric=config.get("eval_metric"),
+        clm = config.get("clm"), 
         device=device,
         epochs=config.get("epochs"),
         wandb_on=wandb_on,
@@ -257,6 +258,7 @@ def train(
     validloader,
     optimizer,
     eval_metric,
+    clm,
     device,
     epochs,
     wandb_on,
@@ -286,6 +288,7 @@ def train(
             optimizer,
             device,
             eval_metric=eval_metric,
+            clm=clm,
         )
 
         val_loss, val_metric_value = validate_epoch(
@@ -293,6 +296,7 @@ def train(
             validloader,
             device,
             eval_metric,
+            clm=clm
         )
 
         # checkpoint saving with early stopping
@@ -329,7 +333,7 @@ def train(
 
 
 # train a single epoch
-def train_epoch(model, dataloader, optimizer, device, eval_metric):
+def train_epoch(model, dataloader, optimizer, device, eval_metric, clm):
     model.train()
     criterion = model.criterion(reduction="sum")
     running_loss = 0.0
@@ -357,6 +361,8 @@ def train_epoch(model, dataloader, optimizer, device, eval_metric):
         if eval_metric == const.EVAL_METRIC_ACCURACY:
             if isinstance(criterion, nn.MSELoss): # compare with is_regression for generalization?
                 predictions = outputs.round()
+            elif clm:
+                predictions = torch.argmax(outputs, dim=1)
             else:
                 probs = model.get_class_probabilies(outputs)
                 predictions = torch.argmax(probs, dim=1)
@@ -378,7 +384,7 @@ def train_epoch(model, dataloader, optimizer, device, eval_metric):
 
 
 # validate a single epoch
-def validate_epoch(model, dataloader, device, eval_metric):
+def validate_epoch(model, dataloader, device, eval_metric, clm):
     model.eval()
     criterion = model.criterion(reduction="sum")
     running_loss = 0.0
@@ -400,6 +406,8 @@ def validate_epoch(model, dataloader, device, eval_metric):
             if eval_metric == const.EVAL_METRIC_ACCURACY:
                 if isinstance(criterion, nn.MSELoss):
                     predictions = outputs.round()
+                elif clm:
+                    predictions = torch.argmax(outputs, dim=1)
                 else:
                     probs = model.get_class_probabilies(outputs)
                     predictions = torch.argmax(probs, dim=1)
