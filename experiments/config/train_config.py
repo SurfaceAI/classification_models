@@ -167,7 +167,7 @@ vgg16_asphalt_regression_params = {
     "is_regression": True,
     "eval_metric": const.EVAL_METRIC_ACCURACY,
     "clm": False,
-    "project": const.PROJECT_SMOOTHNESS_FIXED,
+    "project": const.PROJECT_ORDINAL_REGRESSION_FIXED,
     "name": "VGG16_Regression",
     "level": const.ASPHALT,
     "selected_classes": global_config.global_config.get("selected_classes")[const.ASPHALT],
