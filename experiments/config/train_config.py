@@ -162,17 +162,35 @@ vgg16_asphalt_regression_params = {
     **global_config.global_config,
     **default_params,
     "batch_size": 96,
-    "epochs": 20,
-    "learning_rate": 0.00003,
+    "epochs": 50,
+    "learning_rate": 0.0001,
     "is_regression": True,
-    "eval_metric": const.EVAL_METRIC_MSE,
+    "eval_metric": const.EVAL_METRIC_ACCURACY,
+    "clm": False,
     "project": const.PROJECT_SMOOTHNESS_FIXED,
     "name": "VGG16_Regression",
     "level": const.ASPHALT,
     "selected_classes": global_config.global_config.get("selected_classes")[const.ASPHALT],
-    "dataset": "V7/annotated/asphalt",
+    "dataset": "V12/annotated/asphalt",
     "model": const.VGG16,
 
+}
+
+vgg16_asphalt_CLM_params = {
+    **global_config.global_config,
+    **default_params,
+    "batch_size": 96,
+    "epochs": 50,
+    "learning_rate": 0.0001,
+    "is_regression": True,
+    "eval_metric": const.EVAL_METRIC_ACCURACY,
+    "clm": True,
+    "project": const.PROJECT_ORDINAL_REGRESSION_FIXED,
+    "name": "VGG16_asphalt_quality_CLM",
+    "level": const.ASPHALT,
+    "selected_classes": global_config.global_config.get("selected_classes")[const.ASPHALT],
+    "dataset": "V12/annotated/asphalt",
+    "model": const.VGG16_CLM,
 }
 
 vgg16_asphalt_crophalf_regression_params = {
@@ -191,7 +209,7 @@ vgg16_asphalt_crophalf_regression_params = {
     "name": "VGG16_Regression",
     "level": const.ASPHALT,
     "selected_classes": global_config.global_config.get("selected_classes")[const.ASPHALT],
-    "dataset": "V7/annotated/asphalt",
+    "dataset": "V12/annotated/asphalt",
     "model": const.VGG16,
 
 }
@@ -212,7 +230,7 @@ effnet_asphalt_crophalf_regression_params = {
     "name": "effnet_Regression",
     "level": const.ASPHALT,
     "selected_classes": global_config.global_config.get("selected_classes")[const.ASPHALT],
-    "dataset": "V7/annotated/asphalt",
+    "dataset": "V12/annotated/asphalt",
     "model": const.EFFNET_LINEAR,
 
 }
