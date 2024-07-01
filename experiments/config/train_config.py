@@ -8,7 +8,7 @@ default_params = {
     "optimizer": const.OPTI_ADAM,
     "is_regression": True,
     "eval_metric": const.EVAL_METRIC_ACCURACY,
-    "max_class_size": 100
+    "max_class_size": 200
 }
 
 default_search_params = {
@@ -161,9 +161,9 @@ vgg16_regression_params = {
 vgg16_asphalt_regression_params = {
     **global_config.global_config,
     **default_params,
-    "batch_size": 96,
-    "epochs": 50,
-    "learning_rate": 0.0001,
+    "batch_size": 16,
+    "epochs": 30,
+    "learning_rate": 0.00003,
     "is_regression": True,
     "eval_metric": const.EVAL_METRIC_ACCURACY,
     "clm": False,
@@ -179,9 +179,9 @@ vgg16_asphalt_regression_params = {
 vgg16_asphalt_classification_params = {
     **global_config.global_config,
     **default_params,
-    "batch_size": 96,
-    "epochs": 50,
-    "learning_rate": 0.0001,
+    "batch_size": 16,
+    "epochs": 30,
+    "learning_rate": 0.00003,
     "is_regression": False,
     "eval_metric": const.EVAL_METRIC_ACCURACY,
     "clm": False,
@@ -197,10 +197,10 @@ vgg16_asphalt_classification_params = {
 vgg16_asphalt_CLM_params = {
     **global_config.global_config,
     **default_params,
-    "batch_size": 96,
-    "epochs": 50,
-    "learning_rate": 0.0001,
-    "is_regression": True,
+    "batch_size": 16,
+    "epochs": 30,
+    "learning_rate": 0.00003,
+    "is_regression": False,
     "eval_metric": const.EVAL_METRIC_ACCURACY,
     "clm": True,
     "project": const.PROJECT_ORDINAL_REGRESSION_FIXED,
