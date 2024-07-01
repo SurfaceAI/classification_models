@@ -15,6 +15,7 @@ import random
 import wandb
 from src import constants as const
 from src.utils import checkpointing, helper, preprocessing
+from multi_label import QWK
 import argparse
 
 
@@ -114,7 +115,8 @@ def _run_training(project=None, name=None, config=None, wandb_on=True):
         learning_rate=config.get("learning_rate"),
         random_seed=config.get("seed"),
         is_regression=config.get("is_regression"),
-        max_class_size=config.get("max_class_size")
+        clm=config.get("clm"),
+        max_class_size=config.get("max_class_size"),
     )
 
     trained_model = train(
@@ -164,6 +166,7 @@ def prepare_train(
     learning_rate,
     random_seed,
     is_regression,
+    clm,
     max_class_size,
 ):
     train_data, valid_data = preprocessing.create_train_validation_datasets(
@@ -183,7 +186,7 @@ def prepare_train(
     # print(f"classes: {train_data.class_to_idx}")
 
     # load model
-    if is_regression:
+    if is_regression or clm:
         num_classes = 1
     else:
         num_classes = len(train_data.classes)
@@ -335,7 +338,11 @@ def train(
 # train a single epoch
 def train_epoch(model, dataloader, optimizer, device, eval_metric, clm):
     model.train()
-    criterion = model.criterion(reduction="sum")
+    if clm:
+        cost_matrix = QWK.make_cost_matrix(4)
+        criterion = model.criterion(cost_matrix)
+    else:
+        criterion = model.criterion(reduction="sum")
     running_loss = 0.0
     eval_metric_value = 0
 
@@ -350,7 +357,10 @@ def train_epoch(model, dataloader, optimizer, device, eval_metric, clm):
         if isinstance(criterion, nn.MSELoss):
             outputs = outputs.flatten()
             labels = labels.float()
-        loss = criterion(outputs, labels)
+        elif clm: 
+            loss = criterion(helper.to_one_hot_tensor(labels, 4), outputs)
+        else:
+            loss = criterion(outputs, labels)
         loss.backward()
         optimizer.step()
 
@@ -386,7 +396,11 @@ def train_epoch(model, dataloader, optimizer, device, eval_metric, clm):
 # validate a single epoch
 def validate_epoch(model, dataloader, device, eval_metric, clm):
     model.eval()
-    criterion = model.criterion(reduction="sum")
+    if clm:
+        cost_matrix = QWK.make_cost_matrix(4)
+        criterion = model.criterion(cost_matrix)
+    else:
+        criterion = model.criterion(reduction="sum")
     running_loss = 0.0
     eval_metric_value = 0
 
@@ -399,7 +413,10 @@ def validate_epoch(model, dataloader, device, eval_metric, clm):
             if isinstance(criterion, nn.MSELoss):
                 outputs = outputs.flatten()
                 labels = labels.float()
-            loss = criterion(outputs, labels)
+            elif clm: 
+                loss = criterion(helper.to_one_hot_tensor(labels, 4), outputs)
+            else:
+                loss = criterion(outputs, labels)
 
             running_loss += loss.item()
 
