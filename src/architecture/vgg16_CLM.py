@@ -1,7 +1,12 @@
+import sys
+
+sys.path.append(".")
+
 import torch
 import torch.nn as nn
 from torchvision import models
 from collections import OrderedDict
+from multi_label import QWK
 
 class CLM(nn.Module):
     def __init__(self, num_classes, link_function, min_distance=0.35, use_slope=False, fixed_thresholds=False):
@@ -91,9 +96,14 @@ class CustomVGG16_CLM(nn.Module):
         self.features = model.features
         self.avgpool = model.avgpool
         self.classifier = model.classifier
-        self.criterion = nn.CrossEntropyLoss
-        # if num_classes == 1:
-        #     self.criterion = nn.MSELoss
+        #self.criterion = nn.CrossEntropyLoss
+        if num_classes == 1:
+            self.criterion = QWK.qwk_loss_base
+            #self.criterion = nn.MSELoss
+        else:
+            #cost_matrix = QWK.make_cost_matrix(num_classes)
+            #self.criterion = QWK.qwk_loss(cost_matrix, num_classes)
+            self.criterion = QWK.qwk_loss_base
         # else:
         #     self.criterion = nn.CrossEntropyLoss
             
