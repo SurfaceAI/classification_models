@@ -415,7 +415,8 @@ def validate_epoch(model, dataloader, device, eval_metric, clm):
             if isinstance(criterion, nn.MSELoss):
                 outputs = outputs.flatten()
                 labels = labels.float()
-            elif clm: 
+            
+            if clm:
                 loss = criterion(helper.to_one_hot_tensor(labels, 4), outputs)
             else:
                 loss = criterion(outputs, labels)
