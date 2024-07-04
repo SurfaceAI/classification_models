@@ -203,6 +203,7 @@ vgg16_asphalt_CLM_params = {
     "is_regression": False,
     "eval_metric": const.EVAL_METRIC_ACCURACY,
     "clm": True,
+    "two_optimizers":True,
     "project": const.PROJECT_ORDINAL_REGRESSION_FIXED,
     "name": "VGG16_CLM_asphalt",
     "level": const.ASPHALT,
