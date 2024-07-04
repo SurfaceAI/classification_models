@@ -7,6 +7,7 @@ import torch.nn as nn
 from torchvision import models
 from collections import OrderedDict
 from multi_label import QWK
+import math
 
 class CLM(nn.Module):
     def __init__(self, num_classes, link_function, min_distance=0.35, use_slope=False, fixed_thresholds=False):
@@ -18,16 +19,27 @@ class CLM(nn.Module):
         self.fixed_thresholds = fixed_thresholds
         
         #if we dont have fixed thresholds, we initalize two trainable parameters 
+
         if not self.fixed_thresholds:
+           
+            self.thresholds_b = nn.Parameter(torch.empty(1))
+            nn.init.uniform_(self.thresholds_b, -0.5, 0.5)
+
+            # Initialize thresholds_a with random values between sqrt((1.0 / (num_classes - 2)) / 2) and sqrt(1.0 / (num_classes - 2))
+            min_val = math.sqrt((1.0 / (num_classes - 2)) / 2)
+            max_val = math.sqrt(1.0 / (num_classes - 2))
+            self.thresholds_a = nn.Parameter(torch.empty(num_classes - 2))
+            nn.init.uniform_(self.thresholds_a, min_val, max_val)
             #first threshold
-            self.thresholds_b = nn.Parameter(torch.rand(1) * 0.1) #random number between 0 and 1
-            #squared distance 
-            self.thresholds_a = nn.Parameter(
-                torch.sqrt(torch.ones(num_classes - 2) / (num_classes - 2) / 2) * torch.rand(num_classes - 2)
-            )
+            #self.thresholds_b = nn.Parameter(torch.rand(1) * 0.1) #random number between 0 and 1
+            # self.thresholds_b = nn.Parameter(torch.rand(1) * 0.1)
+            # #squared distance 
+            # self.thresholds_a = nn.Parameter(
+            #     torch.sqrt(torch.ones(num_classes - 2) / (num_classes - 2) / 2) * torch.rand(num_classes - 2)
+            # )
 
         if self.use_slope:
-            self.slope = nn.Parameter(torch.tensor(100.0))
+            self.slope = nn.Parameter(torch.tensor(100))
             
     def convert_thresholds(self, b, a, min_distance=0.35):
         a = a.pow(2) + min_distance
@@ -56,13 +68,13 @@ class CLM(nn.Module):
 
         ones = torch.ones((m, 1))
         a3 = torch.cat([a3T, ones], dim=1)
-        a3 = torch.cat([a3[:, :1], a3[:, 1:] - a3[:, :-1]], dim=1)
+        A3 = torch.cat([a3[:, :1], a3[:, 1:] - a3[:, :-1]], dim=1)
 
-        return a3
+        return A3
 
     def forward(self, x):
         if self.fixed_thresholds:
-            thresholds = torch.linspace(0, 1, self.num_classes, dtype=torch.float32)[1:-1]
+            thresholds = torch.linspace(0, 1, 5, dtype=torch.float32)[1:-1]
         else:
             thresholds = self.convert_thresholds(self.thresholds_b, self.thresholds_a, self.min_distance)
 
@@ -84,7 +96,7 @@ class CustomVGG16_CLM(nn.Module):
         
         # Freeze training for all layers in features
         for param in model.features.parameters():
-            param.requires_grad = False
+            param.requires_grad = True
 
         # Modify the classifier layer
         num_features = model.classifier[6].in_features
@@ -96,19 +108,19 @@ class CustomVGG16_CLM(nn.Module):
         self.features = model.features
         self.avgpool = model.avgpool
         self.classifier = model.classifier
-        #self.criterion = nn.CrossEntropyLoss
-        if num_classes == 1:
-            self.criterion = QWK.qwk_loss_base
+        self.criterion = QWK.qwk_loss_base
+        # if num_classes == 1:
+        #     self.criterion = QWK.qwk_loss_base
             #self.criterion = nn.MSELoss
-        else:
-            #cost_matrix = QWK.make_cost_matrix(num_classes)
-            #self.criterion = QWK.qwk_loss(cost_matrix, num_classes)
-            self.criterion = QWK.qwk_loss_base
         # else:
+        #     #cost_matrix = QWK.make_cost_matrix(num_classes)
+        #     #self.criterion = QWK.qwk_loss(cost_matrix, num_classes)
+        #     self.criterion = QWK.qwk_loss_base
+        # # else:
         #     self.criterion = nn.CrossEntropyLoss
             
         
-        self.CLM = CLM(num_classes = 4, link_function='logit', min_distance=0.0, use_slope=False, fixed_thresholds=False)
+        self.CLM = CLM(num_classes = 4, link_function='logit', min_distance=0.001, use_slope=False, fixed_thresholds=False)
         
 
     @ staticmethod
