@@ -40,7 +40,7 @@ def qwk_loss_base(cost_matrix):
 
         denominator = a * b
         denominator = torch.sum(denominator) + epsilon
-
+        
         loss = numerator / denominator
 
         return loss * 1000
