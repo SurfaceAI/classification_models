@@ -432,7 +432,7 @@ def validate_epoch(model, dataloader, device, eval_metric, clm):
             
             if clm:
                 loss = criterion(helper.to_one_hot_tensor(labels, 4), outputs)
-            # else:
+            else:
                 loss = criterion(outputs, labels)
 
             running_loss += loss.item()
