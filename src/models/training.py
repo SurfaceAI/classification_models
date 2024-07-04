@@ -531,7 +531,7 @@ def validate_epoch(model, dataloader, device, eval_metric, clm):
             else:
                 raise ValueError(f"Unknown eval_metric: {eval_metric}")
             
-            break
+            #break
 
     return running_loss / len(dataloader.sampler), eval_metric_value / len(
         dataloader.sampler
