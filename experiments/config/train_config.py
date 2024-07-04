@@ -197,9 +197,9 @@ vgg16_asphalt_classification_params = {
 vgg16_asphalt_CLM_params = {
     **global_config.global_config,
     **default_params,
-    "batch_size": 16,
+    "batch_size": 32,
     "epochs": 30,
-    "learning_rate": 0.00003,
+    "learning_rate": 0.001,
     "is_regression": False,
     "eval_metric": const.EVAL_METRIC_ACCURACY,
     "clm": True,
