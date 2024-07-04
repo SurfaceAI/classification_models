@@ -220,7 +220,7 @@ def prepare_train(
         rest_params = [param for name, param in model.named_parameters() if 'CLM' not in name]
         
         optimizer_clm = optimizer_cls(cls_params, lr=0.01)
-        optimizer_model = optimizer_cls(rest_params, lr=0.0001)
+        optimizer_model = optimizer_cls(rest_params, lr=learning_rate)
         optimizer = optimizer_clm, optimizer_model
     
     else:
