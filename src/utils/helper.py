@@ -233,6 +233,16 @@ def set_seed(seed):
     torch.cuda.manual_seed_all(seed)
     torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark = False
-
+    
+    
+def get_parameters_by_layer(model, layer_name):
+    """
+    Get the parameters of a specific layer by name.
+    """
+    params = []
+    for name, param in model.named_parameters():
+        if layer_name in name:
+            params.append(param)
+    return params
 
     

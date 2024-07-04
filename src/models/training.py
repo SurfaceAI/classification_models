@@ -18,6 +18,7 @@ from src import constants as const
 from src.utils import checkpointing, helper, preprocessing
 from multi_label import QWK
 import argparse
+import matplotlib.pyplot as plt
 
 
 
@@ -75,7 +76,6 @@ def _run_training(project=None, name=None, config=None, wandb_on=True):
         wandb.define_metric(f'eval/{config.get("eval_metric")}', summary=summary)
         # wandb.define_metric("eval/acc", summary="max")
         # wandb.define_metric("eval/mse", summary="min")
-
     model_cls = helper.string_to_object(config.get("model"))
     optimizer_cls = helper.string_to_object(config.get("optimizer"))
 
@@ -117,6 +117,7 @@ def _run_training(project=None, name=None, config=None, wandb_on=True):
         random_seed=config.get("seed"),
         is_regression=config.get("is_regression"),
         clm=config.get("clm"),
+        two_optimizers=config.get("two_optimizers"),
         max_class_size=config.get("max_class_size"),
     )
 
@@ -129,6 +130,7 @@ def _run_training(project=None, name=None, config=None, wandb_on=True):
         optimizer=optimizer,
         eval_metric=config.get("eval_metric"),
         clm = config.get("clm"), 
+        two_optimizers=config.get("two_optimizers"),
         device=device,
         epochs=config.get("epochs"),
         wandb_on=wandb_on,
@@ -168,6 +170,7 @@ def prepare_train(
     random_seed,
     is_regression,
     clm,
+    two_optimizers, 
     max_class_size,
 ):
     train_data, valid_data = preprocessing.create_train_validation_datasets(
@@ -212,7 +215,16 @@ def prepare_train(
             optimizer_params += [p for p in layer.parameters()]
 
     # set parameters to optimize
-    optimizer = optimizer_cls(optimizer_params, lr=learning_rate)
+    if two_optimizers:
+        cls_params = helper.get_parameters_by_layer(model, 'CLM')
+        rest_params = [param for name, param in model.named_parameters() if 'CLM' not in name]
+        
+        optimizer_clm = optimizer_cls(cls_params, lr=0.01)
+        optimizer_model = optimizer_cls(rest_params, lr=0.0001)
+        optimizer = optimizer_clm, optimizer_model
+    
+    else:
+        optimizer = optimizer_cls(optimizer_params, lr=learning_rate)
 
     # limit max class size
     if max_class_size is not None:
@@ -263,6 +275,7 @@ def train(
     optimizer,
     eval_metric,
     clm,
+    two_optimizers,
     device,
     epochs,
     wandb_on,
@@ -293,6 +306,7 @@ def train(
             device,
             eval_metric=eval_metric,
             clm=clm,
+            two_optimizers=two_optimizers,
         )
 
         val_loss, val_metric_value = validate_epoch(
@@ -300,7 +314,8 @@ def train(
             validloader,
             device,
             eval_metric,
-            clm=clm
+            clm=clm,
+            two_optimizers=two_optimizers,
         )
 
         # checkpoint saving with early stopping
@@ -337,7 +352,8 @@ def train(
 
 
 # train a single epoch
-def train_epoch(model, dataloader, optimizer, device, eval_metric, clm):
+def train_epoch(model, dataloader, optimizer, device, eval_metric, clm, two_optimizers):
+    #wandb.watch(model, criterion, log='all', log_freq=25)
     model.train()
     if clm:
         cost_matrix = QWK.make_cost_matrix(4)
@@ -345,15 +361,27 @@ def train_epoch(model, dataloader, optimizer, device, eval_metric, clm):
         #criterion = model.criterion(reduction="sum")
     else:
         criterion = model.criterion(reduction="sum")
+        
+    wandb.watch(model, criterion, log="all", log_freq=10)
     running_loss = 0.0
     eval_metric_value = 0
+
+    gradients = []
+    first_moments = []
+    second_moments = []
 
     for inputs, labels in dataloader:
         # helper.multi_imshow(inputs, labels)
 
         inputs, labels = inputs.to(device), labels.to(device)
-
-        optimizer.zero_grad()
+        
+        if two_optimizers:
+            optimizer_clm, optimizer_model = optimizer
+            optimizer_clm.zero_grad()
+            optimizer_model.zero_grad()
+        
+        else:
+            optimizer.zero_grad()
 
         outputs = model.forward(inputs)
         if isinstance(criterion, nn.MSELoss):
@@ -367,15 +395,37 @@ def train_epoch(model, dataloader, optimizer, device, eval_metric, clm):
         loss.backward()
         
         # Print gradients
-        for name, param in model.named_parameters():
-            if param.grad is not None:
-                print(f"{name} gradient: {param.grad.norm()}")
+        # for name, param in model.named_parameters():
+        #     if param.grad is not None:
+        #         print(f"{name} gradient: {param.grad.norm()}")
                 #print(f"{name} gradient values: {param.grad}")
 
         
         print(f"Thresholds before optimizer step: b: {model.CLM.thresholds_b.data}, a: {model.CLM.thresholds_a.data}")
         
-        optimizer.step()
+        
+        if two_optimizers:
+            optimizer_clm.step()
+            optimizer_model.step()
+        else:
+            optimizer.step()
+        
+        # Capture gradients and moments for the CLM layer
+        for name, param in model.named_parameters():
+            if 'CLM' in name and param.grad is not None:
+                gradients.append(param.grad.norm().item())
+                if param in optimizer_clm.state:
+                    param_state = optimizer_clm.state[param]
+                    if 'exp_avg' in param_state and 'exp_avg_sq' in param_state:
+                        first_moment = param_state['exp_avg'].norm().item()
+                        second_moment = param_state['exp_avg_sq'].norm().item()
+                        first_moments.append(first_moment)
+                        second_moments.append(second_moment)
+                
+                # Print optimizer state for the parameter
+                if param in optimizer_clm.state:
+                    param_state = optimizer_clm.state[param]
+                    print(f"{name} optimizer state: {param_state}")
         
         print(f"Thresholds after optimizer step: b: {model.CLM.thresholds_b.data}, a: {model.CLM.thresholds_a.data}")
 
@@ -401,7 +451,33 @@ def train_epoch(model, dataloader, optimizer, device, eval_metric, clm):
             eval_metric_value = running_loss
         else:
             raise ValueError(f"Unknown eval_metric: {eval_metric}")
-        # break
+        #break
+    
+    plt.figure(figsize=(12, 6))
+
+    plt.subplot(1, 3, 1)
+    plt.plot(gradients, label="Gradients")
+    plt.title("Gradients of Last CLM Layer")
+    plt.xlabel("Batch")
+    plt.ylabel("Gradient Norm")
+    plt.legend()
+
+    plt.subplot(1, 3, 2)
+    plt.plot(first_moments, label="First Moment (m_t)")
+    plt.title("First Moment (m_t) of Last CLM Layer")
+    plt.xlabel("Batch")
+    plt.ylabel("First Moment Norm")
+    plt.legend()
+
+    plt.subplot(1, 3, 3)
+    plt.plot(second_moments, label="Second Moment (v_t)")
+    plt.title("Second Moment (v_t) of Last CLM Layer")
+    plt.xlabel("Batch")
+    plt.ylabel("Second Moment Norm")
+    plt.legend()
+
+    plt.tight_layout()
+    plt.show()
 
     return running_loss / len(dataloader.sampler), eval_metric_value / len(
         dataloader.sampler
@@ -432,7 +508,7 @@ def validate_epoch(model, dataloader, device, eval_metric, clm):
             
             if clm:
                 loss = criterion(helper.to_one_hot_tensor(labels, 4), outputs)
-            # else:
+            else:
                 loss = criterion(outputs, labels)
 
             running_loss += loss.item()
@@ -455,7 +531,8 @@ def validate_epoch(model, dataloader, device, eval_metric, clm):
                 eval_metric_value = running_loss
             else:
                 raise ValueError(f"Unknown eval_metric: {eval_metric}")
-            # break
+            
+            break
 
     return running_loss / len(dataloader.sampler), eval_metric_value / len(
         dataloader.sampler
