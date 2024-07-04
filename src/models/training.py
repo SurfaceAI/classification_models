@@ -9,6 +9,7 @@ from datetime import datetime
 
 import torch
 from torch import nn
+import torch.optim as optim
 from torch.utils.data import DataLoader, WeightedRandomSampler, Subset
 import random
 
@@ -341,6 +342,7 @@ def train_epoch(model, dataloader, optimizer, device, eval_metric, clm):
     if clm:
         cost_matrix = QWK.make_cost_matrix(4)
         criterion = model.criterion(cost_matrix)
+        #criterion = model.criterion(reduction="sum")
     else:
         criterion = model.criterion(reduction="sum")
     running_loss = 0.0
@@ -357,14 +359,25 @@ def train_epoch(model, dataloader, optimizer, device, eval_metric, clm):
         if isinstance(criterion, nn.MSELoss):
             outputs = outputs.flatten()
             labels = labels.float()
-        
-        if clm:
+        elif clm:
             loss = criterion(helper.to_one_hot_tensor(labels, 4), outputs)
         else:
             loss = criterion(outputs, labels)
             
         loss.backward()
+        
+        # Print gradients
+        for name, param in model.named_parameters():
+            if param.grad is not None:
+                print(f"{name} gradient: {param.grad.norm()}")
+                #print(f"{name} gradient values: {param.grad}")
+
+        
+        print(f"Thresholds before optimizer step: b: {model.CLM.thresholds_b.data}, a: {model.CLM.thresholds_a.data}")
+        
         optimizer.step()
+        
+        print(f"Thresholds after optimizer step: b: {model.CLM.thresholds_b.data}, a: {model.CLM.thresholds_a.data}")
 
         running_loss += loss.item()
 
@@ -401,6 +414,7 @@ def validate_epoch(model, dataloader, device, eval_metric, clm):
     if clm:
         cost_matrix = QWK.make_cost_matrix(4)
         criterion = model.criterion(cost_matrix)
+        # criterion = model.criterion(reduction="sum")
     else:
         criterion = model.criterion(reduction="sum")
     running_loss = 0.0
@@ -418,7 +432,7 @@ def validate_epoch(model, dataloader, device, eval_metric, clm):
             
             if clm:
                 loss = criterion(helper.to_one_hot_tensor(labels, 4), outputs)
-            else:
+            # else:
                 loss = criterion(outputs, labels)
 
             running_loss += loss.item()
