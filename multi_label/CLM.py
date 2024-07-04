@@ -26,7 +26,18 @@ class CLM(nn.Module):
     def convert_thresholds(self, b, a, min_distance=0.35):
         a = a.pow(2) + min_distance
         thresholds_param = torch.cat([b, a], dim=0).float()
-        th = torch.cumsum(thresholds_param, dim=0)
+        
+        band_matrix = torch.tril(torch.ones((self.num_classes - 1, self.num_classes - 1)))
+        
+        # Tile and reshape thresholds_param
+        thresholds_param_tiled = thresholds_param.repeat(self.num_classes - 1)
+        thresholds_param_reshaped = thresholds_param_tiled.view(self.num_classes - 1, self.num_classes - 1)
+        
+        # Element-wise multiplication
+        cumulative_sums_matrix = band_matrix * thresholds_param_reshaped
+        
+        # Sum along the rows
+        th = cumulative_sums_matrix.sum(dim=1)
         return th
     
     def nnpom(self, projected, thresholds):
