@@ -315,7 +315,6 @@ def train(
             device,
             eval_metric,
             clm=clm,
-            two_optimizers=two_optimizers,
         )
 
         # checkpoint saving with early stopping
