@@ -361,7 +361,7 @@ def train_epoch(model, dataloader, optimizer, device, eval_metric, clm, two_opti
     else:
         criterion = model.criterion(reduction="sum")
         
-    wandb.watch(model, criterion, log="all", log_freq=10)
+    wandb.watch(model, criterion, log="all", log_freq=100)
     running_loss = 0.0
     eval_metric_value = 0
 
