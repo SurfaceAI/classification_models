@@ -60,12 +60,12 @@ class HierarchyNet_Pre(nn.Module):
         self.fc_2_fine = nn.Linear(num_features, num_classes) 
 
         
-        self.coarse_criterion = nn.CrossEntropyLoss()
+        # self.coarse_criterion = nn.CrossEntropyLoss()
         
-        if num_classes == 1:
-            self.fine_criterion = nn.MSELoss()
-        else:
-            self.fine_criterion = nn.CrossEntropyLoss()
+        # if num_classes == 1:
+        #     self.fine_criterion = nn.MSELoss()
+        # else:
+        #     self.fine_criterion = nn.CrossEntropyLoss()
     
     @ staticmethod
     def get_class_probabilies(x):

@@ -4,7 +4,6 @@ class B_CNN(nn.Module):
     def __init__(self, num_c, num_classes):
         super(B_CNN, self).__init__()
         
-        
         ### Block 1
         self.block1_layer1 = nn.Sequential(
             nn.Conv2d(3, 64, kernel_size=3, stride=1, padding=1),
@@ -92,7 +91,7 @@ class B_CNN(nn.Module):
         
         ### Fine Block
         self.fc = nn.Sequential(
-            nn.Linear(512 * 16 * 16, 1024),
+            nn.Linear(512 * 8 * 8, 1024),
             nn.ReLU(),
             nn.Dropout(0.5),
             )
