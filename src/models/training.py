@@ -352,7 +352,6 @@ def train(
 
 # train a single epoch
 def train_epoch(model, dataloader, optimizer, device, eval_metric, clm, two_optimizers):
-    #wandb.watch(model, criterion, log='all', log_freq=25)
     model.train()
     if clm:
         cost_matrix = QWK.make_cost_matrix(4)
@@ -361,7 +360,7 @@ def train_epoch(model, dataloader, optimizer, device, eval_metric, clm, two_opti
     else:
         criterion = model.criterion(reduction="sum")
         
-    wandb.watch(model, criterion, log="all", log_freq=10)
+    wandb.watch(model, log="all", log_freq=10)
     running_loss = 0.0
     eval_metric_value = 0
 
@@ -410,21 +409,21 @@ def train_epoch(model, dataloader, optimizer, device, eval_metric, clm, two_opti
             optimizer.step()
         
         # Capture gradients and moments for the CLM layer
-        for name, param in model.named_parameters():
-            if 'CLM' in name and param.grad is not None:
-                gradients.append(param.grad.norm().item())
-                if param in optimizer_clm.state:
-                    param_state = optimizer_clm.state[param]
-                    if 'exp_avg' in param_state and 'exp_avg_sq' in param_state:
-                        first_moment = param_state['exp_avg'].norm().item()
-                        second_moment = param_state['exp_avg_sq'].norm().item()
-                        first_moments.append(first_moment)
-                        second_moments.append(second_moment)
+        # for name, param in model.named_parameters():
+        #     if 'CLM' in name and param.grad is not None:
+        #         gradients.append(param.grad.norm().item())
+        #         if param in optimizer_clm.state:
+        #             param_state = optimizer_clm.state[param]
+        #             if 'exp_avg' in param_state and 'exp_avg_sq' in param_state:
+        #                 first_moment = param_state['exp_avg'].norm().item()
+        #                 second_moment = param_state['exp_avg_sq'].norm().item()
+        #                 first_moments.append(first_moment)
+        #                 second_moments.append(second_moment)
                 
-                # Print optimizer state for the parameter
-                if param in optimizer_clm.state:
-                    param_state = optimizer_clm.state[param]
-                    print(f"{name} optimizer state: {param_state}")
+        #         # Print optimizer state for the parameter
+        #         if param in optimizer_clm.state:
+        #             param_state = optimizer_clm.state[param]
+        #             print(f"{name} optimizer state: {param_state}")
         
         print(f"Thresholds after optimizer step: b: {model.CLM.thresholds_b.data}, a: {model.CLM.thresholds_a.data}")
 
@@ -450,33 +449,39 @@ def train_epoch(model, dataloader, optimizer, device, eval_metric, clm, two_opti
             eval_metric_value = running_loss
         else:
             raise ValueError(f"Unknown eval_metric: {eval_metric}")
+        
+        wandb.log(
+        {
+            "batch_loss": running_loss,
+        }
+        )
         #break
     
-    plt.figure(figsize=(12, 6))
+    # plt.figure(figsize=(12, 6))
 
-    plt.subplot(1, 3, 1)
-    plt.plot(gradients, label="Gradients")
-    plt.title("Gradients of Last CLM Layer")
-    plt.xlabel("Batch")
-    plt.ylabel("Gradient Norm")
-    plt.legend()
+    # plt.subplot(1, 3, 1)
+    # plt.plot(gradients, label="Gradients")
+    # plt.title("Gradients of Last CLM Layer")
+    # plt.xlabel("Batch")
+    # plt.ylabel("Gradient Norm")
+    # plt.legend()
 
-    plt.subplot(1, 3, 2)
-    plt.plot(first_moments, label="First Moment (m_t)")
-    plt.title("First Moment (m_t) of Last CLM Layer")
-    plt.xlabel("Batch")
-    plt.ylabel("First Moment Norm")
-    plt.legend()
+    # plt.subplot(1, 3, 2)
+    # plt.plot(first_moments, label="First Moment (m_t)")
+    # plt.title("First Moment (m_t) of Last CLM Layer")
+    # plt.xlabel("Batch")
+    # plt.ylabel("First Moment Norm")
+    # plt.legend()
 
-    plt.subplot(1, 3, 3)
-    plt.plot(second_moments, label="Second Moment (v_t)")
-    plt.title("Second Moment (v_t) of Last CLM Layer")
-    plt.xlabel("Batch")
-    plt.ylabel("Second Moment Norm")
-    plt.legend()
+    # plt.subplot(1, 3, 3)
+    # plt.plot(second_moments, label="Second Moment (v_t)")
+    # plt.title("Second Moment (v_t) of Last CLM Layer")
+    # plt.xlabel("Batch")
+    # plt.ylabel("Second Moment Norm")
+    # plt.legend()
 
-    plt.tight_layout()
-    plt.show()
+    # plt.tight_layout()
+    # plt.show()
 
     return running_loss / len(dataloader.sampler), eval_metric_value / len(
         dataloader.sampler
