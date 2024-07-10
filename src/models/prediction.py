@@ -19,6 +19,8 @@ from PIL import Image, ImageDraw, ImageFont
 import pandas as pd
 import argparse
 import matplotlib.pyplot as plt
+from tqdm import tqdm
+
 
 def cam_prediction(config):
     # load device
@@ -125,7 +127,7 @@ def predict(model, data, batch_size, is_regression, device):
     ids = []
     with torch.no_grad():
         
-        for batch_inputs, batch_ids in loader:
+        for batch_inputs, batch_ids in tqdm(loader, desc="predict batches"):
             batch_inputs = batch_inputs.to(device)
     
             batch_outputs = model(batch_inputs)

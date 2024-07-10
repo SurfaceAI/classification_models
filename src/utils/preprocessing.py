@@ -15,6 +15,8 @@ from torch.utils.data import DataLoader, Dataset
 from torchvision import datasets, transforms
 from torchvision.io import read_image
 from tqdm import tqdm
+from itertools import chain
+import pandas as pd
 
 from experiments.config import global_config
 from src import constants as const
@@ -298,6 +300,8 @@ class TestImages(Dataset):
 def create_train_validation_datasets(
     data_root,
     dataset,
+    metadata,
+    train_valid_split_list,
     selected_classes,
     validation_size,
     general_transform,
@@ -311,6 +315,12 @@ def create_train_validation_datasets(
 
     # data path
     data_path = os.path.join(data_root, dataset)
+
+    # train validation split file
+    if metadata is not None and train_test_split is not None:
+        train_valid_split_list = os.path.join(data_root, metadata, train_valid_split_list)
+    else:
+        train_valid_split_list = None
 
     # flatten if level is flatten
     if level == const.FLATTEN:
@@ -337,6 +347,7 @@ def create_train_validation_datasets(
 
     train_dataset, valid_dataset = train_validation_split_datasets(
         complete_dataset,
+        train_valid_split_list,
         validation_size,
         train_transform,
         valid_transform,
@@ -426,23 +437,55 @@ def calculate_dataset_normalization(data_root, dataset):
 
 
 def train_validation_split_datasets(
-    complete_dataset, validation_size, train_transform, valid_transform, random_state
+    complete_dataset, train_valid_split_list, validation_size, train_transform, valid_transform, random_state
 ):
-    (
-        samples_train,
-        samples_valid,
-        targets_train,
-        targets_valid,
-        imgs_train,
-        imgs_valid,
-    ) = train_test_split(
-        complete_dataset.samples,
-        complete_dataset.targets,
-        complete_dataset.imgs,
-        test_size=validation_size,
-        random_state=random_state,
-        stratify=complete_dataset.targets,
-    )
+    if train_valid_split_list is not None:
+        print(f"Train validation split with {train_valid_split_list}.")
+        df = pd.read_csv(train_valid_split_list,
+                         dtype={
+                             'is_in_validation': bool,
+                             'image_id': str,
+                             })
+        image_id_to_index = {os.path.splitext(os.path.basename(path))[0]: idx for idx, (path, _) in enumerate(complete_dataset.samples)}
+    
+        train_indices = []
+        valid_indices = []
+        
+        for image_id in image_id_to_index.keys():
+            index = image_id_to_index[image_id]
+            if image_id in df['image_id'].values and df[df['image_id'] == image_id]['is_in_validation'].values[0]:
+                valid_indices.append(index)
+            else:
+                train_indices.append(index)
+        (
+            samples_train,
+            samples_valid,
+            targets_train,
+            targets_valid,
+            imgs_train,
+            imgs_valid,
+        ) = train_valid_split(
+            complete_dataset.samples,
+            complete_dataset.targets,
+            complete_dataset.imgs,
+            train_valid_split_tuple=(train_indices, valid_indices),
+        )
+    else:
+        (
+            samples_train,
+            samples_valid,
+            targets_train,
+            targets_valid,
+            imgs_train,
+            imgs_valid,
+        ) = train_test_split(
+            complete_dataset.samples,
+            complete_dataset.targets,
+            complete_dataset.imgs,
+            test_size=validation_size,
+            random_state=random_state,
+            stratify=complete_dataset.targets,
+        )
 
     train_dataset = copy.deepcopy(complete_dataset)
     train_dataset.samples = samples_train
@@ -457,6 +500,24 @@ def train_validation_split_datasets(
     valid_dataset.transform = valid_transform
 
     return train_dataset, valid_dataset
+
+def train_valid_split(*arrays, train_valid_split_tuple):
+    n_arrays = len(arrays)
+    if n_arrays == 0:
+        raise ValueError("At least one array required as input")
+    
+    train_indices, valid_indices = train_valid_split_tuple
+    n_samples = len(train_indices) + len(valid_indices)
+
+    for a in arrays:
+        if len(a) != n_samples:
+            raise ValueError("All input arrays must have the same length as sum of train and validation indices")
+
+    return list(
+        chain.from_iterable(
+            ([a[idx] for idx in train_indices], [a[idx] for idx in valid_indices]) for a in arrays
+        )
+    )
 
 
 def custom_crop(img, crop_style=None):
@@ -481,6 +542,16 @@ def custom_crop(img, crop_style=None):
         left = im_width / 4
         height = im_height * 0.35
         width = im_width / 2
+    elif crop_style == "small_pano": # 9 July 2024
+        top = im_height * 0.55
+        left = im_width * 0.35
+        height = im_height * 0.3
+        width = im_width * 0.3
+    elif crop_style == "super_small_pano": # 9 July 2024
+        top = im_height * 0.65
+        left = im_width * 0.4
+        height = im_height * 0.2
+        width = im_width * 0.2
     else:  # None, or not valid
         return img
 
@@ -489,6 +560,7 @@ def custom_crop(img, crop_style=None):
 
 
 def transform(
+    preresize=None,
     resize=None,
     crop=None,
     to_tensor=True,
@@ -497,7 +569,9 @@ def transform(
     random_horizontal_flip=None,
     random_vertical_flip=None,
     color_jitter=None,
-    gaussian_blur=None,
+    gaussian_blur_kernel=None,
+    gaussian_blur_sigma=None,
+    gaussian_blur_fixed=False,
 ):
     """
     Create a PyTorch image transformation function based on specified parameters.
@@ -515,7 +589,9 @@ def transform(
             - contrast between 0 and 1 or None
             - saturation between 0 and 1 or None
             - hue between 0 and 0.5 or None
-        - gaussian_blur (int or None): Blurs image with randomly chosen Gaussian blur.
+        - gaussian_blur_kernel (odd int or None): Kernel size for image Gaussian blur.
+        - gaussian_blur_sigma (float or None): Sigma or max sigma for randomly chosen Gaussian blur.
+        - gaussian_blur_fixed (boolean): True for fixed sigma, False for range
 
     Returns:
         PyTorch image transformation function.
@@ -531,6 +607,9 @@ def transform(
     if crop is not None:
         transform_list.append(transforms.Lambda(partial(custom_crop, crop_style=crop)))
 
+    if preresize is not None:
+        transform_list.append(transforms.Resize(preresize))
+
     if resize is not None:
         transform_list.append(transforms.Resize(resize))
 
@@ -543,8 +622,13 @@ def transform(
     if color_jitter is not None:
         transform_list.append(transforms.ColorJitter(*color_jitter))
 
-    if gaussian_blur is not None:
-        transform_list.append(transforms.GaussianBlur(gaussian_blur))
+    if gaussian_blur_kernel is not None:
+        if gaussian_blur_sigma is not None:
+            if gaussian_blur_fixed == False:
+                gaussian_blur_sigma = (0.01, gaussian_blur_sigma)
+        else:
+            gaussian_blur_sigma = (0.1, 2.0) # pytorch default value
+        transform_list.append(transforms.GaussianBlur(gaussian_blur_kernel, gaussian_blur_sigma))
 
     if to_tensor:
         transform_list.append(transforms.ToTensor())

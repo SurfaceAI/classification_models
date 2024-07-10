@@ -28,7 +28,7 @@ def apply_gaussian_blur(image_tensor, kernel_size, sigma):
 
 # Verschiedene Werte für Sigma und Kernelgröße
 sigma_values = [0.001, 0.1]
-sigma_values = [2, 5]
+sigma_values = [2, 3.5, 5]
 kernel_sizes = [(5, 5), (7, 7), (9, 9), (11, 11)]
 
 # Plotten der originalen und verschwommenen Bilder
@@ -48,4 +48,5 @@ for i, sigma in enumerate(sigma_values):
         axes[i, j + 1].axis('off')
 
 plt.tight_layout()
+# plt.savefig("gaussian_blur_experiment.jpg")
 plt.show()
