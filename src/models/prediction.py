@@ -127,7 +127,7 @@ def predict(model, data, batch_size, is_regression, device):
     ids = []
     with torch.no_grad():
         
-        for batch_inputs, batch_ids in tqdm(loader, desc="train batches"):
+        for batch_inputs, batch_ids in tqdm(loader, desc="predict batches"):
             batch_inputs = batch_inputs.to(device)
     
             batch_outputs = model(batch_inputs)

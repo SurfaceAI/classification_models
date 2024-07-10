@@ -92,6 +92,8 @@ CROP_LOWER_MIDDLE_THIRD = "lower_middle_third"
 CROP_LOWER_MIDDLE_HALF = "lower_middle_half"
 CROP_LOWER_MIDDLE_HALF_PANO = "lower_middle_half_pano"
 CROP_LOWER_HALF = "lower_half"
+CROP_SMALL_PANO = "small_pano"
+CROP_SUPER_SMALL_PANO = "super_small_pano"
 
 # normalization
 NORM_IMAGENET = "imagenet"
