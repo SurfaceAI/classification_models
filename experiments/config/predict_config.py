@@ -86,16 +86,60 @@ CC_V1_0 = {
     "root_data": str(global_config.ROOT_DIR / "data"),
     # "dataset": "weseraue/imgs_2048",
     # "dataset": "weseraue/original",
-    # "dataset": "weseraue/paving_stones",
+    "dataset": "weseraue/paving_stones",
     # "dataset": "V1_0/s_1024",
-    "dataset": "lndw",
+    # "dataset": "lndw",
+    # "dataset": "berlin",
     "transform": {
         "resize": (384, 384),
         # "crop": const.CROP_LOWER_MIDDLE_HALF_PANO,
-        "crop": const.CROP_LOWER_MIDDLE_HALF,
+        # "crop": const.CROP_LOWER_MIDDLE_HALF,
+        "crop": "small_pano",
         "normalize": (const.V1_0_ANNOTATED_MEAN, const.V1_0_ANNOTATED_SD),
     },
+    "gpu_kernel": 0,
+    "batch_size": 16,
+}
+
+blur_V1_0 = {
+    **global_config.global_config,
+    "name": "effnet_blur_surface_pred",
+    "model_dict": {
+        "trained_model": "",
+        "level": const.TYPE,
+    },
+    "dataset": "V1_0/annotated",
+    "transform": {
+        "preresize": (96, 96),
+        "resize": (384, 384),
+        "crop": const.CROP_LOWER_MIDDLE_HALF,
+        "normalize": (const.V1_0_ANNOTATED_MEAN, const.V1_0_ANNOTATED_SD),
+        # "gaussian_blur_kernel": 11,
+        # "gaussian_blur_sigma": 5,
+        # "gaussian_blur_fixed": True,
+    },
     "gpu_kernel": 1,
+    "batch_size": 16,
+}
+
+blur_weseraue = {
+    **global_config.global_config,
+    "name": "effnet_blur_surface_pred_weseraue",
+    "model_dict": {
+        "trained_model": "",
+        "level": const.TYPE,
+    },
+    "root_data": str(global_config.ROOT_DIR / "data"),
+    "dataset": "weseraue/paving_stones",
+    "transform": {
+        "resize": (384, 384),
+        "crop": const.CROP_LOWER_MIDDLE_HALF_PANO,
+        # "crop": const.CROP_SMALL_PANO,
+        # "crop": const.CROP_SUPER_SMALL_PANO,
+        "normalize": (const.V1_0_ANNOTATED_MEAN, const.V1_0_ANNOTATED_SD),
+        # "gaussian_blur_fixed": True,
+    },
+    "gpu_kernel": 0,
     "batch_size": 16,
 }
 
@@ -226,6 +270,22 @@ cam_surface = {
     "transform": {
         "resize": (384, 384),
         "crop": const.CROP_LOWER_MIDDLE_HALF,
+        "normalize": (const.V1_0_ANNOTATED_MEAN, const.V1_0_ANNOTATED_SD),
+    },
+    "gpu_kernel": 1,
+    "batch_size": 16,
+}
+
+cam_surface_weseraue = {
+    **global_config.global_config,
+    "name": "cam_surface_prediction",
+    # "model_dict": {"trained_model": "surface-efficientNetV2SLinear-20240704_211831-ntvzab3t_epoch7.pt"}, # no blur run 5
+    "model_dict": {"trained_model": "surface-efficientNetV2SLinear-20240704_220436-7v8p5y2o_epoch8.pt"}, # noblur run 6
+    "root_data": str(global_config.ROOT_DIR / "data"),
+    "dataset": "weseraue_cam_analysis",
+    "transform": {
+        "resize": (384, 384),
+        "crop": const.CROP_LOWER_MIDDLE_HALF_PANO,
         "normalize": (const.V1_0_ANNOTATED_MEAN, const.V1_0_ANNOTATED_SD),
     },
     "gpu_kernel": 1,

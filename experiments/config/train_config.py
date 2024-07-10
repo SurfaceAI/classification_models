@@ -282,7 +282,7 @@ effnet_surface_blur_sweep_params = {
     **global_config.global_config,
     **default_params,
     'gpu_kernel': 1,
-    "epochs": 20,
+    "epochs": 30,
     "eval_metric": const.EVAL_METRIC_ACCURACY,
     'model': const.EFFNET_LINEAR,
     "dataset": "V1_0/annotated",
@@ -292,25 +292,63 @@ effnet_surface_blur_sweep_params = {
     "metric": {"name": f"eval/{const.EVAL_METRIC_ACCURACY}", "goal": "maximize"},
     "search_params":{
         "batch_size": {"values": [16]},
-        "learning_rate": {"values": [0.0003, 0.0007]},
+        # "learning_rate": {"values": [0.0003, 0.0007]},
+        "learning_rate": {"values": [0.0003]},
         "augment": {
             "parameters": {
                 **{key: {"value": value} for key, value in global_config.global_config.get("augment").items()},
-                "gaussian_blur_kernel": {"values": [5, 11]},
-                "gaussian_blur_sigma": {"values": [2, 5]},
+                "gaussian_blur_kernel": {"values": [5, 7, 9, 11]},
+                "gaussian_blur_sigma": {"values": [2, 3.5, 5]},
             }
         },
         },
-    # "project": const.PROJECT_SURFACE_SWEEP,
-    "project": "test_sweep-road-surface-classification-type",
-    "name": "effnet",
+    "project": const.PROJECT_SURFACE_SWEEP,
+    "name": "effnet_blur",
     "level": const.SURFACE,
-    "sweep_counts": 2,
+    "sweep_counts": 100,
     "transform":
         {"resize": (384, 384),
         "crop": const.CROP_LOWER_MIDDLE_HALF,    
         "normalize": const.NORM_DATA,},    
     "save_state": True,
+ }
+
+effnet_surface_high_blur_sweep_params = {
+    **global_config.global_config,
+    **default_params,
+    'gpu_kernel': 0,
+    "epochs": 30,
+    "eval_metric": const.EVAL_METRIC_ACCURACY,
+    'model': const.EFFNET_LINEAR,
+    "dataset": "V1_0/annotated",
+    "metadata": "V1_0/metadata",
+    "train_valid_split_list": "train_valid_split.csv",
+    "method": "grid",
+    "metric": {"name": f"eval/{const.EVAL_METRIC_ACCURACY}", "goal": "maximize"},
+    "search_params":{
+        "unused": {"values": [1, 2]},
+        "batch_size": {"values": [16]},
+        # "learning_rate": {"values": [0.0003, 0.0007]},
+        "learning_rate": {"values": [0.0003, 0.0001653, 0.0006]}, # 0.0001653 used for first high blur experiment
+        # "learning_rate": {"values": [0.0005284]}, # 0.0001653 used for first high blur experiment
+        # "augment": {
+        #     "parameters": {
+        #         **{key: {"value": value} for key, value in global_config.global_config.get("augment").items()},
+        #         "gaussian_blur_kernel": {"values": [5]},
+        #         "gaussian_blur_sigma": {"values": [2]},
+        #     }
+        # },
+        },
+    "project": const.PROJECT_SURFACE_SWEEP,
+    "name": "effnet_blur",
+    "level": const.SURFACE,
+    "sweep_counts": 100,
+    "transform":
+        {"resize": (384, 384),
+        "crop": const.CROP_LOWER_MIDDLE_HALF,    
+        "normalize": const.NORM_DATA,},    
+    "save_state": True,
+    # "checkpoint_top_n": 10,
  }
 
 effnet_quality_sweep_params = {
@@ -433,8 +471,8 @@ road_scenery_focus_params = {
 
 train_valid_split_params = {
     **global_config.global_config,
-    "root_data": str(global_config.ROOT_DIR / "data" / "training"),
-    "dataset": "V12/annotated",
-    "metadata": "V12/metadata",
+    # "root_data": str(global_config.ROOT_DIR / "data" / "training"),
+    "dataset": "V1_0/annotated",
+    "metadata": "V1_0/metadata",
     "train_valid_split_list": "train_valid_split.csv",
 }

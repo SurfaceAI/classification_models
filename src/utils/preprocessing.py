@@ -440,6 +440,7 @@ def train_validation_split_datasets(
     complete_dataset, train_valid_split_list, validation_size, train_transform, valid_transform, random_state
 ):
     if train_valid_split_list is not None:
+        print(f"Train validation split with {train_valid_split_list}.")
         df = pd.read_csv(train_valid_split_list,
                          dtype={
                              'is_in_validation': bool,
@@ -541,6 +542,16 @@ def custom_crop(img, crop_style=None):
         left = im_width / 4
         height = im_height * 0.35
         width = im_width / 2
+    elif crop_style == "small_pano": # 9 July 2024
+        top = im_height * 0.55
+        left = im_width * 0.35
+        height = im_height * 0.3
+        width = im_width * 0.3
+    elif crop_style == "super_small_pano": # 9 July 2024
+        top = im_height * 0.65
+        left = im_width * 0.4
+        height = im_height * 0.2
+        width = im_width * 0.2
     else:  # None, or not valid
         return img
 
@@ -549,6 +560,7 @@ def custom_crop(img, crop_style=None):
 
 
 def transform(
+    preresize=None,
     resize=None,
     crop=None,
     to_tensor=True,
@@ -559,6 +571,7 @@ def transform(
     color_jitter=None,
     gaussian_blur_kernel=None,
     gaussian_blur_sigma=None,
+    gaussian_blur_fixed=False,
 ):
     """
     Create a PyTorch image transformation function based on specified parameters.
@@ -577,7 +590,8 @@ def transform(
             - saturation between 0 and 1 or None
             - hue between 0 and 0.5 or None
         - gaussian_blur_kernel (odd int or None): Kernel size for image Gaussian blur.
-        - gaussian_blur_sigma (float or None): Max sigma for randomly chosen Gaussian blur.
+        - gaussian_blur_sigma (float or None): Sigma or max sigma for randomly chosen Gaussian blur.
+        - gaussian_blur_fixed (boolean): True for fixed sigma, False for range
 
     Returns:
         PyTorch image transformation function.
@@ -593,6 +607,9 @@ def transform(
     if crop is not None:
         transform_list.append(transforms.Lambda(partial(custom_crop, crop_style=crop)))
 
+    if preresize is not None:
+        transform_list.append(transforms.Resize(preresize))
+
     if resize is not None:
         transform_list.append(transforms.Resize(resize))
 
@@ -607,7 +624,8 @@ def transform(
 
     if gaussian_blur_kernel is not None:
         if gaussian_blur_sigma is not None:
-            gaussian_blur_sigma = (0.01, gaussian_blur_sigma)
+            if gaussian_blur_fixed == False:
+                gaussian_blur_sigma = (0.01, gaussian_blur_sigma)
         else:
             gaussian_blur_sigma = (0.1, 2.0) # pytorch default value
         transform_list.append(transforms.GaussianBlur(gaussian_blur_kernel, gaussian_blur_sigma))
