@@ -216,7 +216,7 @@ def save_cam(model, data, normalize_transform, classes, valid_dataset, is_regres
                 # Erstelle eine neue Figur für jedes Bild
                 fig, ax = plt.subplots()
                 # ax.imshow(image.permute(1, 2, 0))
-                ax.imshow(cam_map[i].detach(), alpha=1.0, extent=(0, 48, 48, 0),
+                ax.imshow(cam_map[i].detach().cpu(), alpha=1.0, extent=(0, 48, 48, 0),
                         interpolation='bicubic', cmap='magma')
                 ax.axis('off')
                 
@@ -227,6 +227,23 @@ def save_cam(model, data, normalize_transform, classes, valid_dataset, is_regres
 
             print(f"Images saved in {image_folder}")   
             # break        
+
+#             for i in range(n_classes):
+#                 if (i == idx) or (classes[i] == "paving_stones"):
+#                     class_name = classes[i]
+#                     if (i == idx):
+#                         class_name = class_name + '_max'
+#                     # Erstelle eine neue Figur für jedes Bild
+#                     fig, ax = plt.subplots()
+#                     ax.imshow(image.permute(1, 2, 0))
+#                     ax.imshow(cam_map[i].detach().cpu(), alpha=0.75, extent=(0, image.shape[2], image.shape[1], 0),
+#                         interpolation='bicubic', cmap='magma')
+#                     ax.axis('off')
+#                     
+#                     # Speichere das Bild mit dem Klassennamen als Präfix
+#                     class_image_path = os.path.join(image_folder, f"{image_id}_cam_{class_name}.jpg")
+#                     plt.savefig(class_image_path, bbox_inches='tight', pad_inches=0)
+#                     plt.close()
 
 
 def prepare_data(data_root, dataset, transform):
