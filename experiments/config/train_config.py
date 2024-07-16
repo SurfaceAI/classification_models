@@ -198,6 +198,23 @@ vgg16_asphalt_CLM_params = {
     **global_config.global_config,
     **default_params,
     "batch_size": 64,
+    "epochs": 20,
+    "learning_rate": 0.01,
+    "is_regression": False,
+    "eval_metric": const.EVAL_METRIC_ACCURACY,
+    "clm": True,
+    "project": const.PROJECT_ORDINAL_REGRESSION_FIXED,
+    "name": "VGG16_CLM_asphalt",
+    "level": const.ASPHALT,
+    "selected_classes": global_config.global_config.get("selected_classes")[const.ASPHALT],
+    "dataset": "V12/annotated/asphalt",
+    "model": const.VGG16_CLM,
+}
+
+vgg16_asphalt_Rosati_params = {
+    **global_config.global_config,
+    **default_params,
+    "batch_size": 64,
     "epochs": 30,
     "learning_rate": 0.0001,
     "is_regression": False,

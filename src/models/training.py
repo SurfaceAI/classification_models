@@ -117,7 +117,6 @@ def _run_training(project=None, name=None, config=None, wandb_on=True):
         random_seed=config.get("seed"),
         is_regression=config.get("is_regression"),
         clm=config.get("clm"),
-        two_optimizers=config.get("two_optimizers"),
         max_class_size=config.get("max_class_size"),
     )
 
@@ -130,7 +129,6 @@ def _run_training(project=None, name=None, config=None, wandb_on=True):
         optimizer=optimizer,
         eval_metric=config.get("eval_metric"),
         clm = config.get("clm"), 
-        two_optimizers=config.get("two_optimizers"),
         device=device,
         epochs=config.get("epochs"),
         wandb_on=wandb_on,
@@ -170,7 +168,6 @@ def prepare_train(
     random_seed,
     is_regression,
     clm,
-    two_optimizers, 
     max_class_size,
 ):
     train_data, valid_data = preprocessing.create_train_validation_datasets(
@@ -190,7 +187,7 @@ def prepare_train(
     # print(f"classes: {train_data.class_to_idx}")
 
     # load model
-    if is_regression or clm:
+    if is_regression:
         num_classes = 1
     else:
         num_classes = len(train_data.classes)
@@ -215,16 +212,8 @@ def prepare_train(
             optimizer_params += [p for p in layer.parameters()]
 
     # set parameters to optimize
-    if two_optimizers:
-        cls_params = helper.get_parameters_by_layer(model, 'CLM')
-        rest_params = [param for name, param in model.named_parameters() if 'CLM' not in name]
-        
-        optimizer_clm = optimizer_cls(cls_params, lr=0.01)
-        optimizer_model = optimizer_cls(rest_params, lr=learning_rate)
-        optimizer = optimizer_clm, optimizer_model
     
-    else:
-        optimizer = optimizer_cls(optimizer_params, lr=learning_rate)
+    optimizer = optimizer_cls(optimizer_params, lr=learning_rate)
 
     # limit max class size
     if max_class_size is not None:
@@ -275,7 +264,6 @@ def train(
     optimizer,
     eval_metric,
     clm,
-    two_optimizers,
     device,
     epochs,
     wandb_on,
@@ -299,14 +287,13 @@ def train(
     )
 
     for epoch in range(epochs):
-        train_loss, train_metric_value = train_epoch(
+        train_loss, train_metric_value, gradients, first_moments, second_moments = train_epoch(
             model,
             trainloader,
             optimizer,
             device,
             eval_metric=eval_metric,
             clm=clm,
-            two_optimizers=two_optimizers,
         )
 
         val_loss, val_metric_value = validate_epoch(
@@ -316,6 +303,8 @@ def train(
             eval_metric,
             clm=clm,
         )
+        
+        helper.save_gradient_plots(epoch, gradients, first_moments, second_moments)
 
         # checkpoint saving with early stopping
         early_stop = checkpointer(
@@ -351,16 +340,10 @@ def train(
 
 
 # train a single epoch
-def train_epoch(model, dataloader, optimizer, device, eval_metric, clm, two_optimizers):
+def train_epoch(model, dataloader, optimizer, device, eval_metric, clm):
     model.train()
-    if clm:
-        cost_matrix = QWK.make_cost_matrix(4)
-        criterion = model.criterion(cost_matrix)
-        #criterion = model.criterion(reduction="sum")
-    else:
-        criterion = model.criterion(reduction="sum")
+    criterion = model.criterion(reduction="sum")
         
-    wandb.watch(model, log="all", log_freq=10)
     running_loss = 0.0
     eval_metric_value = 0
 
@@ -372,23 +355,15 @@ def train_epoch(model, dataloader, optimizer, device, eval_metric, clm, two_opti
         # helper.multi_imshow(inputs, labels)
 
         inputs, labels = inputs.to(device), labels.to(device)
-        
-        if two_optimizers:
-            optimizer_clm, optimizer_model = optimizer
-            optimizer_clm.zero_grad()
-            optimizer_model.zero_grad()
-        
-        else:
-            optimizer.zero_grad()
+
+        optimizer.zero_grad()
 
         outputs = model.forward(inputs)
         if isinstance(criterion, nn.MSELoss):
             outputs = outputs.flatten()
             labels = labels.float()
-        elif clm:
-            loss = criterion(helper.to_one_hot_tensor(labels, 4), outputs)
-        else:
-            loss = criterion(outputs, labels)
+        #loss = criterion(helper.to_one_hot_tensor(labels, 4), outputs) Todo: for QWK
+        loss = criterion(outputs, labels)
             
         loss.backward()
         
@@ -399,33 +374,28 @@ def train_epoch(model, dataloader, optimizer, device, eval_metric, clm, two_opti
                 #print(f"{name} gradient values: {param.grad}")
 
         
-        print(f"Thresholds before optimizer step: b: {model.CLM.thresholds_b.data}, a: {model.CLM.thresholds_a.data}")
+        print(f"Thresholds before optimizer step: b: {model.classifier[-1].thresholds_b.data}, a: {model.classifier[-1].thresholds_a.data}")
         
-        
-        if two_optimizers:
-            optimizer_clm.step()
-            optimizer_model.step()
-        else:
-            optimizer.step()
-        
-        # Capture gradients and moments for the CLM layer
-        # for name, param in model.named_parameters():
-        #     if 'CLM' in name and param.grad is not None:
-        #         gradients.append(param.grad.norm().item())
-        #         if param in optimizer_clm.state:
-        #             param_state = optimizer_clm.state[param]
-        #             if 'exp_avg' in param_state and 'exp_avg_sq' in param_state:
-        #                 first_moment = param_state['exp_avg'].norm().item()
-        #                 second_moment = param_state['exp_avg_sq'].norm().item()
-        #                 first_moments.append(first_moment)
-        #                 second_moments.append(second_moment)
+        optimizer.step()
+            
+        # # Collect gradients
+        for name, param in model.named_parameters():
+            if param.grad is not None:
+                gradients.append(param.grad.norm().item())
+                if 'CLM' in name and param in optimizer.state:
+                    param_state = optimizer.state[param]
+                    if 'exp_avg' in param_state and 'exp_avg_sq' in param_state:
+                        first_moment = param_state['exp_avg'].norm().item()
+                        second_moment = param_state['exp_avg_sq'].norm().item()
+                        first_moments.append(first_moment)
+                        second_moments.append(second_moment)
                 
-        #         # Print optimizer state for the parameter
-        #         if param in optimizer_clm.state:
-        #             param_state = optimizer_clm.state[param]
-        #             print(f"{name} optimizer state: {param_state}")
+        #         # Debugging: Print gradients and optimizer state
+        #         print(f"{name} gradient: {param.grad.norm().item()}")
+        #         if param in optimizer.state:
+        #             print(f"{name} optimizer state: {optimizer.state[param]}")
         
-        print(f"Thresholds after optimizer step: b: {model.CLM.thresholds_b.data}, a: {model.CLM.thresholds_a.data}")
+        print(f"Thresholds after optimizer step: b: {model.classifier[-1].thresholds_b.data}, a: {model.classifier[-1].thresholds_a.data}")
 
         running_loss += loss.item()
 
@@ -449,12 +419,6 @@ def train_epoch(model, dataloader, optimizer, device, eval_metric, clm, two_opti
             eval_metric_value = running_loss
         else:
             raise ValueError(f"Unknown eval_metric: {eval_metric}")
-        
-        wandb.log(
-        {
-            "batch_loss": running_loss,
-        }
-        )
         #break
     
     # plt.figure(figsize=(12, 6))
@@ -484,19 +448,13 @@ def train_epoch(model, dataloader, optimizer, device, eval_metric, clm, two_opti
     # plt.show()
 
     return running_loss / len(dataloader.sampler), eval_metric_value / len(
-        dataloader.sampler
-    )
+        dataloader.sampler), gradients, first_moments, second_moments
 
 
 # validate a single epoch
 def validate_epoch(model, dataloader, device, eval_metric, clm):
     model.eval()
-    if clm:
-        cost_matrix = QWK.make_cost_matrix(4)
-        criterion = model.criterion(cost_matrix)
-        # criterion = model.criterion(reduction="sum")
-    else:
-        criterion = model.criterion(reduction="sum")
+    criterion = model.criterion(reduction="sum")
     running_loss = 0.0
     eval_metric_value = 0
 
@@ -510,10 +468,7 @@ def validate_epoch(model, dataloader, device, eval_metric, clm):
                 outputs = outputs.flatten()
                 labels = labels.float()
             
-            if clm:
-                loss = criterion(helper.to_one_hot_tensor(labels, 4), outputs)
-            else:
-                loss = criterion(outputs, labels)
+            loss = criterion(outputs, labels)
 
             running_loss += loss.item()
 

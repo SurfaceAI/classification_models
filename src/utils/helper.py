@@ -12,6 +12,7 @@ import json
 import argparse
 from matplotlib.lines import Line2D
 from torch.utils.data import Dataset
+import os
 
 
 def string_to_object(string):
@@ -245,4 +246,35 @@ def get_parameters_by_layer(model, layer_name):
             params.append(param)
     return params
 
+
+def save_gradient_plots(epoch, gradients, first_moments, second_moments, save_dir="multi_label\gradients"):
+    if not os.path.exists(save_dir):
+        os.makedirs(save_dir)
+    
+    plt.figure(figsize=(12, 6))
+
+    plt.subplot(1, 3, 1)
+    plt.plot(gradients, label="Gradients")
+    plt.title("Gradients of Last CLM Layer")
+    plt.xlabel("Batch")
+    plt.ylabel("Gradient Norm")
+    plt.legend()
+
+    plt.subplot(1, 3, 2)
+    plt.plot(first_moments, label="First Moment (m_t)")
+    plt.title("First Moment (m_t) of Last CLM Layer")
+    plt.xlabel("Batch")
+    plt.ylabel("First Moment Norm")
+    plt.legend()
+
+    plt.subplot(1, 3, 3)
+    plt.plot(second_moments, label="Second Moment (v_t)")
+    plt.title("Second Moment (v_t) of Last CLM Layer")
+    plt.xlabel("Batch")
+    plt.ylabel("Second Moment Norm")
+    plt.legend()
+
+    plt.tight_layout()
+    plt.savefig(os.path.join(save_dir, f"epoch_{epoch+1}.png"))
+    plt.close()
     

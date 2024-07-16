@@ -9,10 +9,61 @@ from collections import OrderedDict
 from multi_label import QWK
 import math
 
+class CustomVGG16_CLM(nn.Module):
+    def __init__(self, num_classes):
+        super(CustomVGG16_CLM, self).__init__()
+
+        # Load the pre-trained VGG16 model
+        model = models.vgg16(weights='VGG16_Weights.IMAGENET1K_V1')
+        
+        # Freeze training for all layers in features
+        for param in model.features.parameters():
+            param.requires_grad = False
+
+        # Modify the classifier layer
+        num_features = model.classifier[0].in_features
+        #features = list(model.classifier.children())[:-1]  # select features in our last layer
+        model.classifier = nn.Sequential(
+            nn.Dropout(0.3),
+            nn.Linear(num_features, 4096),
+            nn.ReLU(),
+            
+            nn.Linear(4096, 4096),
+            nn.ReLU(),
+            
+            nn.Linear(4096, 1),
+            nn.BatchNorm1d(1),
+            CLM(classes=num_classes, link_function='logit', min_distance=0.001, use_slope=False, fixed_thresholds=False),
+        )
+         # add layer with output size num_classes
+        #model.classifier = nn.Sequential(*features)  # Replace the model classifier
+
+        # Save the modified model as a member variable
+        self.features = model.features
+        self.avgpool = model.avgpool
+        self.classifier = model.classifier
+        self.criterion = nn.CrossEntropyLoss
+            
+
+    @staticmethod
+    def get_class_probabilies(x):
+        return nn.functional.softmax(x, dim=1)
+
+    def forward(self, x):
+        x = self.features(x)
+        x = self.avgpool(x)
+        x = torch.flatten(x, 1)
+        x = self.classifier(x)
+        return x
+    
+    def get_optimizer_layers(self):
+        return self.classifier
+
+
 class CLM(nn.Module):
-    def __init__(self, num_classes, link_function, min_distance=0.35, use_slope=False, fixed_thresholds=False):
+    def __init__(self, classes, link_function, min_distance=0.35, use_slope=False, fixed_thresholds=False):
         super(CLM, self).__init__()
-        self.num_classes = num_classes
+        self.classes = classes
         self.link_function = link_function
         self.min_distance = min_distance
         self.use_slope = use_slope
@@ -21,15 +72,16 @@ class CLM(nn.Module):
         #if we dont have fixed thresholds, we initalize two trainable parameters 
 
         if not self.fixed_thresholds:
-           
-            self.thresholds_b = nn.Parameter(torch.empty(1))
-            nn.init.uniform_(self.thresholds_b, -0.5, 0.5)
+            if self.classes > 2:
+                    # First threshold
+                    self.thresholds_b = nn.Parameter(torch.rand(1) * 0.1)  # Random number between 0 and 0.1
+                    # Squared distance
+                    minval = math.sqrt((1.0 / (self.classes - 2)) / 2)
+                    maxval = math.sqrt(1.0 / (self.classes - 2))
+                    self.thresholds_a = nn.Parameter(minval + (maxval - minval) * torch.rand(self.classes - 2))
 
-            # Initialize thresholds_a with random values between sqrt((1.0 / (num_classes - 2)) / 2) and sqrt(1.0 / (num_classes - 2))
-            min_val = math.sqrt((1.0 / (num_classes - 2)) / 2)
-            max_val = math.sqrt(1.0 / (num_classes - 2))
-            self.thresholds_a = nn.Parameter(torch.empty(num_classes - 2))
-            nn.init.uniform_(self.thresholds_a, min_val, max_val)
+            else: 
+                raise ValueError("Number of classes must be greater than 2 for CLM.")
             #first threshold
             #self.thresholds_b = nn.Parameter(torch.rand(1) * 0.1) #random number between 0 and 1
             # self.thresholds_b = nn.Parameter(torch.rand(1) * 0.1)
@@ -56,7 +108,7 @@ class CLM(nn.Module):
 
         m = projected.shape[0]
         a = thresholds.repeat(m, 1)
-        b = projected.repeat(self.num_classes - 1, 1).t()
+        b = projected.repeat(self.classes - 1, 1).t()
         z3 = a - b
 
         if self.link_function == 'probit':
@@ -82,64 +134,7 @@ class CLM(nn.Module):
 
     def extra_repr(self):
         return 'num_classes={}, link_function={}, min_distance={}, use_slope={}, fixed_thresholds={}'.format(
-            self.num_classes, self.link_function, self.min_distance, self.use_slope, self.fixed_thresholds
+            self.classes, self.link_function, self.min_distance, self.use_slope, self.fixed_thresholds
         )
 
 architecture = "VGG16"
-
-class CustomVGG16_CLM(nn.Module):
-    def __init__(self, num_classes):
-        super(CustomVGG16_CLM, self).__init__()
-
-        # Load the pre-trained VGG16 model
-        model = models.vgg16(weights='VGG16_Weights.IMAGENET1K_V1')
-        
-        # Freeze training for all layers in features
-        for param in model.features.parameters():
-            param.requires_grad = True
-
-        # Modify the classifier layer
-        num_features = model.classifier[6].in_features
-        features = list(model.classifier.children())[:-1]  # select features in our last layer
-        features.extend([nn.Linear(num_features, num_classes)])  # add layer with output size num_classes
-        model.classifier = nn.Sequential(*features)  # Replace the model classifier
-
-        # Save the modified model as a member variable
-        self.features = model.features
-        self.avgpool = model.avgpool
-        self.classifier = model.classifier
-        self.criterion = QWK.qwk_loss_base
-        # if num_classes == 1:
-        #     self.criterion = QWK.qwk_loss_base
-            #self.criterion = nn.MSELoss
-        # else:
-        #     #cost_matrix = QWK.make_cost_matrix(num_classes)
-        #     #self.criterion = QWK.qwk_loss(cost_matrix, num_classes)
-        #     self.criterion = QWK.qwk_loss_base
-        # # else:
-        #     self.criterion = nn.CrossEntropyLoss
-            
-        
-        self.CLM = CLM(num_classes = 4, link_function='logit', min_distance=0.001, use_slope=False, fixed_thresholds=False)
-        
-
-    @ staticmethod
-    def get_class_probabilies(x):
-        return nn.functional.softmax(x, dim=1)
-
-    def forward(self, x):
-        x = self.features(x)
-
-        x = self.avgpool(x)
-        x = torch.flatten(x, 1)
-
-        x = self.classifier(x)
-        
-        x = self.CLM(x)
-
-        return x
-    
-    def get_optimizer_layers(self):
-        return self.classifier, self.CLM
-    
-        
