@@ -196,8 +196,8 @@ def prepare_train(
     model = model_cls(num_classes)
 
     # Unfreeze parameters
-    for param in model.parameters():
-        param.requires_grad = True
+    # for param in model.features.parameters():
+    #     param.requires_grad = True
 
     optimizer_layers = None
     if hasattr(model, "get_optimizer_layers") and callable(model.get_optimizer_layers):

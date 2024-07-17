@@ -18,7 +18,7 @@ class CustomVGG16_CLM(nn.Module):
         
         # Freeze training for all layers in features
         for param in model.features.parameters():
-            param.requires_grad = False
+            param.requires_grad = True
 
         # Modify the classifier layer
         num_features = model.classifier[0].in_features
@@ -43,7 +43,10 @@ class CustomVGG16_CLM(nn.Module):
         self.avgpool = model.avgpool
         self.classifier = model.classifier
         self.criterion = nn.CrossEntropyLoss
-            
+        
+        for name, param in self.named_parameters():
+            print(name, param.requires_grad)
+
 
     @staticmethod
     def get_class_probabilies(x):
