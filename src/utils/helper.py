@@ -278,3 +278,9 @@ def save_gradient_plots(epoch, gradients, first_moments, second_moments, save_di
     plt.savefig(os.path.join(save_dir, f"epoch_{epoch+1}.png"))
     plt.close()
     
+    
+def count_parameters(model):
+    total_params = sum(p.numel() for p in model.parameters())
+    trainable_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
+    non_trainable_params = total_params - trainable_params
+    return total_params, trainable_params, non_trainable_params

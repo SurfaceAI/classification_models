@@ -196,8 +196,10 @@ def prepare_train(
     model = model_cls(num_classes)
 
     # Unfreeze parameters
-    # for param in model.features.parameters():
-    #     param.requires_grad = True
+    for param in model.features.parameters():
+        param.requires_grad = False
+    for param in model.classifier.parameters():
+        param.requires_grad = True
 
     optimizer_layers = None
     if hasattr(model, "get_optimizer_layers") and callable(model.get_optimizer_layers):
@@ -205,14 +207,24 @@ def prepare_train(
 
     # setup optimizer
     if optimizer_layers is None:
+        #optimizer_params = model.parameters()
         optimizer_params = model.parameters()
     else:
         optimizer_params = []
         for layer in optimizer_layers:
             optimizer_params += [p for p in layer.parameters()]
 
+    for name, param in model.named_parameters():
+        print(f"{name} requires_grad: {param.requires_grad}")
+        
+    # Count parameters and print
+    total_params, trainable_params, non_trainable_params = helper.count_parameters(model)
+    print(f"Total params: {total_params}")
+    print(f"Trainable params: {trainable_params}")
+    print(f"Non-trainable params: {non_trainable_params}")
+
+
     # set parameters to optimize
-    
     optimizer = optimizer_cls(optimizer_params, lr=learning_rate)
 
     # limit max class size

@@ -17,8 +17,8 @@ class CustomVGG16_CLM(nn.Module):
         model = models.vgg16(weights='VGG16_Weights.IMAGENET1K_V1')
         
         # Freeze training for all layers in features
-        for param in model.features.parameters():
-            param.requires_grad = True
+        # for param in model.features.parameters():
+        #     param.requires_grad = False
 
         # Modify the classifier layer
         num_features = model.classifier[0].in_features
@@ -44,8 +44,8 @@ class CustomVGG16_CLM(nn.Module):
         self.classifier = model.classifier
         self.criterion = nn.CrossEntropyLoss
         
-        for name, param in self.named_parameters():
-            print(name, param.requires_grad)
+        # for name, param in self.named_parameters():
+        #     print(name, param.requires_grad)
 
 
     @staticmethod

@@ -208,7 +208,7 @@ def create_vgg16_model(img_shape: np.ndarray, n_labels: int, trainable_convs: bo
                        input_shape=(img_shape[0], img_shape[1], 3))
     if not trainable_convs:
         for layer in vgg16_conv.layers[:-1]:
-            layer.trainable = False
+            layer.trainable = True
 
     if obd['enabled']:
         # build top model         
