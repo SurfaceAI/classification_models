@@ -392,9 +392,9 @@ def train_epoch(model, dataloader, optimizer, device, eval_metric, clm):
             
         # # Collect gradients
         for name, param in model.named_parameters():
-            if param.grad is not None:
+            if param.requires_grad and param.grad is not None:
                 gradients.append(param.grad.norm().item())
-                if 'CLM' in name and param in optimizer.state:
+                if param in optimizer.state:
                     param_state = optimizer.state[param]
                     if 'exp_avg' in param_state and 'exp_avg_sq' in param_state:
                         first_moment = param_state['exp_avg'].norm().item()
