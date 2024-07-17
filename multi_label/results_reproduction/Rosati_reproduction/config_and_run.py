@@ -1,3 +1,6 @@
+import os
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '1' 
+
 import tensorflow as tf
 import numpy as np
 import pandas as pd
@@ -195,7 +198,8 @@ def cfg():
     seed = 3
 
     # Base path
-    base_path = Path(r'c:\Users\esthe\Documents\GitHub\classification_models\data\training\V12/annotated/asphalt')
+    #base_path = Path(r'c:\Users\esthe\Documents\GitHub\classification_models\data\training\V12/annotated/asphalt')
+    base_path = Path(r"/home/esther/surfaceai/classification_models/data/training/V12/annotated/asphalt")
 
     # Type of model that will be used
     model_name = "vgg16"
@@ -216,7 +220,7 @@ def cfg():
     optimiser_params = {
         'lr': 0.01,
         'bs': 64,
-        'epochs': 5
+        'epochs': 50
     }
 
     # Basically, QWK for CLM and MAE for OBD
