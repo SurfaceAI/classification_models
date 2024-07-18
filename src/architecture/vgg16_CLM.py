@@ -32,7 +32,7 @@ class CustomVGG16_CLM(nn.Module):
             nn.ReLU(),
             
             nn.Linear(4096, 1),
-            nn.BatchNorm1d(1),
+            nn.BatchNorm1d(1, momentum=0.99, eps=0.001, affine=False),
             CLM(classes=num_classes, link_function='logit', min_distance=0.001, use_slope=False, fixed_thresholds=False),
         )
          # add layer with output size num_classes
