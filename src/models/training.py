@@ -297,6 +297,9 @@ def train(
         early_stop_thresh=early_stop_thresh,
         save_state=save_state,
     )
+    
+    if wandb_on:
+        wandb.watch(model, log_freq=27)
 
     for epoch in range(epochs):
         train_loss, train_metric_value, gradients, first_moments, second_moments = train_epoch(
@@ -306,6 +309,7 @@ def train(
             device,
             eval_metric=eval_metric,
             clm=clm,
+            wandb_on=wandb_on
         )
 
         val_loss, val_metric_value = validate_epoch(
@@ -352,7 +356,7 @@ def train(
 
 
 # train a single epoch
-def train_epoch(model, dataloader, optimizer, device, eval_metric, clm):
+def train_epoch(model, dataloader, optimizer, device, eval_metric, clm, wandb_on):
     model.train()
     criterion = model.criterion(reduction="sum")
         
@@ -363,7 +367,7 @@ def train_epoch(model, dataloader, optimizer, device, eval_metric, clm):
     first_moments = []
     second_moments = []
 
-    for inputs, labels in dataloader:
+    for batch_idx, (inputs, labels) in enumerate(dataloader):
         # helper.multi_imshow(inputs, labels)
 
         inputs, labels = inputs.to(device), labels.to(device)
@@ -389,6 +393,15 @@ def train_epoch(model, dataloader, optimizer, device, eval_metric, clm):
         print(f"Thresholds before optimizer step: b: {model.classifier[-1].thresholds_b.data}, a: {model.classifier[-1].thresholds_a.data}")
         
         optimizer.step()
+        
+        #log gradients in w&b
+        if wandb_on:
+            wandb.log(
+                {
+                    "batch": batch_idx + 1,
+                    "batch/loss": loss.item(),
+                }
+            )
             
         # # Collect gradients
         for name, param in model.named_parameters():
