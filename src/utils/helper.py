@@ -13,6 +13,7 @@ import argparse
 from matplotlib.lines import Line2D
 from torch.utils.data import Dataset
 import os
+import tensorflow as tf
 
 
 def string_to_object(string):
@@ -235,6 +236,17 @@ def set_seed(seed):
     torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark = False
     
+#for both tensorflow and pytorch   
+def fix_seeds(seed=42):
+    os.environ['PYTHONHASHSEED'] = str(seed)
+    np.random.seed(seed)
+    random.seed(seed)
+    tf.random.set_seed(seed)
+    torch.manual_seed(seed)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed(seed)
+        torch.cuda.manual_seed_all(seed)
+    
     
 def get_parameters_by_layer(model, layer_name):
     """
@@ -284,3 +296,45 @@ def count_parameters(model):
     trainable_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
     non_trainable_params = total_params - trainable_params
     return total_params, trainable_params, non_trainable_params
+
+
+def load_images_and_labels(base_path, img_shape, custom_label_order):
+    images = []
+    labels = []
+    for label_folder in os.listdir(base_path):
+        label_folder_path = os.path.join(base_path, label_folder)
+        if os.path.isdir(label_folder_path):
+            for img_file in os.listdir(label_folder_path):
+                img_path = os.path.join(label_folder_path, img_file)
+                try:
+                    img = tf.keras.preprocessing.image.load_img(img_path, target_size=img_shape)
+                    img_array = tf.keras.preprocessing.image.img_to_array(img)
+                    images.append(img_array)
+                    labels.append(label_folder)  # Use the folder name as the label
+                except Exception as e:
+                    print(f"Error loading image {img_path}: {e}")
+    
+    # Create a mapping based on custom_label_order
+    label_to_index = {label: idx for idx, label in enumerate(custom_label_order)}
+    index_to_label = {idx: label for label, idx in label_to_index.items()}
+    
+    # Map labels to the custom order indices
+    y = np.array([label_to_index[label] for label in labels])
+    
+    return np.array(images), y, label_to_index, index_to_label
+
+class CustomDataset(Dataset):
+    def __init__(self, images, targets, transform=None):
+        self.images = images
+        self.targets = targets
+        self.transform = transform
+
+    def __len__(self):
+        return len(self.images)
+
+    def __getitem__(self, idx):
+        image = self.images[idx]
+        target = self.targets[idx]
+        if self.transform:
+            image = self.transform(image)
+        return image, target

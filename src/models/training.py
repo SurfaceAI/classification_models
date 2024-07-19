@@ -20,6 +20,9 @@ from multi_label import QWK
 import argparse
 import matplotlib.pyplot as plt
 
+from sklearn.model_selection import StratifiedShuffleSplit
+
+
 
 
 def run_training(
@@ -170,6 +173,7 @@ def prepare_train(
     clm,
     max_class_size,
 ):
+    
     train_data, valid_data = preprocessing.create_train_validation_datasets(
         data_root=data_root,
         dataset=dataset,
@@ -185,12 +189,55 @@ def prepare_train(
 
     # torch.save(valid_data, os.path.join(general_config.save_path, "valid_data.pt"))
     # print(f"classes: {train_data.class_to_idx}")
+    
+    helper.fix_seeds(random_seed)
+
+    # Load images and labels
+    # X, y, label_to_index, index_to_label = helper.load_images_and_labels(r'c:\Users\esthe\Documents\GitHub\classification_models\data\training\V12/annotated/asphalt', 
+    #                                                                      (256,256), 
+    #                                                                      ['excellent', 'good', 'intermediate', 'bad'])
+
+
+    # sss = StratifiedShuffleSplit(n_splits=1, test_size=validation_size, random_state=random_seed)
+    # sss_splits = list(sss.split(X=X, y=y))
+    # train_idx, test_idx = sss_splits[0]
+
+    # X_trainval, X_test = X[train_idx], X[test_idx]
+    # y_trainval, y_test = y[train_idx], y[test_idx]
+
+    # sss_val = StratifiedShuffleSplit(n_splits=1, test_size=0.25, random_state=random_seed)  
+    # sss_splits_val = list(sss_val.split(X=X_trainval, y=y_trainval))
+    # train_idx, val_idx = sss_splits_val[0]
+
+    # X_train, X_val = X_trainval[train_idx], X_trainval[val_idx]
+    # y_train, y_val = y_trainval[train_idx], y_trainval[val_idx]
+
+    # train_data = helper.CustomDataset(X_train, y_train, transform=transform)
+    # valid_data = helper.CustomDataset(X_val, y_val, transform=transform)
+    # test_data = helper.CustomDataset(X_test, y_test, transform=transform)
+
+    # sampler = None
+    # if max_class_size is not None:
+    #     class_counts = Counter(train_data.labels)
+    #     indices = []
+    #     for i, label in enumerate(train_data.labels):
+    #         if class_counts[label] > max_class_size:
+    #             continue
+    #         indices.append(i)
+    #         class_counts[label] -= 1
+    #     train_data = Subset(train_data, indices)
+    #     sample_weights = [1.0 / class_counts[label] for _, label in train_data]
+    #     sampler = WeightedRandomSampler(weights=sample_weights, num_samples=len(train_data))
+
+    # trainloader = DataLoader(train_data, batch_size=batch_size, sampler=sampler, shuffle=sampler is None)
+    # validloader = DataLoader(valid_data, batch_size=valid_batch_size)
 
     # load model
     if is_regression:
         num_classes = 1
     else:
-        num_classes = len(train_data.classes)
+        num_classes = 4
+        #num_classes = len(train_data.classes)
 
     # instanciate model with number of classes
     model = model_cls(num_classes)
@@ -298,8 +345,8 @@ def train(
         save_state=save_state,
     )
     
-    if wandb_on:
-        wandb.watch(model, log_freq=27)
+    # if wandb_on:
+    #     wandb.watch(model, log_freq=27)
 
     for epoch in range(epochs):
         train_loss, train_metric_value, gradients, first_moments, second_moments = train_epoch(
@@ -384,24 +431,25 @@ def train_epoch(model, dataloader, optimizer, device, eval_metric, clm, wandb_on
         loss.backward()
         
         # Print gradients
-        # for name, param in model.named_parameters():
-        #     if param.grad is not None:
-        #         print(f"{name} gradient: {param.grad.norm()}")
-                #print(f"{name} gradient values: {param.grad}")
+        for name, param in model.named_parameters():
+            if param.grad is not None:
+                print(f"{name} gradient: {param.grad.norm()}")
+                print(f"{name} gradient values: {param.grad}")
 
         
         print(f"Thresholds before optimizer step: b: {model.classifier[-1].thresholds_b.data}, a: {model.classifier[-1].thresholds_a.data}")
+        print(loss.item()/ 64)
         
         optimizer.step()
         
         #log gradients in w&b
-        if wandb_on:
-            wandb.log(
-                {
-                    "batch": batch_idx + 1,
-                    "batch/loss": loss.item(),
-                }
-            )
+        # if wandb_on:
+        #     wandb.log(
+        #         {
+        #             "batch": batch_idx + 1,
+        #             "batch/loss": loss.item(),
+        #         }
+        #     )
             
         # # Collect gradients
         for name, param in model.named_parameters():
