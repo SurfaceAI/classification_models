@@ -80,10 +80,15 @@ class CLM(nn.Module):
         if not self.fixed_thresholds:
             if self.classes > 2:
                     # First threshold
-                    self.thresholds_b = nn.Parameter(torch.rand(1) * 0.1)  # Random number between 0 and 0.1
+                    #self.thresholds_b = nn.Parameter(torch.rand(1) * 0.1)  # Random number between 0 and 0.1
+                    random_value = torch.rand(1) * -0.3
+                    random_value = random_value - 2
+                    self.thresholds_b = nn.Parameter(random_value)
                     # Squared distance
-                    minval = math.sqrt((1.0 / (self.classes - 2)) / 2)
-                    maxval = math.sqrt(1.0 / (self.classes - 2))
+                    # minval = math.sqrt((1.0 / (self.classes - 2)) / 2)
+                    # maxval = math.sqrt(1.0 / (self.classes - 2))
+                    minval = 1.9
+                    maxval = 2.3
                     self.thresholds_a = nn.Parameter(minval + (maxval - minval) * torch.rand(self.classes - 2))
 
             else: 
