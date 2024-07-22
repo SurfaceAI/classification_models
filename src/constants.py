@@ -152,6 +152,8 @@ EARLY_STOPPING_DEFAULT = np.Inf
 ### preprocessing
 # image size
 H256_W256 = (256, 256)
+H224_W224 = (224, 224)
+
 
 # crop
 CROP_LOWER_MIDDLE_THIRD = "lower_middle_third"

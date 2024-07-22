@@ -37,13 +37,13 @@ global_config = dict(
         constants.UNPAVED: [constants.INTERMEDIATE, constants.BAD, constants.VERY_BAD],
     },
     transform = dict(
-        resize=constants.H256_W256,
-        crop=constants.CROP_LOWER_MIDDLE_THIRD,
-        normalize=constants.NORM_DATA,
+        resize=constants.H224_W224,
+        #crop=constants.CROP_LOWER_MIDDLE_THIRD,
+        #normalize=constants.NORM_DATA,
     ),
     augment = dict(
         random_horizontal_flip=True,
-        random_rotation=10,
+        #random_rotation=10,
     ),
     dataset = "V12/annotated",
     seed = 42,

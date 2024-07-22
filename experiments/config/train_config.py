@@ -9,7 +9,7 @@ default_params = {
     "is_regression": False,
     "eval_metric": const.EVAL_METRIC_ACCURACY,
     "max_class_size": None,
-    "lr_scheduler": False
+    "lr_scheduler": True
 }
 
 default_search_params = {

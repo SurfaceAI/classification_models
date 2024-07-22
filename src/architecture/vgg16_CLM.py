@@ -25,17 +25,17 @@ class CustomVGG16_CLM(nn.Module):
         #features = list(model.classifier.children())[:-1]  # select features in our last layer
         self.classifier = nn.Sequential(
             nn.Linear(num_features, 4096),
-            #nn.ReLU(),
+            nn.LeakyReLU(0.1),
             nn.BatchNorm1d(4096),
             nn.Dropout(0.5),
             
             nn.Linear(4096, 4096),
-            #nn.ReLU(),
+            nn.LeakyReLU(0.1),
             nn.BatchNorm1d(4096),
             nn.Dropout(0.5),
             
             nn.Linear(4096, 1),
-            nn.BatchNorm1d(1, momentum=0.99, eps=0.001),
+            nn.BatchNorm1d(1, eps=0.001),
             CLM(classes=num_classes, link_function='logit', min_distance=0.0, use_slope=False, fixed_thresholds=False),
         )
          # add layer with output size num_classes
@@ -135,7 +135,8 @@ class CLM(nn.Module):
 
     def forward(self, x):
         if self.fixed_thresholds:
-            thresholds = torch.linspace(0, 1, 5, dtype=torch.float32)[1:-1]
+            #thresholds = torch.linspace(0, 1, 5, dtype=torch.float32)[1:-1]
+            thresholds = [-0.58, 1.66, 1.51]
         else:
             thresholds = self.convert_thresholds(self.thresholds_b, self.thresholds_a, self.min_distance)
 
