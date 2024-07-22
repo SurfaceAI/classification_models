@@ -16,6 +16,7 @@ class CustomVGG16_CLM(nn.Module):
         # Load the pre-trained VGG16 model
         model = models.vgg16(weights='VGG16_Weights.IMAGENET1K_V1')
         self.features = torch.nn.Sequential(*(list(model.children())[:-1]))
+        self.features = self.features[:-1]
         # Freeze training for all layers in features
         # for param in model.features.parameters():
         #     param.requires_grad = False

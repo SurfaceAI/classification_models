@@ -7,7 +7,7 @@ ROOT_DIR = Path(__file__).parent.parent.parent
 global_config = dict(
     gpu_kernel = 0,
     wandb_mode = constants.WANDB_MODE_ON,
-    wandb_on=True,
+    wandb_on=False,
     root_data = str(ROOT_DIR / "data" / "training"),
     root_model = str(ROOT_DIR / "trained_models"),
     root_predict = str(ROOT_DIR / "data" / "training" / "prediction"),
@@ -38,12 +38,12 @@ global_config = dict(
     },
     transform = dict(
         resize=constants.H224_W224,
-        #crop=constants.CROP_LOWER_MIDDLE_THIRD,
-        #normalize=constants.NORM_DATA,
+        crop=constants.CROP_LOWER_MIDDLE_THIRD,
+        normalize=constants.NORM_DATA,
     ),
     augment = dict(
         random_horizontal_flip=True,
-        #random_rotation=10,
+        random_rotation=10,
     ),
     dataset = "V12/annotated",
     seed = 42,

@@ -200,7 +200,7 @@ vgg16_asphalt_CLM_params = {
     **default_params,
     "batch_size": 64,
     "epochs": 40,
-    "learning_rate": 0.01,
+    "learning_rate": 0.1,
     "is_regression": False,
     "eval_metric": const.EVAL_METRIC_ACCURACY,
     "clm": True,
