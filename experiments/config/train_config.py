@@ -8,7 +8,8 @@ default_params = {
     "optimizer": const.OPTI_ADAM,
     "is_regression": False,
     "eval_metric": const.EVAL_METRIC_ACCURACY,
-    "max_class_size": None
+    "max_class_size": None,
+    "lr_scheduler": False
 }
 
 default_search_params = {
@@ -198,7 +199,7 @@ vgg16_asphalt_CLM_params = {
     **global_config.global_config,
     **default_params,
     "batch_size": 64,
-    "epochs": 10,
+    "epochs": 40,
     "learning_rate": 0.01,
     "is_regression": False,
     "eval_metric": const.EVAL_METRIC_ACCURACY,

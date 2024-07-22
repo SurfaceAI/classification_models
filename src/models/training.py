@@ -22,6 +22,8 @@ import matplotlib.pyplot as plt
 
 from sklearn.model_selection import StratifiedShuffleSplit
 
+from torch.optim.lr_scheduler import StepLR
+
 
 
 
@@ -139,6 +141,7 @@ def _run_training(project=None, name=None, config=None, wandb_on=True):
         early_stop_thresh=config.get("early_stop_thresh", const.EARLY_STOPPING_DEFAULT),
         save_state=config.get("save_state", True),
         config=config,
+        lr_scheduler=config.get("lr_scheduler"),
     )
 
     # TODO: save best instead of last model (if checkpoint used)
@@ -329,6 +332,7 @@ def train(
     checkpoint_top_n=const.CHECKPOINT_DEFAULT_TOP_N,
     early_stop_thresh=const.EARLY_STOPPING_DEFAULT,
     save_state=True,
+    lr_scheduler=None,
     config=None,
 ):
     model.to(device)
@@ -347,6 +351,8 @@ def train(
     
     # if wandb_on:
     #     wandb.watch(model, log_freq=27)
+    if lr_scheduler:
+        scheduler = StepLR(optimizer, step_size=6, gamma=0.1) 
 
     for epoch in range(epochs):
         train_loss, train_metric_value, gradients, first_moments, second_moments = train_epoch(
@@ -367,6 +373,9 @@ def train(
             clm=clm,
         )
         
+        if lr_scheduler:
+            scheduler.step()
+        
         helper.save_gradient_plots(epoch, gradients, first_moments, second_moments)
 
         # checkpoint saving with early stopping
@@ -375,23 +384,45 @@ def train(
         )
 
         if wandb_on:
-            wandb.log(
-                {
-                    "epoch": epoch + 1,
-                    "train/loss": train_loss,
-                    f"train/{eval_metric}": train_metric_value,
-                    "eval/loss": val_loss,
-                    f"eval/{eval_metric}": val_metric_value,
-                }
-            )
-
-        print(
-            f"Epoch {epoch+1:>{len(str(epochs))}}/{epochs}.. ",
-            f"Train loss: {train_loss:.3f}.. ",
-            f"Test loss: {val_loss:.3f}.. ",
-            f"Train {eval_metric}: {train_metric_value:.3f}.. ",
-            f"Test {eval_metric}: {val_metric_value:.3f}",
+            if lr_scheduler:
+                wandb.log(
+                    {
+                        "epoch": epoch + 1,
+                        "train/loss": train_loss,
+                        f"train/{eval_metric}": train_metric_value,
+                        "eval/loss": val_loss,
+                        f"eval/{eval_metric}": val_metric_value,
+                        "learning_rate": scheduler.get_last_lr()[0],
+                    }
+                )
+                
+                print(
+                    f"Epoch {epoch+1:>{len(str(epochs))}}/{epochs}.. ",
+                    f"Train loss: {train_loss:.3f}.. ",
+                    f"Test loss: {val_loss:.3f}.. ",
+                    f"Train {eval_metric}: {train_metric_value:.3f}.. ",
+                    f"Test {eval_metric}: {val_metric_value:.3f}",
+                    f"Learning Rate: {scheduler.get_last_lr()[0]}"
         )
+            else:
+                wandb.log(
+                    {
+                        "epoch": epoch + 1,
+                        "train/loss": train_loss,
+                        f"train/{eval_metric}": train_metric_value,
+                        "eval/loss": val_loss,
+                        f"eval/{eval_metric}": val_metric_value,
+                    }
+                )
+                
+
+                print(
+                    f"Epoch {epoch+1:>{len(str(epochs))}}/{epochs}.. ",
+                    f"Train loss: {train_loss:.3f}.. ",
+                    f"Test loss: {val_loss:.3f}.. ",
+                    f"Train {eval_metric}: {train_metric_value:.3f}.. ",
+                    f"Test {eval_metric}: {val_metric_value:.3f}",
+                )
 
         if early_stop:
             print(f"Early stopped training at epoch {epoch}")
