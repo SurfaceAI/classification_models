@@ -21,6 +21,11 @@ from sacred.stflow import LogFileWriter
 import wandb
 from wandb.keras import WandbCallback
 
+import sys
+
+sys.path.append(".")
+from src.utils.helper import *
+
 # Sacred Configuration
 ex = Experiment('BenelliHierOrd', interactive=False)
 SETTINGS.CONFIG.READ_ONLY_CONFIG = False
@@ -28,34 +33,9 @@ SETTINGS.CONFIG.READ_ONLY_CONFIG = False
 SETTINGS.CAPTURE_MODE = 'no'
 
 
-def load_images_and_labels(base_path, img_shape, custom_label_order):
-    images = []
-    labels = []
-    for label_folder in os.listdir(base_path):
-        label_folder_path = os.path.join(base_path, label_folder)
-        if os.path.isdir(label_folder_path):
-            for img_file in os.listdir(label_folder_path):
-                img_path = os.path.join(label_folder_path, img_file)
-                try:
-                    img = tf.keras.preprocessing.image.load_img(img_path, target_size=img_shape)
-                    img_array = tf.keras.preprocessing.image.img_to_array(img)
-                    images.append(img_array)
-                    labels.append(label_folder)  # Use the folder name as the label
-                except Exception as e:
-                    print(f"Error loading image {img_path}: {e}")
-    
-    # Create a mapping based on custom_label_order
-    label_to_index = {label: idx for idx, label in enumerate(custom_label_order)}
-    index_to_label = {idx: label for label, idx in label_to_index.items()}
-    
-    # Map labels to the custom order indices
-    y = np.array([label_to_index[label] for label in labels])
-    
-    return np.array(images), y, label_to_index, index_to_label
-
-def fix_seeds(seed):
-    np.random.seed(seed)
-    tf.random.set_seed(seed)
+# def fix_seeds(seed):
+#     np.random.seed(seed)
+#     tf.random.set_seed(seed)
 
 # def compute_splits_hash(splits):
 #     import hashlib
@@ -79,7 +59,6 @@ def run(seed, base_path, model_name, use_wandb, img_shape, trainable_convs, shar
 
     # Fix random seeds
     fix_seeds(seed)
-
 
     custom_label_order = ['excellent', 'good', 'intermediate', 'bad']
 
@@ -195,11 +174,11 @@ def run(seed, base_path, model_name, use_wandb, img_shape, trainable_convs, shar
 # Configuration function
 def cfg():
     # Random seed
-    seed = 3
+    seed = 42
 
     # Base path
-    #base_path = Path(r'c:\Users\esthe\Documents\GitHub\classification_models\data\training\V12/annotated/asphalt')
-    base_path = Path(r"/home/esther/surfaceai/classification_models/data/training/V12/annotated/asphalt")
+    base_path = Path(r'c:\Users\esthe\Documents\GitHub\classification_models\data\training\V12/annotated/asphalt')
+    #base_path = Path(r"/home/esther/surfaceai/classification_models/data/training/V12/annotated/asphalt")
 
     # Type of model that will be used
     model_name = "vgg16"
@@ -208,10 +187,10 @@ def cfg():
     use_wandb = True
 
     # Shape of each image
-    img_shape = (224, 224)
+    img_shape = (256, 256)
 
     # Are the convolutional layers trainable?
-    trainable_convs = False
+    trainable_convs = True
 
     # Level of shared layers
     shared_layers = 'All' #All or 2ConvBlocks

@@ -15,7 +15,7 @@ class CustomVGG16_CLM(nn.Module):
 
         # Load the pre-trained VGG16 model
         model = models.vgg16(weights='VGG16_Weights.IMAGENET1K_V1')
-        
+        self.features = torch.nn.Sequential(*(list(model.children())[:-1]))
         # Freeze training for all layers in features
         # for param in model.features.parameters():
         #     param.requires_grad = False
@@ -23,14 +23,14 @@ class CustomVGG16_CLM(nn.Module):
         # Modify the classifier layer
         num_features = model.classifier[0].in_features
         #features = list(model.classifier.children())[:-1]  # select features in our last layer
-        model.classifier = nn.Sequential(
+        self.classifier = nn.Sequential(
             nn.Linear(num_features, 4096),
-            nn.ReLU(),
+            #nn.ReLU(),
             nn.BatchNorm1d(4096),
             nn.Dropout(0.5),
             
             nn.Linear(4096, 4096),
-            nn.ReLU(),
+            #nn.ReLU(),
             nn.BatchNorm1d(4096),
             nn.Dropout(0.5),
             
@@ -42,9 +42,7 @@ class CustomVGG16_CLM(nn.Module):
         #model.classifier = nn.Sequential(*features)  # Replace the model classifier
 
         # Save the modified model as a member variable
-        self.features = model.features
-        self.avgpool = model.avgpool
-        self.classifier = model.classifier
+        #self.avgpool = model.avgpool
         self.criterion = nn.CrossEntropyLoss
         
         # for name, param in self.named_parameters():
@@ -57,7 +55,7 @@ class CustomVGG16_CLM(nn.Module):
 
     def forward(self, x):
         x = self.features(x)
-        x = self.avgpool(x)
+        #x = self.avgpool(x)
         x = torch.flatten(x, 1)
         x = self.classifier(x)
         return x
@@ -81,9 +79,14 @@ class CLM(nn.Module):
             if self.classes > 2:
                     # First threshold
                     self.thresholds_b = nn.Parameter(torch.rand(1) * 0.1)  # Random number between 0 and 0.1
+                    # random_value = torch.rand(1) * -0.3
+                    # random_value = random_value - 2
+                    # self.thresholds_b = nn.Parameter(random_value)
                     # Squared distance
                     minval = math.sqrt((1.0 / (self.classes - 2)) / 2)
                     maxval = math.sqrt(1.0 / (self.classes - 2))
+                    # minval = 1.9
+                    # maxval = 2.3
                     self.thresholds_a = nn.Parameter(minval + (maxval - minval) * torch.rand(self.classes - 2))
 
             else: 
