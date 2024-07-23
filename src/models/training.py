@@ -398,7 +398,8 @@ def train(
                         f"eval/{eval_metric}": val_metric_value,
                         "learning_rate": scheduler.get_last_lr()[0],
                         "threshold_b": model.classifier[-1].thresholds_b.data,
-                        "threshold_a": model.classifier[-1].thresholds_a.data,
+                        "threshold_a_1": model.classifier[-1].thresholds_a.data[0],
+                        "threshold_a_2": model.classifier[-1].thresholds_a.data[1],
                     }
                 )
                 
@@ -419,7 +420,8 @@ def train(
                         "eval/loss": val_loss,
                         f"eval/{eval_metric}": val_metric_value,
                         "threshold_b": model.classifier[-1].thresholds_b.data,
-                        "threshold_a": model.classifier[-1].thresholds_a.data,
+                        "threshold_a_1": model.classifier[-1].thresholds_a.data[0],
+                        "threshold_a_2": model.classifier[-1].thresholds_a.data[1],
                     }
                 )
                 
@@ -473,10 +475,10 @@ def train_epoch(model, dataloader, optimizer, device, eval_metric, clm, wandb_on
         loss.backward()
         
         # Print gradients
-        for name, param in model.named_parameters():
-            if param.grad is not None:
-                print(f"{name} gradient: {param.grad.norm()}")
-                print(f"{name} gradient values: {param.grad}")
+        # for name, param in model.named_parameters():
+        #     if param.grad is not None:
+        #         print(f"{name} gradient: {param.grad.norm()}")
+        #         print(f"{name} gradient values: {param.grad}")
 
         
         print(f"Thresholds before optimizer step: b: {model.classifier[-1].thresholds_b.data}, a: {model.classifier[-1].thresholds_a.data}")
@@ -494,16 +496,16 @@ def train_epoch(model, dataloader, optimizer, device, eval_metric, clm, wandb_on
         #     )
             
         # # Collect gradients
-        for name, param in model.named_parameters():
-            if param.requires_grad and param.grad is not None:
-                gradients.append(param.grad.norm().item())
-                if param in optimizer.state:
-                    param_state = optimizer.state[param]
-                    if 'exp_avg' in param_state and 'exp_avg_sq' in param_state:
-                        first_moment = param_state['exp_avg'].norm().item()
-                        second_moment = param_state['exp_avg_sq'].norm().item()
-                        first_moments.append(first_moment)
-                        second_moments.append(second_moment)
+        # for name, param in model.named_parameters():
+        #     if param.requires_grad and param.grad is not None:
+        #         gradients.append(param.grad.norm().item())
+        #         if param in optimizer.state:
+        #             param_state = optimizer.state[param]
+        #             if 'exp_avg' in param_state and 'exp_avg_sq' in param_state:
+        #                 first_moment = param_state['exp_avg'].norm().item()
+        #                 second_moment = param_state['exp_avg_sq'].norm().item()
+        #                 first_moments.append(first_moment)
+        #                 second_moments.append(second_moment)
                 
         #         # Debugging: Print gradients and optimizer state
         #         print(f"{name} gradient: {param.grad.norm().item()}")
