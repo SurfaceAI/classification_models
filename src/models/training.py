@@ -457,6 +457,9 @@ def train_epoch(model, dataloader, optimizer, device, eval_metric, clm, wandb_on
             outputs = outputs.flatten()
             labels = labels.float()
         #loss = criterion(helper.to_one_hot_tensor(labels, 4), outputs) Todo: for QWK
+        if clm:
+            outputs = torch.log(outputs)
+            
         loss = criterion(outputs, labels)
             
         loss.backward()
@@ -571,7 +574,10 @@ def validate_epoch(model, dataloader, device, eval_metric, clm):
             if isinstance(criterion, nn.MSELoss):
                 outputs = outputs.flatten()
                 labels = labels.float()
-            
+                
+            if clm:
+                outputs = torch.log(outputs)
+                
             loss = criterion(outputs, labels)
 
             running_loss += loss.item()

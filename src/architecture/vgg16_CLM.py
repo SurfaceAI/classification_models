@@ -44,7 +44,7 @@ class CustomVGG16_CLM(nn.Module):
 
         # Save the modified model as a member variable
         #self.avgpool = model.avgpool
-        self.criterion = nn.NLLLoss2d
+        self.criterion = nn.NLLLoss
         
         # for name, param in self.named_parameters():
         #     print(name, param.requires_grad)
