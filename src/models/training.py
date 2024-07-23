@@ -123,6 +123,7 @@ def _run_training(project=None, name=None, config=None, wandb_on=True):
         is_regression=config.get("is_regression"),
         clm=config.get("clm"),
         max_class_size=config.get("max_class_size"),
+        freeze_convs=config.get("freeze_convs"),
     )
 
     trained_model = train(
@@ -175,6 +176,7 @@ def prepare_train(
     is_regression,
     clm,
     max_class_size,
+    freeze_convs
 ):
     
     train_data, valid_data = preprocessing.create_train_validation_datasets(
@@ -246,10 +248,12 @@ def prepare_train(
     model = model_cls(num_classes)
 
     # Unfreeze parameters
-    for param in model.features.parameters():
-        param.requires_grad = False
-    for param in model.classifier.parameters():
-        param.requires_grad = True
+    if freeze_convs:
+        for param in model.features.parameters():
+            param.requires_grad = False
+        
+    # for param in model.classifier.parameters():
+    #     param.requires_grad = True
 
     optimizer_layers = None
     if hasattr(model, "get_optimizer_layers") and callable(model.get_optimizer_layers):
@@ -393,6 +397,8 @@ def train(
                         "eval/loss": val_loss,
                         f"eval/{eval_metric}": val_metric_value,
                         "learning_rate": scheduler.get_last_lr()[0],
+                        "threshold_b": model.classifier[-1].thresholds_b.data,
+                        "threshold_a": model.classifier[-1].thresholds_a.data,
                     }
                 )
                 
@@ -412,6 +418,8 @@ def train(
                         f"train/{eval_metric}": train_metric_value,
                         "eval/loss": val_loss,
                         f"eval/{eval_metric}": val_metric_value,
+                        "threshold_b": model.classifier[-1].thresholds_b.data,
+                        "threshold_a": model.classifier[-1].thresholds_a.data,
                     }
                 )
                 

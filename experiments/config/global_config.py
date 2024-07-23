@@ -37,7 +37,7 @@ global_config = dict(
         constants.UNPAVED: [constants.INTERMEDIATE, constants.BAD, constants.VERY_BAD],
     },
     transform = dict(
-        resize=constants.H224_W224,
+        resize=constants.H256_W256,
         crop=constants.CROP_LOWER_MIDDLE_THIRD,
         normalize=constants.NORM_DATA,
     ),

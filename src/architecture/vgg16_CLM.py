@@ -16,7 +16,7 @@ class CustomVGG16_CLM(nn.Module):
         # Load the pre-trained VGG16 model
         model = models.vgg16(weights='VGG16_Weights.IMAGENET1K_V1')
         self.features = torch.nn.Sequential(*(list(model.children())[:-1]))
-        self.features = self.features[:-1]
+        #self.features = self.features[:-1]
         # Freeze training for all layers in features
         # for param in model.features.parameters():
         #     param.requires_grad = False
@@ -26,24 +26,26 @@ class CustomVGG16_CLM(nn.Module):
         #features = list(model.classifier.children())[:-1]  # select features in our last layer
         self.classifier = nn.Sequential(
             nn.Linear(num_features, 4096),
-            nn.LeakyReLU(0.1),
-            nn.BatchNorm1d(4096),
+            nn.ReLU(),
+            #nn.LeakyReLU(0.1),
+            #nn.BatchNorm1d(4096),
             nn.Dropout(0.5),
             
             nn.Linear(4096, 4096),
-            nn.LeakyReLU(0.1),
-            nn.BatchNorm1d(4096),
-            nn.Dropout(0.5),
+            nn.ReLU(),
+            #nn.LeakyReLU(0.1),
+            #nn.BatchNorm1d(4096),
+            #nn.Dropout(0.5),
             
             nn.Linear(4096, 1),
-            nn.BatchNorm1d(1, eps=0.001),
+            nn.BatchNorm1d(1),
             CLM(classes=num_classes, link_function='logit', min_distance=0.0, use_slope=False, fixed_thresholds=False),
         )
          # add layer with output size num_classes
         #model.classifier = nn.Sequential(*features)  # Replace the model classifier
 
         # Save the modified model as a member variable
-        #self.avgpool = model.avgpool
+        self.avgpool = model.avgpool
         self.criterion = nn.NLLLoss
         
         # for name, param in self.named_parameters():
@@ -56,7 +58,7 @@ class CustomVGG16_CLM(nn.Module):
 
     def forward(self, x):
         x = self.features(x)
-        #x = self.avgpool(x)
+        x = self.avgpool(x)
         x = torch.flatten(x, 1)
         x = self.classifier(x)
         return x

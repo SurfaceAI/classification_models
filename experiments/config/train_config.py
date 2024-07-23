@@ -3,13 +3,14 @@ from experiments.config  import global_config
 
 default_params = {
     "batch_size": 64, #16,  # 48
-    "epochs": 40,
+    "epochs": 20,
     "learning_rate": 0.01,
     "optimizer": const.OPTI_ADAM,
     "is_regression": False,
     "eval_metric": const.EVAL_METRIC_ACCURACY,
     "max_class_size": None,
-    "lr_scheduler": False
+    "lr_scheduler": False,
+    "freeze_convs": True,
 }
 
 default_search_params = {
@@ -199,7 +200,7 @@ vgg16_asphalt_CLM_params = {
     **global_config.global_config,
     **default_params,
     "batch_size": 64,
-    "epochs": 40,
+    "epochs": 20,
     "learning_rate": 0.01,
     "is_regression": False,
     "eval_metric": const.EVAL_METRIC_ACCURACY,
