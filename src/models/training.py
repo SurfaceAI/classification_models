@@ -251,6 +251,10 @@ def prepare_train(
     if freeze_convs:
         for param in model.features.parameters():
             param.requires_grad = False
+            
+    else:
+        for param in model.features.parameters():
+            param.requires_grad = True
         
     # for param in model.classifier.parameters():
     #     param.requires_grad = True
@@ -267,6 +271,8 @@ def prepare_train(
         optimizer_params = []
         for layer in optimizer_layers:
             optimizer_params += [p for p in layer.parameters()]
+
+    print(f"{len(optimizer_params)} optimizer params")
 
     for name, param in model.named_parameters():
         print(f"{name} requires_grad: {param.requires_grad}")
