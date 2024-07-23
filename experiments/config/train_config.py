@@ -10,7 +10,7 @@ default_params = {
     "eval_metric": const.EVAL_METRIC_ACCURACY,
     "max_class_size": None,
     "lr_scheduler": False,
-    "freeze_convs": True,
+    "freeze_convs": False,
 }
 
 default_search_params = {
