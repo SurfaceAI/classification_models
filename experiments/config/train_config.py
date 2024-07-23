@@ -10,7 +10,7 @@ default_params = {
     "eval_metric": const.EVAL_METRIC_ACCURACY,
     "max_class_size": None,
     "lr_scheduler": False,
-    "freeze_convs": False,
+    "freeze_convs": True,
 }
 
 default_search_params = {
@@ -383,11 +383,11 @@ B_CNN_CLM = {
 C_CNN_CLM = {
     **global_config.global_config,
     **default_params,
-    "batch_size": 128,
-    "epochs": 40,
-    "learning_rate": 0.001,
+    "batch_size": 64,
+    "epochs": 20,
+    "learning_rate": 0.01,
     "optimizer": const.OPTI_ADAM,
-    "is_regression": True,
+    "is_regression": False,
     "ordinal_method": const.CLM,
     "coarse_eval_metric": const.EVAL_METRIC_ACCURACY,
     "fine_eval_metric": const.EVAL_METRIC_ACCURACY,
@@ -395,6 +395,7 @@ C_CNN_CLM = {
     "name": "C_CNN_CLM",
     "level": const.MULTILABEL,
     "model": const.CCNNREGRESSION,
+    "clm": True,
     "hierarchy_method": 'use_ground_truth',
 }
 

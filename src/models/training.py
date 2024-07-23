@@ -404,8 +404,8 @@ def train(
                         f"eval/{eval_metric}": val_metric_value,
                         "learning_rate": scheduler.get_last_lr()[0],
                         "threshold_b": model.classifier[-1].thresholds_b.data,
-                        "threshold_a_1": model.classifier[-1].thresholds_a.data[0],
-                        "threshold_a_2": model.classifier[-1].thresholds_a.data[1],
+                        "threshold_a_1": model.classifier[-1].thresholds_a.data[0].item(),
+                        "threshold_a_2": model.classifier[-1].thresholds_a.data[1].item(),
                     }
                 )
                 

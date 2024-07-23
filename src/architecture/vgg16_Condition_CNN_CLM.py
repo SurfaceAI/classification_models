@@ -101,15 +101,11 @@ class Condition_CNN_CLM(nn.Module):
         
 #--------------------------fine--------------------------------------       
         
-        self.CLM_4 = CLM(num_classes = 4, link_function='logit', min_distance=0.0, use_slope=False, fixed_thresholds=False)
-        self.CLM_3 = CLM(num_classes = 3, link_function='logit', min_distance=0.0, use_slope=False, fixed_thresholds=False)
-
-        
-        self.quality_fc_asphalt = self.create_quality_fc()
-        self.quality_fc_concrete = self.create_quality_fc()
-        self.quality_fc_sett = self.create_quality_fc()
-        self.quality_fc_paving_stones = self.create_quality_fc()
-        self.quality_fc_unpaved = self.create_quality_fc()
+        self.quality_fc_asphalt = self._create_quality_fc(num_classes=4)
+        self.quality_fc_concrete = self._create_quality_fc(num_classes=4)
+        self.quality_fc_paving_stones = self._create_quality_fc(num_classes=4)
+        self.quality_fc_sett = self._create_quality_fc(num_classes=3)
+        self.quality_fc_unpaved = self._create_quality_fc(num_classes=3)
         
 
         
@@ -125,15 +121,17 @@ class Condition_CNN_CLM(nn.Module):
         #     nn.ReLU()
         # )
         
-    def create_quality_fc(self):
+    def _create_quality_fc(self, num_classes=4):
         return nn.Sequential(
-            nn.Linear(512 * 16 * 16, 1024),
+            nn.Linear(131072, 1024),
             nn.ReLU(),
             nn.Dropout(0.5),
             nn.Linear(1024, 1024),
             nn.ReLU(),
             nn.Dropout(0.5),
-            nn.Linear(1024, 1)
+            nn.Linear(1024, 1),
+            nn.BatchNorm1d(1),
+            CLM(classes=num_classes, link_function="logit", min_distance=0.0, use_slope=False, fixed_thresholds=False)
         )
   
         
@@ -175,20 +173,15 @@ class Condition_CNN_CLM(nn.Module):
         
         if hierarchy_method == 'use_condition_layer':
         #---fine
-            fine_raw_asphalt = self.quality_fc_asphalt(flat) #([batch_size, 1024])
-            clm_fine_output_asphalt = self.CLM_4(fine_raw_asphalt)
+            fine_output_asphalt = self.quality_fc_asphalt(flat) #([batch_size, 1024])
             
-            fine_raw_concrete = self.quality_fc_concrete(flat)
-            clm_fine_output_concrete = self.CLM_4(fine_raw_concrete)
+            fine_output_concrete = self.quality_fc_concrete(flat)
             
-            fine_raw_sett = self.quality_fc_sett(flat)
-            clm_fine_output_sett = self.CLM_4(fine_raw_sett)
+            fine_output_paving_stones = self.quality_fc_paving_stones(flat)
+                        
+            fine_output_sett = self.quality_fc_sett(flat)
             
-            fine_raw_paving_stones = self.quality_fc_paving_stones(flat)
-            clm_fine_output_paving_stones = self.CLM_3(fine_raw_paving_stones)
-            
-            fine_raw_unpaved = self.quality_fc_unpaved(flat)
-            clm_fine_output_unpaved = self.CLM_3(fine_raw_unpaved)
+            fine_output_unpaved = self.quality_fc_unpaved(flat)
 
             
             if self.training:
@@ -198,11 +191,11 @@ class Condition_CNN_CLM(nn.Module):
             else:
                 coarse_condition = self.coarse_condition(coarse_output) 
                 
-            fine_clm_combined = torch.cat([clm_fine_output_asphalt, 
-                                        clm_fine_output_concrete, 
-                                        clm_fine_output_sett, 
-                                        clm_fine_output_paving_stones, 
-                                        clm_fine_output_unpaved], 
+            fine_clm_combined = torch.cat([fine_output_asphalt, 
+                                        fine_output_concrete, 
+                                        fine_output_sett, 
+                                        fine_output_paving_stones, 
+                                        fine_output_unpaved], 
                                         dim=1)
         #features = torch.add(coarse_condition, fine_raw)#
         #Adding the conditional probabilities to the dense features
@@ -218,46 +211,35 @@ class Condition_CNN_CLM(nn.Module):
                 #we seperate out one-hot encoded tensor to seperate one hot tensors 1=belonging to surface type, 0 not 
 
                 fine_output_asphalt = self.quality_fc_asphalt(flat[true_coarse[:, 0].bool()])
-                fine_probs_asphalt = self.CLM_4(fine_output_asphalt)
                 #fine_pred_asphalt = torch.argmax(self.CLM_4(fine_output_asphalt), dim=1)
                 #fine_predictions[true_coarse[:, 0].bool()] = fine_pred_asphalt
                 
                 fine_output_concrete = self.quality_fc_concrete(flat[true_coarse[:, 1].bool()])
-                fine_probs_concrete = self.CLM_4(fine_output_concrete)
                 #fine_pred_concrete = torch.argmax(self.CLM_4(fine_output_concrete), dim=1)
-                #fine_predictions[true_coarse[:, 1].bool()] = fine_pred_concrete             
-
-                fine_output_sett = self.quality_fc_sett(flat[true_coarse[:, 2].bool()])
-                fine_probs_sett = self.CLM_4(fine_output_sett)
-                #fine_pred_sett = torch.argmax(self.CLM_4(fine_output_sett), dim=1)
-                #fine_predictions[true_coarse[:, 2].bool()] = fine_pred_sett                       
-
+                #fine_predictions[true_coarse[:, 1].bool()] = fine_pred_concrete   
+                          
                 fine_output_paving_stones = self.quality_fc_paving_stones(flat[true_coarse[:, 3].bool()])
-                fine_probs_paving_stones = self.CLM_3(fine_output_paving_stones)
-
                 #fine_pred_paving_stones = torch.argmax(self.CLM_3(fine_output_paving_stones), dim=1)
                 #fine_predictions[true_coarse[:, 3].bool()] = fine_pred_paving_stones   
 
-                fine_output_unpaved = self.quality_fc_unpaved(flat[true_coarse[:, 4].bool()])
-                fine_probs_unpaved = self.CLM_3(fine_output_unpaved)
+                fine_output_sett = self.quality_fc_sett(flat[true_coarse[:, 2].bool()])
+                #fine_pred_sett = torch.argmax(self.CLM_4(fine_output_sett), dim=1)
+                #fine_predictions[true_coarse[:, 2].bool()] = fine_pred_sett                       
 
+
+                fine_output_unpaved = self.quality_fc_unpaved(flat[true_coarse[:, 4].bool()])
                 #fine_pred_unpaved = torch.argmax(self.CLM_3(fine_output_unpaved), dim=1)
                 #fine_predictions[true_coarse[:, 3].bool()] = fine_pred_unpaved   
                 
             else:
                 fine_output_asphalt = self.quality_fc_asphalt(flat)
-                fine_probs_asphalt = self.CLM_4(fine_output_asphalt)
                 
                 fine_output_concrete = self.quality_fc_concrete(flat)
-                fine_probs_concrete = self.CLM_4(fine_output_concrete)
                 
+                fine_output_paving_stones = self.quality_fc_paving_stones(flat)   
+                             
                 fine_output_sett = self.quality_fc_sett(flat)
-                fine_probs_sett = self.CLM_4(fine_output_sett)
-                
-                fine_output_paving_stones = self.quality_fc_paving_stones(flat)
-                fine_probs_paving_stones = self.CLM_3(fine_output_paving_stones)
                 
                 fine_output_unpaved = self.quality_fc_unpaved(flat)
-                fine_probs_unpaved = self.CLM_3(fine_output_unpaved)
         
-        return coarse_output, fine_probs_asphalt, fine_probs_concrete, fine_probs_sett, fine_probs_paving_stones, fine_probs_unpaved
+        return coarse_output, fine_output_asphalt, fine_output_concrete, fine_output_paving_stones, fine_output_sett, fine_output_unpaved

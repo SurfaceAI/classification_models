@@ -153,7 +153,7 @@ else:
 
 # Initialize the model, loss function, and optimizer
 model = Condition_CNN_CLM(num_c=num_c, num_classes=num_classes)
-criterion = nn.CrossEntropyLoss()
+criterion = nn.NLLLoss(reduction="sum")
 
 # if num_classes == 1:
 #     if config.get('ordinal_method') == "clm":
@@ -220,38 +220,39 @@ for epoch in range(config.get('epochs')):
         #coarse_one_hot = coarse_one_hot.type(torch.LongTensor)
         #, dtype=torch.float32
         
-        if config.get('is_regression'):
+        if config.get('clm'):
             fine_labels_mapped = torch.tensor([map_quality_to_continuous(label) for label in fine_labels], dtype=torch.long).to(device)
             
             asphalt_mask = (coarse_labels == 0)
             concrete_mask = (coarse_labels == 1)
-            sett_mask = (coarse_labels == 2)
-            paving_stones_mask = (coarse_labels == 3)
+            paving_stones_mask = (coarse_labels == 2)
+            sett_mask = (coarse_labels == 3)
             unpaved_mask = (coarse_labels == 4)
             
             fine_labels_mapped_aspahlt = fine_labels_mapped[asphalt_mask]
             fine_labels_mapped_concrete = fine_labels_mapped[concrete_mask]
-            fine_labels_mapped_sett = fine_labels_mapped[sett_mask]
             fine_labels_mapped_paving_stones = fine_labels_mapped[paving_stones_mask]
+            fine_labels_mapped_sett = fine_labels_mapped[sett_mask]
             fine_labels_mapped_unpaved = fine_labels_mapped[unpaved_mask]
         
         #we give the coarse true labels for the conditional prob weights matrix as input to the model
         model_inputs = (inputs, coarse_one_hot, config.get('hierarchy_method'))
         
         coarse_outputs, fine_probs_asphalt, fine_probs_concrete, fine_probs_sett, fine_probs_paving_stones, fine_probs_unpaved = model.forward(model_inputs)
+        
         coarse_loss = criterion(coarse_outputs, coarse_labels)
         
         
-        fine_loss_asphalt = criterion(fine_probs_asphalt, fine_labels_mapped_aspahlt)
-        fine_loss_concrete = criterion(fine_probs_concrete, fine_labels_mapped_concrete)
-        fine_loss_sett = criterion(fine_probs_sett, fine_labels_mapped_sett)
-        fine_loss_paving_stones = criterion(fine_probs_paving_stones, fine_labels_mapped_paving_stones)
-        fine_loss_unpaved = criterion(fine_probs_unpaved, fine_labels_mapped_unpaved)
+        fine_loss_asphalt = criterion(torch.log(fine_probs_asphalt), fine_labels_mapped_aspahlt)
+        fine_loss_concrete = criterion(torch.log(fine_probs_concrete), fine_labels_mapped_concrete)
+        fine_loss_paving_stones = criterion(torch.log(fine_probs_paving_stones), fine_labels_mapped_paving_stones)
+        fine_loss_sett = criterion(torch.log(fine_probs_sett), fine_labels_mapped_sett)
+        fine_loss_unpaved = criterion(torch.log(fine_probs_unpaved), fine_labels_mapped_unpaved)
         
         fine_loss_asphalt = torch.nan_to_num(fine_loss_asphalt, nan=0.0)
         fine_loss_concrete = torch.nan_to_num(fine_loss_concrete, nan=0.0)
-        fine_loss_sett = torch.nan_to_num(fine_loss_sett, nan=0.0)
         fine_loss_paving_stones = torch.nan_to_num(fine_loss_paving_stones, nan=0.0)
+        fine_loss_sett = torch.nan_to_num(fine_loss_sett, nan=0.0)
         fine_loss_unpaved = torch.nan_to_num(fine_loss_unpaved, nan=0.0)
         
         fine_loss = 1/5 * fine_loss_asphalt + 1/5 * fine_loss_concrete + 1/5 * fine_loss_sett + 1/5 * fine_loss_paving_stones + 1/5 * fine_loss_unpaved
