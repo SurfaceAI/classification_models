@@ -68,9 +68,7 @@ class Condition_CNN_CLM_PRE(nn.Module):
         self.coarse_condition.weight.data.fill_(0)  # Initialize weights to zero
         self.constraint = NonNegUnitNorm(axis=0) 
         
-        # Save the modified model as a member variable
-        self.features = model.features 
-               
+        # Save the modified model as a member variable               
         self.coarse_criterion = nn.CrossEntropyLoss
         
         if num_classes == 1:
@@ -126,9 +124,7 @@ class Condition_CNN_CLM_PRE(nn.Module):
             fine_output_unpaved = self.classifier_unpaved(flat)
 
             if self.training:
-                coarse_condition = self.coarse_condition(true_coarse) 
-        
-                
+                coarse_condition = self.coarse_condition(true_coarse)  
             else:
                 coarse_condition = self.coarse_condition(coarse_output) 
                 
@@ -170,15 +166,24 @@ class Condition_CNN_CLM_PRE(nn.Module):
                 return coarse_output, fine_output_asphalt, fine_output_concrete, fine_output_paving_stones, fine_output_sett, fine_output_unpaved    
                 
             else:
-                fine_output_asphalt = self.classifier_asphalt(flat)
+                fine_output_asphalt = self.classifier_asphalt(flat) #([batch_size, 1024])
+                
                 fine_output_concrete = self.classifier_concrete(flat)
-                fine_output_paving_stones = self.classifier_paving_stones(flat)            
+                
+                fine_output_paving_stones = self.classifier_paving_stones(flat)
+                            
                 fine_output_sett = self.classifier_sett(flat)
+                
                 fine_output_unpaved = self.classifier_unpaved(flat)
                 
-                fine_output = torch.cat([fine_output_asphalt, fine_output_concrete, fine_output_paving_stones, fine_output_sett, fine_output_unpaved], dim=1)
-            
+                fine_output = torch.cat([fine_output_asphalt, 
+                                        fine_output_concrete, 
+                                        fine_output_paving_stones, 
+                                        fine_output_sett, 
+                                        fine_output_unpaved], 
+                                        dim=1)        
+                    
                 return coarse_output, fine_output    
     
     def get_optimizer_layers(self):
-        return self.features, self.coarse_classifier, self.classifier_asphalt, self.classifier_concrete, self.classifier_paving_stones, self.classifier_sett, self.classifier_unpaved
+        return self.block1, self.block2, self.block3, self.block4, self.block5, self.coarse_classifier, self.classifier_asphalt, self.classifier_concrete, self.classifier_paving_stones, self.classifier_sett, self.classifier_unpaved

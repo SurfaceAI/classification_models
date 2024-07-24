@@ -9,7 +9,7 @@ default_params = {
     "is_regression": False,
     "is_hierarchical": True,
     "eval_metric": const.EVAL_METRIC_ACCURACY,
-    "max_class_size": 100,
+    "max_class_size": None,
     "lr_scheduler": False,
     "freeze_convs": True,
 }
@@ -397,6 +397,6 @@ C_CNN_CLM = {
     "level": const.MULTILABEL,
     "model": const.CCNNCLMPRE,
     "clm": True,
-    "hierarchy_method": 'use_ground_truth',
+    "hierarchy_method": 'use_condition_layer' #'use_ground_truth', 'use_condition_layer'
 }
 

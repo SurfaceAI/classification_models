@@ -164,6 +164,7 @@ for epoch in range(config.get('epochs')):
     fine_correct_paving_stones = 0
     fine_correct_unpaved = 0
     
+    
     for batch_index, (inputs, fine_labels) in enumerate(trainloader):
               
         
@@ -265,8 +266,8 @@ for epoch in range(config.get('epochs')):
             paving_stones_fine_epoch_loss = fine_loss_paving_stones_total / len(trainloader)
             unpaved_fine_epoch_loss = fine_loss_unpaved_total / len(trainloader)
             
-            # if batch_index == 0:
-            #     break
+            if batch_index == 0:
+                break
         
         
         elif config.get('hierarchy_method') == 'use_condition_layer':
@@ -280,7 +281,10 @@ for epoch in range(config.get('epochs')):
             
             loss.backward()
             #plot_grad_flow(model.named_parameters())
+            print(f'CPWM before optimizer step: {model.coarse_condition.weight}')
             optimizer.step()
+            print(f'CPWM after optimizer step: {model.coarse_condition.weight}')
+            
             running_loss += loss.item()
             
             coarse_loss_total += coarse_loss.item()
@@ -359,8 +363,8 @@ for epoch in range(config.get('epochs')):
             val_fine_predictions = torch.argmax(fine_output, dim=1)
             val_fine_correct += (val_fine_predictions == fine_labels).sum().item()
             
-            # if batch_index == 0:
-            #     break
+            if batch_index == 0:
+                break
             
             # if isinstance(criterion, nn.MSELoss):
             #     coarse_outputs = coarse_outputs.flatten()
