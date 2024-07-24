@@ -7,8 +7,9 @@ default_params = {
     "learning_rate": 0.01,
     "optimizer": const.OPTI_ADAM,
     "is_regression": False,
+    "is_hierarchical": True,
     "eval_metric": const.EVAL_METRIC_ACCURACY,
-    "max_class_size": None,
+    "max_class_size": 100,
     "lr_scheduler": False,
     "freeze_convs": True,
 }
@@ -394,7 +395,7 @@ C_CNN_CLM = {
     "project": const.PROJECT_MULTI_LABEL_FIXED,
     "name": "C_CNN_CLM",
     "level": const.MULTILABEL,
-    "model": const.CCNNREGRESSION,
+    "model": const.CCNNCLMPRE,
     "clm": True,
     "hierarchy_method": 'use_ground_truth',
 }

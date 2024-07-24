@@ -121,6 +121,7 @@ def _run_training(project=None, name=None, config=None, wandb_on=True):
         learning_rate=config.get("learning_rate"),
         random_seed=config.get("seed"),
         is_regression=config.get("is_regression"),
+        is_hierarchical=config.get("is_hierarchical"),
         clm=config.get("clm"),
         max_class_size=config.get("max_class_size"),
         freeze_convs=config.get("freeze_convs"),
@@ -135,6 +136,7 @@ def _run_training(project=None, name=None, config=None, wandb_on=True):
         optimizer=optimizer,
         eval_metric=config.get("eval_metric"),
         clm = config.get("clm"), 
+        is_hierarchical = config.get("is_hierarchical"),
         device=device,
         epochs=config.get("epochs"),
         wandb_on=wandb_on,
@@ -174,9 +176,10 @@ def prepare_train(
     learning_rate,
     random_seed,
     is_regression,
+    is_hierarchical,
     clm,
     max_class_size,
-    freeze_convs
+    freeze_convs,
 ):
     
     train_data, valid_data = preprocessing.create_train_validation_datasets(
@@ -241,11 +244,15 @@ def prepare_train(
     if is_regression:
         num_classes = 1
     else:
-        num_classes = 4
+        num_classes = 5
         #num_classes = len(train_data.classes)
 
     # instanciate model with number of classes
-    model = model_cls(num_classes)
+    if is_hierarchical:
+        num_fine_classes = 18
+        model = model_cls(num_classes, num_fine_classes)
+    else:
+        model = model_cls(num_classes)
 
     # Unfreeze parameters
     if freeze_convs:
@@ -272,7 +279,7 @@ def prepare_train(
         for layer in optimizer_layers:
             optimizer_params += [p for p in layer.parameters()]
 
-    print(f"{len(optimizer_params)} optimizer params")
+    #print(f"{len(optimizer_params)} optimizer params")
 
     for name, param in model.named_parameters():
         print(f"{name} requires_grad: {param.requires_grad}")
@@ -302,12 +309,28 @@ def prepare_train(
             # stop if all classes are filled
             if all(count >= max_class_size for count in class_counts.values()):
                 break
+            
+        indices_valid = []
+        class_counts = {}
+        for i, label in enumerate(valid_data.targets):
+            if label not in class_counts:
+                class_counts[label] = 0
+            if class_counts[label] < max_class_size:
+                indices_valid.append(i)
+                class_counts[label] += 1
+            # stop if all classes are filled
+            if all(count >= max_class_size for count in class_counts.values()):
+                break
 
         # create a) (Subset with indices + WeightedRandomSampler) or b) (SubsetRandomSampler) (no weighting, if max class size larger than smallest class size!)
         # b) SubsetRandomSampler ? 
         #    Samples elements randomly from a given list of indices, without replacement.
         # a):
         train_data = Subset(train_data, indices)
+        train_data.dataset.targets = [train_data.dataset.targets[i] for i in indices]
+        
+        valid_data = Subset(valid_data, indices_valid)
+        valid_data.dataset.targets = [valid_data.dataset.targets[i] for i in indices_valid]
 
         sample_weights = [1.0 / class_counts[label] for _, label in train_data]
     else:
@@ -323,7 +346,7 @@ def prepare_train(
     )  # shuffle=True only if no sampler defined
     validloader = DataLoader(valid_data, batch_size=valid_batch_size)
 
-    return trainloader, validloader, model, optimizer
+    return train_data, valid_data, trainloader, validloader, model, optimizer
 
 
 # train the model
@@ -336,6 +359,7 @@ def train(
     optimizer,
     eval_metric,
     clm,
+    is_hierarchical,
     device,
     epochs,
     wandb_on,
@@ -372,7 +396,8 @@ def train(
             device,
             eval_metric=eval_metric,
             clm=clm,
-            wandb_on=wandb_on
+            is_hierarchical=is_hierarchical,
+            wandb_on=wandb_on,
         )
 
         val_loss, val_metric_value = validate_epoch(
@@ -381,6 +406,7 @@ def train(
             device,
             eval_metric,
             clm=clm,
+            is_hierarchical=is_hierarchical,
         )
         
         if lr_scheduler:
@@ -450,9 +476,15 @@ def train(
 
 
 # train a single epoch
-def train_epoch(model, dataloader, optimizer, device, eval_metric, clm, wandb_on):
+def train_epoch(model, dataloader, optimizer, device, eval_metric, clm, is_hierarchical, wandb_on):
     model.train()
-    criterion = model.criterion(reduction="sum")
+    
+    if is_hierarchical:
+        coarse_criterion = model.coarse_criterion(reduction="sum")
+        fine_criterion = model.fine_criterion(reduction="sum")
+    
+    else:
+        criterion = model.criterion(reduction="sum")
         
     running_loss = 0.0
     eval_metric_value = 0
@@ -575,9 +607,16 @@ def train_epoch(model, dataloader, optimizer, device, eval_metric, clm, wandb_on
 
 
 # validate a single epoch
-def validate_epoch(model, dataloader, device, eval_metric, clm):
+def validate_epoch(model, dataloader, device, eval_metric, clm, is_hierarchical):
     model.eval()
-    criterion = model.criterion(reduction="sum")
+    
+    if is_hierarchical:
+        coarse_criterion = model.coarse_criterion(reduction="sum")
+        fine_criterion = model.fine_criterion(reduction="sum")
+    
+    else:
+        criterion = model.criterion(reduction="sum")
+    
     running_loss = 0.0
     eval_metric_value = 0
 

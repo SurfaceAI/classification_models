@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 import torch
 from torch import optim
 from src import constants as const
-from src.architecture import Rateke_CNN, efficientnet, vgg16, vgg16_B_CNN, vgg16_CLM
+from src.architecture import Rateke_CNN, efficientnet, vgg16, vgg16_B_CNN, vgg16_CLM, vgg16_Condition_CNN_CLM_pretrained
 import json
 import argparse
 from matplotlib.lines import Line2D
@@ -26,7 +26,9 @@ def string_to_object(string):
         const.EFFNET_LINEAR: efficientnet.CustomEfficientNetV2SLinear,
         const.OPTI_ADAM: optim.Adam,
         const.BCNN: vgg16_B_CNN.B_CNN,
-        const.VGG16_CLM: vgg16_CLM.CustomVGG16_CLM
+        const.VGG16_CLM: vgg16_CLM.CustomVGG16_CLM,
+        const.CCNNCLMPRE: vgg16_Condition_CNN_CLM_pretrained.Condition_CNN_CLM_PRE
+
     }
 
     return string_dict.get(string)
