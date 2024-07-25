@@ -87,12 +87,12 @@ train_data, valid_data, trainloader, validloader, model, optimizer = training.pr
 
 num_classes = 18
 #counting the coarse classes
-num_c = len(train_data.dataset.selected_classes)
+num_c = len(train_data.selected_classes)
 
 
 #create one-hot encoded tensors with the fine class labels
-y_train = helper.to_one_hot_tensor(train_data.dataset.targets, num_classes)
-y_valid = helper.to_one_hot_tensor(valid_data.dataset.targets, num_classes)
+y_train = helper.to_one_hot_tensor(train_data.targets, num_classes)
+y_valid = helper.to_one_hot_tensor(valid_data.targets, num_classes)
 
 
 #here we define the label tree, left is the fine class (e.g. asphalt-excellent) and right the coarse (e.g.asphalt)
@@ -205,9 +205,9 @@ for epoch in range(config.get('epochs')):
             fine_labels_mapped_unpaved = fine_labels_mapped[unpaved_mask]
             
             
-            coarse_outputs, fine_output_asphalt, fine_output_concrete, fine_output_paving_stones, fine_output_sett, fine_output_unpaved = model.forward(model_inputs)
+            coarse_output, fine_output_asphalt, fine_output_concrete, fine_output_paving_stones, fine_output_sett, fine_output_unpaved = model.forward(model_inputs)
                              
-            coarse_loss = coarse_criterion(coarse_outputs, coarse_labels)
+            coarse_loss = coarse_criterion(coarse_output, coarse_labels)
             
             fine_loss_asphalt = fine_criterion(torch.log(fine_output_asphalt), fine_labels_mapped_aspahlt)
             fine_loss_concrete = fine_criterion(torch.log(fine_output_concrete), fine_labels_mapped_concrete)
@@ -239,7 +239,7 @@ for epoch in range(config.get('epochs')):
             fine_loss_sett_total += fine_loss_sett.item()
             fine_loss_unpaved_total += fine_loss_unpaved.item()
             
-            coarse_output = model.get_class_probabilies(coarse_outputs)
+            coarse_output = model.get_class_probabilies(coarse_output)
             coarse_predictions = torch.argmax(coarse_output, dim=1)
             coarse_correct += (coarse_predictions == coarse_labels).sum().item()
             
@@ -272,29 +272,30 @@ for epoch in range(config.get('epochs')):
         
         elif config.get('hierarchy_method') == 'use_condition_layer':
             
-            coarse_outputs, fine_outputs = model.forward(model_inputs)
+            coarse_output, fine_output = model.forward(model_inputs)
             
-            coarse_loss = coarse_criterion(coarse_outputs, coarse_labels)
-            fine_loss = fine_criterion(torch.log(fine_outputs), fine_labels)
+            coarse_loss = coarse_criterion(coarse_output, coarse_labels)
+            fine_loss = fine_criterion(torch.log(fine_output), fine_labels)
         
             loss = coarse_loss + fine_loss  #weighted loss functions for different levels
             
             loss.backward()
             #plot_grad_flow(model.named_parameters())
-            print(f'CPWM before optimizer step: {model.coarse_condition.weight}')
+            print(f'CPWM before optimizer step: {model.coarse_condition.weight.data}')
+            print("Gradients:", model.coarse_condition.weight.grad)
             optimizer.step()
-            print(f'CPWM after optimizer step: {model.coarse_condition.weight}')
+            print(f'CPWM after optimizer step: {model.coarse_condition.weight.data}')
             
             running_loss += loss.item()
             
             coarse_loss_total += coarse_loss.item()
             fine_loss_total += fine_loss.item()
         
-            coarse_output = model.get_class_probabilies(coarse_outputs)
+            coarse_output = model.get_class_probabilies(coarse_output)
             coarse_predictions = torch.argmax(coarse_output, dim=1)
             coarse_correct += (coarse_predictions == coarse_labels).sum().item()
             
-            fine_predictions = torch.argmax(fine_outputs, dim=1)
+            fine_predictions = torch.argmax(fine_output, dim=1)
             fine_correct += (fine_predictions == fine_labels).sum().item()
 
             # if batch_index == 0:
@@ -367,8 +368,8 @@ for epoch in range(config.get('epochs')):
                 break
             
             # if isinstance(criterion, nn.MSELoss):
-            #     coarse_outputs = coarse_outputs.flatten()
-            #     fine_outputs = fine_outputs.flatten()
+            #     coarse_output = coarse_output.flatten()
+            #     fine_output = fine_output.flatten()
                 
             #     fine_labels = fine_labels.float()
             #     coarse_labels = coarse_labels.float()

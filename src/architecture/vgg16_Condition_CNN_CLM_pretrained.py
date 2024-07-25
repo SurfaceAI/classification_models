@@ -32,11 +32,12 @@ class Condition_CNN_CLM_PRE(nn.Module):
             
         
         ### Block 1
-        self.block1 = model.features[:5]
-        self.block2 = model.features[5:10]
-        self.block3 = model.features[10:17]
-        self.block4 = model.features[17:24]
-        self.block5 = model.features[24:]
+        # self.block1 = model.features[:5]
+        # self.block2 = model.features[5:10]
+        # self.block3 = model.features[10:17]
+        # self.block4 = model.features[17:24]
+        # self.block5 = model.features[24:]
+        self.features = model.features
         
         #Coarse prediction branch
         self.coarse_classifier = nn.Sequential(
@@ -98,12 +99,12 @@ class Condition_CNN_CLM_PRE(nn.Module):
         
         images, true_coarse, hierarchy_method = inputs
         
-        x = self.block1(images) #[128, 64, 128, 128]
-        x = self.block2(x) #([128, 128, 64, 64])
-        x = self.block3(x) #e([128, 256, 32, 32])
+        x = self.features(images) #[128, 64, 128, 128]
+        # x = self.features[5:10](x) #([128, 128, 64, 64])
+        # x = self.model.features[10:17] #e([128, 256, 32, 32])
         
-        x = self.block4(x) # [128, 512, 16, 16])
-        x = self.block5(x) # [128, 512, 8, 8])
+        # x = self.block4(x) # [128, 512, 16, 16])
+        # x = self.block5(x) # [128, 512, 8, 8])
         
        # x = self.avgpool(x)
         flat = x.reshape(x.size(0), -1) #([128, 32768])
@@ -186,4 +187,4 @@ class Condition_CNN_CLM_PRE(nn.Module):
                 return coarse_output, fine_output    
     
     def get_optimizer_layers(self):
-        return self.block1, self.block2, self.block3, self.block4, self.block5, self.coarse_classifier, self.classifier_asphalt, self.classifier_concrete, self.classifier_paving_stones, self.classifier_sett, self.classifier_unpaved
+        return self.features, self.coarse_classifier, self.classifier_asphalt, self.classifier_concrete, self.classifier_paving_stones, self.classifier_sett, self.classifier_unpaved, self.coarse_condition
