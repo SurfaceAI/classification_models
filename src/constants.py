@@ -123,7 +123,7 @@ VGG16_CLM = "vgg16_CLM"
 # temporay onla
 VGG16REGRESSION = "vgg16Regression"
 BCNN = "BCNN"
-BCNN_PRE = "BCNN_pretrained"
+BCNN_PRE = "VGG16_B_CNN_PRE"
 BCNNREGRESSION = "BCNNRegression"
 CCNN = "ConditionCNN"
 CCNN_PRE = "ConditionCNN_pretrained"

@@ -24,8 +24,8 @@ from torch.optim.lr_scheduler import StepLR
 
 from coral_pytorch.dataset import corn_label_from_logits
 
-
 config = train_config.C_CNN_CLM
+#config = train_config.B_CNN_CLM
 torch.manual_seed(config.get("seed"))
 np.random.seed(config.get("seed"))
 
@@ -370,8 +370,8 @@ for epoch in range(config.get('epochs')):
             fine_correct += (fine_predictions == fine_labels).sum().item()
 
 
-            if batch_index == 0:
-                break
+            # if batch_index == 0:
+            #     break
             
     # #learning rate step        
     # before_lr = optimizer.param_groups[0]["lr"]
@@ -419,6 +419,9 @@ for epoch in range(config.get('epochs')):
             coarse_one_hot = helper.to_one_hot_tensor(coarse_labels, num_classes).to(device)
             
             model_inputs = (inputs, coarse_one_hot, config.get('hierarchy_method'))   
+            
+            fine_labels_mapped = torch.tensor([helper.map_quality_to_continuous(label) for label in fine_labels], dtype=torch.long).to(device)
+
             
             coarse_output, fine_output = model.forward(model_inputs)
             
