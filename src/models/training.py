@@ -241,15 +241,12 @@ def prepare_train(
     # validloader = DataLoader(valid_data, batch_size=valid_batch_size)
 
     # load model
-    if is_regression:
-        num_classes = 1
-    else:
-        num_classes = 5
-        #num_classes = len(train_data.classes)
+  
+    num_fine_classes = 18
+    num_classes = 5
 
     # instanciate model with number of classes
     if is_hierarchical:
-        num_fine_classes = 18
         model = model_cls(num_classes, num_fine_classes, head)
     else:
         model = model_cls(num_classes)

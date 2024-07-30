@@ -94,22 +94,24 @@ train_data, valid_data, trainloader, validloader, model, optimizer = training.pr
 
 # Define the data loaders and transformations
 
-num_classes = 18
-#counting the coarse classes
-num_c = len(train_data.selected_classes)
+num_fine_classes = 18
+    #counting the coarse classes
+    
+num_classes = len(train_data.selected_classes)
+
 
 
 #create one-hot encoded tensors with the fine class labels
-y_train = helper.to_one_hot_tensor(train_data.targets, num_classes)
-y_valid = helper.to_one_hot_tensor(valid_data.targets, num_classes)
+y_train = helper.to_one_hot_tensor(train_data.targets, num_fine_classes)
+y_valid = helper.to_one_hot_tensor(valid_data.targets, num_fine_classes)
 
 
 #here we define the label tree, left is the fine class (e.g. asphalt-excellent) and right the coarse (e.g.asphalt)
 parent = torch.tensor([0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 4, 4, 4])
 
 
-y_c_train = torch.zeros(y_train.size(0), num_c, dtype=torch.float32)
-y_c_valid = torch.zeros(y_train.size(0), num_c, dtype=torch.float32)
+y_c_train = torch.zeros(y_train.size(0), num_classes, dtype=torch.float32)
+y_c_valid = torch.zeros(y_train.size(0), num_classes, dtype=torch.float32)
 
 
 # Transform labels for coarse level
@@ -195,17 +197,18 @@ for epoch in range(config.get('epochs')):
         optimizer.zero_grad()
         
         coarse_labels = parent[fine_labels]
-        coarse_one_hot = helper.to_one_hot_tensor(coarse_labels, num_c).to(device)
+        coarse_one_hot = helper.to_one_hot_tensor(coarse_labels, num_classes).to(device)
         #coarse_one_hot = coarse_one_hot.type(torch.LongTensor)
         #, dtype=torch.float32
 
         #we give the coarse true labels for the conditional prob weights matrix as input to the model
         model_inputs = (inputs, coarse_one_hot, config.get('hierarchy_method'))
         
+        fine_labels_mapped = torch.tensor([helper.map_quality_to_continuous(label) for label in fine_labels], dtype=torch.long).to(device)
+
+        
         if config.get('hierarchy_method') == 'use_ground_truth':
-            
-            fine_labels_mapped = torch.tensor([helper.map_quality_to_continuous(label) for label in fine_labels], dtype=torch.long).to(device)
-            
+                        
             asphalt_mask = (coarse_labels == 0)
             concrete_mask = (coarse_labels == 1)
             paving_stones_mask = (coarse_labels == 2)
@@ -223,17 +226,41 @@ for epoch in range(config.get('epochs')):
                              
             coarse_loss = coarse_criterion(coarse_output, coarse_labels)
             
-            fine_loss_asphalt = fine_criterion(torch.log(fine_output_asphalt), fine_labels_mapped_aspahlt)
-            fine_loss_concrete = fine_criterion(torch.log(fine_output_concrete), fine_labels_mapped_concrete)
-            fine_loss_paving_stones = fine_criterion(torch.log(fine_output_paving_stones), fine_labels_mapped_paving_stones)
-            fine_loss_sett = fine_criterion(torch.log(fine_output_sett), fine_labels_mapped_sett)
-            fine_loss_unpaved = fine_criterion(torch.log(fine_output_unpaved), fine_labels_mapped_unpaved)
+            if head == 'clm':
+                fine_loss_asphalt = fine_criterion(torch.log(fine_output_asphalt + epsilon), fine_labels_mapped_aspahlt)
+                fine_loss_concrete = fine_criterion(torch.log(fine_output_concrete + epsilon), fine_labels_mapped_concrete)
+                fine_loss_paving_stones = fine_criterion(torch.log(fine_output_paving_stones + epsilon), fine_labels_mapped_paving_stones)
+                fine_loss_sett = fine_criterion(torch.log(fine_output_sett + epsilon), fine_labels_mapped_sett)
+                fine_loss_unpaved = fine_criterion(torch.log(fine_output_unpaved + epsilon), fine_labels_mapped_unpaved)
             
+                
+            if head == 'regression':
+                
+                fine_output_asphalt = fine_output_asphalt.flatten().float()
+                fine_output_concrete = fine_output_concrete.flatten().float()
+                fine_output_paving_stones = fine_output_paving_stones.flatten().float()
+                fine_output_sett = fine_output_sett.flatten().float()
+                fine_output_unpaved = fine_output_unpaved.flatten().float()
+                
+                fine_labels_mapped_aspahlt = fine_labels_mapped_aspahlt.float()
+                fine_labels_mapped_concrete = fine_labels_mapped_concrete.float()
+                fine_labels_mapped_paving_stones = fine_labels_mapped_paving_stones.float()
+                fine_labels_mapped_sett = fine_labels_mapped_sett.float()
+                fine_labels_mapped_unpaved = fine_labels_mapped_unpaved.float()
+                
+                fine_loss_asphalt = fine_criterion(fine_output_asphalt, fine_labels_mapped_aspahlt)
+                fine_loss_concrete = fine_criterion(fine_output_concrete, fine_labels_mapped_concrete)
+                fine_loss_paving_stones = fine_criterion(fine_output_paving_stones, fine_labels_mapped_paving_stones)
+                fine_loss_sett = fine_criterion(fine_output_sett, fine_labels_mapped_sett)
+                fine_loss_unpaved = fine_criterion(fine_output_unpaved, fine_labels_mapped_unpaved)
+    
+        
             fine_loss_asphalt = torch.nan_to_num(fine_loss_asphalt, nan=0.0)
             fine_loss_concrete = torch.nan_to_num(fine_loss_concrete, nan=0.0)
             fine_loss_paving_stones = torch.nan_to_num(fine_loss_paving_stones, nan=0.0)
             fine_loss_sett = torch.nan_to_num(fine_loss_sett, nan=0.0)
             fine_loss_unpaved = torch.nan_to_num(fine_loss_unpaved, nan=0.0)
+
         
             fine_loss = 1/5 * fine_loss_asphalt + 1/5 * fine_loss_concrete + 1/5 * fine_loss_sett + 1/5 * fine_loss_paving_stones + 1/5 * fine_loss_unpaved
             
@@ -257,8 +284,8 @@ for epoch in range(config.get('epochs')):
             coarse_predictions = torch.argmax(coarse_output, dim=1)
             coarse_correct += (coarse_predictions == coarse_labels).sum().item()
             
-            if head == 'clm':
-                fine_predictions = torch.argmax(fine_output, dim=1)
+            # if head == 'clm':
+            #     fine_predictions = torch.argmax(fine_output, dim=1)
             # if head == 'regression':
             #     fine_predictions = = fine_output.round()
             # else:
@@ -300,13 +327,21 @@ for epoch in range(config.get('epochs')):
             coarse_output, fine_output = model.forward(model_inputs)
             
             coarse_loss = coarse_criterion(coarse_output, coarse_labels)
-            fine_loss = fine_criterion(torch.log(fine_output + epsilon), fine_labels)
-        
+            
+            if head == 'clm':
+                fine_loss = fine_criterion(torch.log(fine_output + epsilon), fine_labels)
+                
+            elif head == 'regression':
+                fine_output = fine_output.flatten().float()
+                fine_labels_mapped = fine_labels_mapped.float()
+                fine_loss = fine_criterion(fine_output, fine_labels_mapped)
+
             loss = coarse_loss + fine_loss  #weighted loss functions for different levels
             
             loss.backward()
             #plot_grad_flow(model.named_parameters())
             print(f'CPWM before optimizer step: {model.coarse_condition.weight.data}')
+            print(f'Fine output tensor: {fine_output}')
             print("Gradients:", model.coarse_condition.weight.grad)
             optimizer.step()
             print(f'CPWM after optimizer step: {model.coarse_condition.weight.data}')
@@ -373,14 +408,20 @@ for epoch in range(config.get('epochs')):
             
             inputs, fine_labels = inputs.to(device), fine_labels.to(device)
             coarse_labels = parent[fine_labels]
-            coarse_one_hot = helper.to_one_hot_tensor(coarse_labels, num_c).to(device)
+            coarse_one_hot = helper.to_one_hot_tensor(coarse_labels, num_classes).to(device)
             
             model_inputs = (inputs, coarse_one_hot, config.get('hierarchy_method'))   
             
             coarse_output, fine_output = model.forward(model_inputs)
             
             coarse_loss = coarse_criterion(coarse_output, coarse_labels)
-            fine_loss = fine_criterion(torch.log(fine_output + epsilon), fine_labels)
+            
+            if head == 'clm':
+                fine_loss = fine_criterion(torch.log(fine_output + epsilon), fine_labels)
+            elif head == 'regression':
+                fine_output = fine_output.flatten().float()
+                fine_labels_mapped = fine_labels_mapped.float()
+                fine_loss = fine_criterion(fine_output, fine_labels_mapped)
                         
             loss = coarse_loss + fine_loss  #weighted loss functions for different levels
         
