@@ -396,7 +396,7 @@ C_CNN_CLM = {
     "name": "C_CNN_CLM",
     "level": const.MULTILABEL,
     "model": const.CCNNCLMPRE,
-    "head": 'regression', #'regression', 'classification', 'obd'
+    "head": 'clm', #'regression', 'classification', 'obd'
     "hierarchy_method": 'use_condition_layer', #'use_ground_truth', 'use_condition_layer',
 }
 
