@@ -1,6 +1,6 @@
 import torch
 import torch.nn as nn
-from src.utils.helper import NonNegUnitNorm
+from src.utils.helper import *
 from multi_label.CLM import CLM
 
 class Condition_CNN_CLM(nn.Module):
@@ -191,7 +191,7 @@ class Condition_CNN_CLM(nn.Module):
             else:
                 coarse_condition = self.coarse_condition(coarse_output) 
                 
-            fine_clm_combined = torch.cat([fine_output_asphalt, 
+            fine_output_combined = torch.cat([fine_output_asphalt, 
                                         fine_output_concrete, 
                                         fine_output_sett, 
                                         fine_output_paving_stones, 
@@ -199,7 +199,7 @@ class Condition_CNN_CLM(nn.Module):
                                         dim=1)
         #features = torch.add(coarse_condition, fine_raw)#
         #Adding the conditional probabilities to the dense features
-            fine_output = coarse_condition + fine_clm_combined
+            fine_output = coarse_condition + fine_output_combined
             self.coarse_condition.weight.data = self.constraint(self.coarse_condition.weight.data)
             
         elif hierarchy_method == 'use_ground_truth': 
@@ -212,24 +212,24 @@ class Condition_CNN_CLM(nn.Module):
 
                 fine_output_asphalt = self.quality_fc_asphalt(flat[true_coarse[:, 0].bool()])
                 #fine_pred_asphalt = torch.argmax(self.CLM_4(fine_output_asphalt), dim=1)
-                #fine_predictions[true_coarse[:, 0].bool()] = fine_pred_asphalt
+                fine_predictions[true_coarse[:, 0].bool()] = torch.argmax(fine_output_asphalt, dim=1)
                 
                 fine_output_concrete = self.quality_fc_concrete(flat[true_coarse[:, 1].bool()])
                 #fine_pred_concrete = torch.argmax(self.CLM_4(fine_output_concrete), dim=1)
-                #fine_predictions[true_coarse[:, 1].bool()] = fine_pred_concrete   
+                fine_predictions[true_coarse[:, 1].bool()] = torch.argmax(fine_output_concrete, dim=1)   
                           
-                fine_output_paving_stones = self.quality_fc_paving_stones(flat[true_coarse[:, 3].bool()])
+                fine_output_paving_stones = self.quality_fc_paving_stones(flat[true_coarse[:, 2].bool()])
                 #fine_pred_paving_stones = torch.argmax(self.CLM_3(fine_output_paving_stones), dim=1)
-                #fine_predictions[true_coarse[:, 3].bool()] = fine_pred_paving_stones   
+                fine_predictions[true_coarse[:, 2].bool()] = torch.argmax(fine_output_paving_stones, dim=1)    
 
-                fine_output_sett = self.quality_fc_sett(flat[true_coarse[:, 2].bool()])
+                fine_output_sett = self.quality_fc_sett(flat[true_coarse[:, 3].bool()])
                 #fine_pred_sett = torch.argmax(self.CLM_4(fine_output_sett), dim=1)
-                #fine_predictions[true_coarse[:, 2].bool()] = fine_pred_sett                       
+                fine_predictions[true_coarse[:, 3].bool()] = torch.argmax(fine_output_sett, dim=1)                          
 
 
                 fine_output_unpaved = self.quality_fc_unpaved(flat[true_coarse[:, 4].bool()])
                 #fine_pred_unpaved = torch.argmax(self.CLM_3(fine_output_unpaved), dim=1)
-                #fine_predictions[true_coarse[:, 3].bool()] = fine_pred_unpaved   
+                fine_predictions[true_coarse[:, 4].bool()] = torch.argmax(fine_output_unpaved, dim=1)    
                 
             else:
                 fine_output_asphalt = self.quality_fc_asphalt(flat)
