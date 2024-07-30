@@ -24,8 +24,8 @@ from torch.optim.lr_scheduler import StepLR
 
 from coral_pytorch.dataset import corn_label_from_logits
 
-config = train_config.C_CNN_CLM
-#config = train_config.B_CNN_CLM
+#config = train_config.C_CNN_CLM
+config = train_config.B_CNN_CLM
 torch.manual_seed(config.get("seed"))
 np.random.seed(config.get("seed"))
 
