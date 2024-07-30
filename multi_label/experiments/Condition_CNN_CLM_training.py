@@ -83,7 +83,7 @@ train_data, valid_data, trainloader, validloader, model, optimizer = training.pr
                 random_seed=config.get("seed"),
                 is_regression=config.get("is_regression"),
                 is_hierarchical=config.get("is_hierarchical"),
-                clm=config.get("clm"),
+                head=config.get("head"),
                 max_class_size=config.get("max_class_size"),
                 freeze_convs=config.get("freeze_convs"),
                 )
@@ -133,7 +133,7 @@ for j in range(y_valid.shape[0]):
 trainable_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
 
 if lr_scheduler:
-    scheduler = StepLR(optimizer, step_size=6, gamma=0.1)
+    scheduler = StepLR(optimizer, step_size=9, gamma=0.1)
 
 checkpointer = checkpointing.CheckpointSaver(
         dirpath=config.get("root_model"),
@@ -251,21 +251,32 @@ for epoch in range(config.get('epochs')):
             coarse_predictions = torch.argmax(coarse_output, dim=1)
             coarse_correct += (coarse_predictions == coarse_labels).sum().item()
             
-            fine_predictions_asphalt = torch.argmax(fine_output_asphalt, dim=1)
+                        if head == 'clm':
+                fine_predictions = torch.argmax(fine_output, dim=1)
+            # if head == 'regression':
+            #     fine_predictions = = fine_output.round()
+            # else:
+            #     probs = model.get_class_probabilies(outputs)
+            #     predictions = torch.argmax(probs, dim=1)
+            if head == 'clm':
+                fine_predictions_asphalt = torch.argmax(fine_output_asphalt, dim=1)                
+                fine_predictions_concrete = torch.argmax(fine_output_concrete, dim=1)
+                fine_predictions_sett = torch.argmax(fine_output_sett, dim=1)
+                fine_predictions_paving_stones = torch.argmax(fine_output_paving_stones, dim=1)
+                fine_predictions_unpaved = torch.argmax(fine_output_unpaved, dim=1)
+                                
+            if head == 'regression':
+                fine_predictions_asphalt = fine_output_asphalt.round()
+                fine_predictions_concrete = fine_output_concrete.round()
+                fine_predictions_sett = fine_output_sett.round()
+                fine_predictions_paving_stones = fine_output_paving_stones.round()
+                fine_predictions_unpaved = fine_output_unpaved.round()
+            
             fine_correct_asphalt += (fine_predictions_asphalt == fine_labels_mapped_aspahlt).sum().item()
-            
-            fine_predictions_concrete = torch.argmax(fine_output_concrete, dim=1)
             fine_correct_concrete += (fine_predictions_concrete == fine_labels_mapped_concrete).sum().item()
-
-            fine_predictions_sett = torch.argmax(fine_output_sett, dim=1)
             fine_correct_sett += (fine_predictions_sett == fine_labels_mapped_sett).sum().item()
-
-            fine_predictions_paving_stones = torch.argmax(fine_output_paving_stones, dim=1)
             fine_correct_paving_stones += (fine_predictions_paving_stones == fine_labels_mapped_paving_stones).sum().item()
-
-            fine_predictions_unpaved = torch.argmax(fine_output_unpaved, dim=1)
             fine_correct_unpaved += (fine_predictions_unpaved == fine_labels_mapped_unpaved).sum().item()
-            
             fine_correct = fine_correct_asphalt + fine_correct_concrete + fine_correct_sett + fine_correct_paving_stones + fine_correct_unpaved
             
             asphalt_fine_epoch_loss = fine_loss_asphalt_total / len(trainloader)
@@ -303,8 +314,15 @@ for epoch in range(config.get('epochs')):
             coarse_predictions = torch.argmax(coarse_output, dim=1)
             coarse_correct += (coarse_predictions == coarse_labels).sum().item()
             
-            fine_predictions = torch.argmax(fine_output, dim=1)
+            if head == 'clm':
+                fine_predictions = torch.argmax(fine_output, dim=1)
+            if head == 'regression':
+                fine_predictions = = fine_output.round()
+            else:
+                probs = model.get_class_probabilies(fine_output)
+                predictions = torch.argmax(probs, dim=1)
             fine_correct += (fine_predictions == fine_labels).sum().item()
+
 
             # if batch_index == 0:
             #     break
@@ -369,9 +387,15 @@ for epoch in range(config.get('epochs')):
             val_coarse_predictions = torch.argmax(val_coarse_output, dim=1)
             val_coarse_correct += (val_coarse_predictions == coarse_labels).sum().item()
             
-            val_fine_predictions = torch.argmax(fine_output, dim=1)
+            if head == 'clm':
+                val_fine_predictions = torch.argmax(fine_output, dim=1)
+            if head == 'regression':
+                val_fine_predictions = = fine_output.round()
+            else:
+                probs = model.get_class_probabilies(fine_output)
+                predictions = torch.argmax(probs, dim=1)
             val_fine_correct += (val_fine_predictions == fine_labels).sum().item()
-            
+
             # if batch_index == 0:
             #     break
             

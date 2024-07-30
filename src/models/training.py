@@ -122,7 +122,7 @@ def _run_training(project=None, name=None, config=None, wandb_on=True):
         random_seed=config.get("seed"),
         is_regression=config.get("is_regression"),
         is_hierarchical=config.get("is_hierarchical"),
-        clm=config.get("clm"),
+        head=config.get("head"),
         max_class_size=config.get("max_class_size"),
         freeze_convs=config.get("freeze_convs"),
     )
@@ -177,7 +177,7 @@ def prepare_train(
     random_seed,
     is_regression,
     is_hierarchical,
-    clm,
+    head,
     max_class_size,
     freeze_convs,
 ):
@@ -250,7 +250,7 @@ def prepare_train(
     # instanciate model with number of classes
     if is_hierarchical:
         num_fine_classes = 18
-        model = model_cls(num_classes, num_fine_classes)
+        model = model_cls(num_classes, num_fine_classes, head)
     else:
         model = model_cls(num_classes)
 

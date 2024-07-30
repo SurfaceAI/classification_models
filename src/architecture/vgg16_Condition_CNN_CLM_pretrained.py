@@ -17,7 +17,7 @@ class NonNegUnitNorm:
 
 
 class Condition_CNN_CLM_PRE(nn.Module):
-    def __init__(self, num_c, num_classes):
+    def __init__(self, num_c, num_classes, head):
         super(Condition_CNN_CLM_PRE, self).__init__()
         
         self.num_c = num_c
@@ -50,12 +50,21 @@ class Condition_CNN_CLM_PRE(nn.Module):
             nn.Linear(256, num_c)
         )
         
-        #Individual fine prediction branches        
-        self.classifier_asphalt = self._create_quality_fc(num_classes=4)
-        self.classifier_concrete = self._create_quality_fc(num_classes=4)
-        self.classifier_paving_stones = self._create_quality_fc(num_classes=4)
-        self.classifier_sett = self._create_quality_fc(num_classes=3)
-        self.classifier_unpaved = self._create_quality_fc(num_classes=3)
+        #Individual fine prediction branches  
+        if head == 'clm':      
+            self.classifier_asphalt = self._create_quality_fc(num_classes=4)
+            self.classifier_concrete = self._create_quality_fc(num_classes=4)
+            self.classifier_paving_stones = self._create_quality_fc(num_classes=4)
+            self.classifier_sett = self._create_quality_fc(num_classes=3)
+            self.classifier_unpaved = self._create_quality_fc(num_classes=3)
+            
+        elif head == 'regression':
+            self.classifier_asphalt = self._create_quality_fc(num_classes=num_classes)
+            self.classifier_concrete = self._create_quality_fc(num_classes=num_classes)
+            self.classifier_paving_stones = self._create_quality_fc(num_classes=num_classes)
+            self.classifier_sett = self._create_quality_fc(num_classes=num_classes)
+            self.classifier_unpaved = self._create_quality_fc(num_classes=num_classes)
+            
                 
         ### Fine prediction branch
         # num_features = model.classifier[6].in_features
@@ -72,24 +81,38 @@ class Condition_CNN_CLM_PRE(nn.Module):
         # Save the modified model as a member variable               
         self.coarse_criterion = nn.CrossEntropyLoss
         
-        if num_classes == 1:
+        if head == 'regression':
             self.fine_criterion = nn.MSELoss
-        else:
+        elif head == 'clm':
             self.fine_criterion = nn.NLLLoss
+        else:
+            self.fine_criterion = nn.CrossEntropyLoss
             
+    if head == 'clm':        
+        def _create_quality_fc(self, num_classes=4):
+            return nn.Sequential(
+                nn.Linear(32768, 1024),
+                nn.ReLU(),
+                nn.Dropout(0.5),
+                nn.Linear(1024, 1024),
+                nn.ReLU(),
+                nn.Dropout(0.5),
+                nn.Linear(1024, 1),
+                nn.BatchNorm1d(1),
+                CLM(classes=num_classes, link_function="logit", min_distance=0.0, use_slope=False, fixed_thresholds=False)
+            )
             
-    def _create_quality_fc(self, num_classes=4):
-        return nn.Sequential(
-            nn.Linear(32768, 1024),
-            nn.ReLU(),
-            nn.Dropout(0.5),
-            nn.Linear(1024, 1024),
-            nn.ReLU(),
-            nn.Dropout(0.5),
-            nn.Linear(1024, 1),
-            nn.BatchNorm1d(1),
-            CLM(classes=num_classes, link_function="logit", min_distance=0.0, use_slope=False, fixed_thresholds=False)
-        )
+    elif head == 'regression':
+        def _create_quality_fc(self, num_classes):
+            return nn.Sequential(
+                nn.Linear(32768, 1024),
+                nn.ReLU(),
+                nn.Dropout(0.5),
+                nn.Linear(1024, 1024),
+                nn.ReLU(),
+                nn.Dropout(0.5),
+                nn.Linear(1024, num_classes),
+            )
         
     @ staticmethod
     def get_class_probabilies(x):
