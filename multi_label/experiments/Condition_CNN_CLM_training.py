@@ -22,7 +22,7 @@ import os
 
 from torch.optim.lr_scheduler import StepLR
 
-
+from coral_pytorch.dataset import corn_label_from_logits
 
 
 config = train_config.C_CNN_CLM
@@ -335,6 +335,9 @@ for epoch in range(config.get('epochs')):
                 fine_output = fine_output.flatten().float()
                 fine_labels_mapped = fine_labels_mapped.float()
                 fine_loss = fine_criterion(fine_output, fine_labels_mapped)
+                
+            elif head == 'corn':
+                corn_loss = fine_criterion(fine_output, fine_labels_mapped, num_fine_classes)
 
             loss = coarse_loss + fine_loss  #weighted loss functions for different levels
             
@@ -357,16 +360,18 @@ for epoch in range(config.get('epochs')):
             
             if head == 'clm':
                 fine_predictions = torch.argmax(fine_output, dim=1)
-            if head == 'regression':
+            elif head == 'regression':
                 fine_predictions = fine_output.round()
+            elif head == 'corn':
+                fine_predictions = corn_label_from_logits(fine_output).float()
             else:
                 probs = model.get_class_probabilies(fine_output)
                 predictions = torch.argmax(probs, dim=1)
             fine_correct += (fine_predictions == fine_labels).sum().item()
 
 
-            # if batch_index == 0:
-            #     break
+            if batch_index == 0:
+                break
             
     # #learning rate step        
     # before_lr = optimizer.param_groups[0]["lr"]
@@ -393,7 +398,10 @@ for epoch in range(config.get('epochs')):
     model.eval()
     
     coarse_criterion = model.coarse_criterion(reduction="sum")
-    fine_criterion = model.fine_criterion(reduction="sum")
+    if head == 'corn':
+        fine_criterion = model.fine_criteiron
+    else:
+        fine_criterion = model.fine_criterion(reduction="sum")
     
     
     val_running_loss = 0.0
@@ -422,6 +430,8 @@ for epoch in range(config.get('epochs')):
                 fine_output = fine_output.flatten().float()
                 fine_labels_mapped = fine_labels_mapped.float()
                 fine_loss = fine_criterion(fine_output, fine_labels_mapped)
+            elif head == 'corn':
+                fine_loss = fine_criterion(fine_output, fine_labels_mapped, num_fine_classes)
                         
             loss = coarse_loss + fine_loss  #weighted loss functions for different levels
         
@@ -436,8 +446,10 @@ for epoch in range(config.get('epochs')):
             
             if head == 'clm':
                 val_fine_predictions = torch.argmax(fine_output, dim=1)
-            if head == 'regression':
+            elif head == 'regression':
                 val_fine_predictions = fine_output.round()
+            elif head == 'corn':
+                val_fine_predictions = corn_label_from_logits(fine_output).float()
             else:
                 probs = model.get_class_probabilies(fine_output)
                 predictions = torch.argmax(probs, dim=1)
