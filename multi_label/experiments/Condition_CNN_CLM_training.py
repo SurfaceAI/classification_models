@@ -29,7 +29,11 @@ config = train_config.C_CNN_CLM
 torch.manual_seed(config.get("seed"))
 np.random.seed(config.get("seed"))
 
+
+
 lr_scheduler = config.get("lr_scheduler")
+head = config.get("head")
+epsilon = 1e-9
 
 
 
@@ -132,8 +136,10 @@ for j in range(y_valid.shape[0]):
 
 trainable_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
 
+
+
 if lr_scheduler:
-    scheduler = StepLR(optimizer, step_size=9, gamma=0.1)
+    scheduler = StepLR(optimizer, step_size=6, gamma=0.1)
 
 checkpointer = checkpointing.CheckpointSaver(
         dirpath=config.get("root_model"),
@@ -251,7 +257,7 @@ for epoch in range(config.get('epochs')):
             coarse_predictions = torch.argmax(coarse_output, dim=1)
             coarse_correct += (coarse_predictions == coarse_labels).sum().item()
             
-                        if head == 'clm':
+            if head == 'clm':
                 fine_predictions = torch.argmax(fine_output, dim=1)
             # if head == 'regression':
             #     fine_predictions = = fine_output.round()
@@ -294,7 +300,7 @@ for epoch in range(config.get('epochs')):
             coarse_output, fine_output = model.forward(model_inputs)
             
             coarse_loss = coarse_criterion(coarse_output, coarse_labels)
-            fine_loss = fine_criterion(torch.log(fine_output), fine_labels)
+            fine_loss = fine_criterion(torch.log(fine_output + epsilon), fine_labels)
         
             loss = coarse_loss + fine_loss  #weighted loss functions for different levels
             
@@ -317,7 +323,7 @@ for epoch in range(config.get('epochs')):
             if head == 'clm':
                 fine_predictions = torch.argmax(fine_output, dim=1)
             if head == 'regression':
-                fine_predictions = = fine_output.round()
+                fine_predictions = fine_output.round()
             else:
                 probs = model.get_class_probabilies(fine_output)
                 predictions = torch.argmax(probs, dim=1)
@@ -374,7 +380,7 @@ for epoch in range(config.get('epochs')):
             coarse_output, fine_output = model.forward(model_inputs)
             
             coarse_loss = coarse_criterion(coarse_output, coarse_labels)
-            fine_loss = fine_criterion(torch.log(fine_output), fine_labels)
+            fine_loss = fine_criterion(torch.log(fine_output + epsilon), fine_labels)
                         
             loss = coarse_loss + fine_loss  #weighted loss functions for different levels
         
@@ -390,7 +396,7 @@ for epoch in range(config.get('epochs')):
             if head == 'clm':
                 val_fine_predictions = torch.argmax(fine_output, dim=1)
             if head == 'regression':
-                val_fine_predictions = = fine_output.round()
+                val_fine_predictions = fine_output.round()
             else:
                 probs = model.get_class_probabilies(fine_output)
                 predictions = torch.argmax(probs, dim=1)

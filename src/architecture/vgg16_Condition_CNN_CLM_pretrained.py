@@ -87,32 +87,32 @@ class Condition_CNN_CLM_PRE(nn.Module):
             self.fine_criterion = nn.NLLLoss
         else:
             self.fine_criterion = nn.CrossEntropyLoss
-            
-    if head == 'clm':        
-        def _create_quality_fc(self, num_classes=4):
-            return nn.Sequential(
-                nn.Linear(32768, 1024),
-                nn.ReLU(),
-                nn.Dropout(0.5),
-                nn.Linear(1024, 1024),
-                nn.ReLU(),
-                nn.Dropout(0.5),
-                nn.Linear(1024, 1),
-                nn.BatchNorm1d(1),
-                CLM(classes=num_classes, link_function="logit", min_distance=0.0, use_slope=False, fixed_thresholds=False)
-            )
-            
-    elif head == 'regression':
-        def _create_quality_fc(self, num_classes):
-            return nn.Sequential(
-                nn.Linear(32768, 1024),
-                nn.ReLU(),
-                nn.Dropout(0.5),
-                nn.Linear(1024, 1024),
-                nn.ReLU(),
-                nn.Dropout(0.5),
-                nn.Linear(1024, num_classes),
-            )
+                
+        if head == 'clm':        
+            def _create_quality_fc(self, num_classes=4):
+                return nn.Sequential(
+                    nn.Linear(32768, 1024),
+                    nn.ReLU(),
+                    nn.Dropout(0.5),
+                    nn.Linear(1024, 1024),
+                    nn.ReLU(),
+                    nn.Dropout(0.5),
+                    nn.Linear(1024, 1),
+                    nn.BatchNorm1d(1),
+                    CLM(classes=num_classes, link_function="logit", min_distance=0.0, use_slope=False, fixed_thresholds=False)
+                )
+                
+        elif head == 'regression':
+            def _create_quality_fc(self, num_classes):
+                return nn.Sequential(
+                    nn.Linear(32768, 1024),
+                    nn.ReLU(),
+                    nn.Dropout(0.5),
+                    nn.Linear(1024, 1024),
+                    nn.ReLU(),
+                    nn.Dropout(0.5),
+                    nn.Linear(1024, num_classes),
+                )
         
     @ staticmethod
     def get_class_probabilies(x):
