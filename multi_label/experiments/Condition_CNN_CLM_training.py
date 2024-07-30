@@ -266,8 +266,8 @@ for epoch in range(config.get('epochs')):
             paving_stones_fine_epoch_loss = fine_loss_paving_stones_total / len(trainloader)
             unpaved_fine_epoch_loss = fine_loss_unpaved_total / len(trainloader)
             
-            if batch_index == 0:
-                break
+            # if batch_index == 0:
+            #     break
         
         
         elif config.get('hierarchy_method') == 'use_condition_layer':
@@ -364,8 +364,8 @@ for epoch in range(config.get('epochs')):
             val_fine_predictions = torch.argmax(fine_output, dim=1)
             val_fine_correct += (val_fine_predictions == fine_labels).sum().item()
             
-            if batch_index == 0:
-                break
+            # if batch_index == 0:
+            #     break
             
             # if isinstance(criterion, nn.MSELoss):
             #     coarse_output = coarse_output.flatten()

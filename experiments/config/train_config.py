@@ -10,7 +10,7 @@ default_params = {
     "is_hierarchical": True,
     "eval_metric": const.EVAL_METRIC_ACCURACY,
     "max_class_size": None,
-    "lr_scheduler": True,
+    "lr_scheduler": False,
     "freeze_convs": False,
 }
 
@@ -386,7 +386,7 @@ C_CNN_CLM = {
     **default_params,
     "batch_size": 128,
     "epochs": 20,
-    "learning_rate": 0.01,
+    "learning_rate": 0.001,
     "optimizer": const.OPTI_ADAM,
     "is_regression": False,
     "ordinal_method": const.CLM,

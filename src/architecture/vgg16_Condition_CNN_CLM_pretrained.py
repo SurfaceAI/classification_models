@@ -127,7 +127,7 @@ class Condition_CNN_CLM_PRE(nn.Module):
             if self.training:
                 coarse_condition = self.coarse_condition(true_coarse)  
             else:
-                coarse_condition = self.coarse_condition(coarse_output) 
+                coarse_condition = self.coarse_condition(self.get_class_probabilies(coarse_output)) 
                 
             fine_output_combined = torch.cat([fine_output_asphalt, 
                                         fine_output_concrete, 
