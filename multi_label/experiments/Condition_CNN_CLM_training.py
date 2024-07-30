@@ -20,11 +20,16 @@ import wandb
 import numpy as np
 import os
 
+from torch.optim.lr_scheduler import StepLR
+
+
 
 
 config = train_config.C_CNN_CLM
 torch.manual_seed(config.get("seed"))
 np.random.seed(config.get("seed"))
+
+lr_scheduler = config.get("lr_scheduler")
 
 
 
@@ -126,6 +131,9 @@ for j in range(y_valid.shape[0]):
 #optimizer = optim.Adam(model.parameters(), lr=config.get('learning_rate'), momentum=0.9)
 
 trainable_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
+
+if lr_scheduler:
+    scheduler = StepLR(optimizer, step_size=6, gamma=0.1)
 
 checkpointer = checkpointing.CheckpointSaver(
         dirpath=config.get("root_model"),
@@ -266,8 +274,8 @@ for epoch in range(config.get('epochs')):
             paving_stones_fine_epoch_loss = fine_loss_paving_stones_total / len(trainloader)
             unpaved_fine_epoch_loss = fine_loss_unpaved_total / len(trainloader)
             
-            if batch_index == 0:
-                break
+            # if batch_index == 0:
+            #     break
         
         
         elif config.get('hierarchy_method') == 'use_condition_layer':
@@ -364,8 +372,8 @@ for epoch in range(config.get('epochs')):
             val_fine_predictions = torch.argmax(fine_output, dim=1)
             val_fine_correct += (val_fine_predictions == fine_labels).sum().item()
             
-            if batch_index == 0:
-                break
+            # if batch_index == 0:
+            #     break
             
             # if isinstance(criterion, nn.MSELoss):
             #     coarse_output = coarse_output.flatten()
@@ -385,9 +393,15 @@ for epoch in range(config.get('epochs')):
     val_coarse_epoch_loss = val_coarse_loss_total / len(validloader)
     val_fine_epoch_loss = val_fine_loss_total / len(validloader)
 
+    if lr_scheduler:
+        scheduler.step()
+
+
     early_stop = checkpointer(
             model=model, epoch=epoch, metric_val=val_epoch_loss, optimizer=optimizer
         )
+    
+    
     
     if config.get('wandb_on'):
         wandb.log(
@@ -400,7 +414,8 @@ for epoch in range(config.get('epochs')):
                 "eval/loss": val_epoch_loss,
                 "eval/accuracy/coarse": val_epoch_coarse_accuracy,
                 "eval/accuracy/fine": val_epoch_fine_accuracy,
-                "trainable_params": trainable_params
+                "trainable_params": trainable_params,
+                "learning_rate": scheduler.get_last_lr()[0],
             }
         )
     
@@ -412,19 +427,17 @@ for epoch in range(config.get('epochs')):
         Coarse train loss: {coarse_epoch_loss:.3f},
         Fine train loss: {fine_epoch_loss:.3f}, 
         
-        Fine asphalt train loss: {asphalt_fine_epoch_loss:.3f},
-        Fine asphalt train loss: {concrete_fine_epoch_loss:.3f},
-        Fine asphalt train loss: {sett_fine_epoch_loss:.3f},
-        Fine asphalt train loss: {paving_stones_fine_epoch_loss:.3f},
-        Fine asphalt train loss: {unpaved_fine_epoch_loss:.3f},
-        
         Train coarse accuracy: {epoch_coarse_accuracy:.3f}%, 
         Train fine accuracy: {epoch_fine_accuracy:.3f}%,
 
         
         Validation loss: {val_epoch_loss:.3f}, 
         Validation coarse accuracy: {val_epoch_coarse_accuracy:.3f}%, 
-        Validation fine accuracy: {val_epoch_fine_accuracy:.3f}% """)
+        Validation fine accuracy: {val_epoch_fine_accuracy:.3f}% 
+        
+        Learning_rate: {scheduler.get_last_lr()[0]}
+        
+        """)
     
     if early_stop:
         print(f"Early stopped training at epoch {epoch}")
@@ -433,3 +446,10 @@ for epoch in range(config.get('epochs')):
 
 if config.get('wandb_on'):
         wandb.finish()    
+
+
+        # Fine asphalt train loss: {asphalt_fine_epoch_loss:.3f},
+        # Fine asphalt train loss: {concrete_fine_epoch_loss:.3f},
+        # Fine asphalt train loss: {sett_fine_epoch_loss:.3f},
+        # Fine asphalt train loss: {paving_stones_fine_epoch_loss:.3f},
+        # Fine asphalt train loss: {unpaved_fine_epoch_loss:.3f},

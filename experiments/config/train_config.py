@@ -397,6 +397,6 @@ C_CNN_CLM = {
     "level": const.MULTILABEL,
     "model": const.CCNNCLMPRE,
     "clm": True,
-    "hierarchy_method": 'use_condition_layer' #'use_ground_truth', 'use_condition_layer'
+    "hierarchy_method": 'use_condition_layer', #'use_ground_truth', 'use_condition_layer',
 }
 
