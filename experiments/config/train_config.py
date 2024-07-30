@@ -2,7 +2,7 @@ from src import constants as const
 from experiments.config  import global_config
 
 default_params = {
-    "batch_size": 64, #16,  # 48
+    "batch_size": 128, #16,  # 48
     "epochs": 20,
     "learning_rate": 0.01,
     "optimizer": const.OPTI_ADAM,
@@ -10,8 +10,8 @@ default_params = {
     "is_hierarchical": True,
     "eval_metric": const.EVAL_METRIC_ACCURACY,
     "max_class_size": None,
-    "lr_scheduler": False,
-    "freeze_convs": True,
+    "lr_scheduler": True,
+    "freeze_convs": False,
 }
 
 default_search_params = {
@@ -384,7 +384,7 @@ B_CNN_CLM = {
 C_CNN_CLM = {
     **global_config.global_config,
     **default_params,
-    "batch_size": 64,
+    "batch_size": 128,
     "epochs": 20,
     "learning_rate": 0.01,
     "optimizer": const.OPTI_ADAM,
