@@ -12,10 +12,6 @@ def make_cost_matrix(num_ratings):
     cost_matrix = (cost_matrix - cost_matrix.T).float() ** 2 / (num_ratings - 1) ** 2.0
     return cost_matrix
 
-# Example usage:
-num_ratings = 4
-cost_matrix = make_cost_matrix(num_ratings)
-print(cost_matrix)
 
 def qwk_loss_base(cost_matrix):
     """

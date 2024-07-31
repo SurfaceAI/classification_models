@@ -363,23 +363,6 @@ B_CNN_regression = {
     "hierarchy_method": const.WEIGHTEDSUM
 }
 
-B_CNN_CLM = {
-    **global_config.global_config,
-    **default_params,
-    "batch_size": 48,
-    "epochs": 20,
-    "learning_rate": 0.001,
-    "optimizer": const.OPTI_ADAM,
-    "is_regression": True,
-    "ordinal_method": const.CLM,
-    "coarse_eval_metric": const.EVAL_METRIC_ACCURACY,
-    "fine_eval_metric": const.EVAL_METRIC_ACCURACY,
-    "project": const.PROJECT_MULTI_LABEL_FIXED,
-    "name": "B_CNN_CLM",
-    "level": const.MULTILABEL,
-    "model": const.BCNNREGRESSION,
-    "hierarchy_method": const.WEIGHTEDSUM
-}
 
 C_CNN_CLM = {
     **global_config.global_config,
@@ -398,5 +381,24 @@ C_CNN_CLM = {
     "model": const.CCNNCLMPRE,
     "head": 'regression', #'regression', 'classification', 'obd'
     "hierarchy_method": 'use_condition_layer', #'use_ground_truth', 'use_condition_layer',
+}
+
+B_CNN_CLM = {
+    **global_config.global_config,
+    **default_params,
+    "batch_size": 64,
+    "epochs": 20,
+    "learning_rate": 0.01,
+    "optimizer": const.OPTI_ADAM,
+    "is_regression": False,
+    "ordinal_method": const.CLM,
+    "coarse_eval_metric": const.EVAL_METRIC_ACCURACY,
+    "fine_eval_metric": const.EVAL_METRIC_ACCURACY,
+    "project": const.PROJECT_MULTI_LABEL_FIXED,
+    "name": "B_CNN_CLM",
+    "level": const.MULTILABEL,
+    "model": const.BCNN_PRE,
+    "head": 'clm', #'regression', 'classification', 'corn', 'clm'
+    "hierarchy_method": None, #'use_ground_truth', 'use_condition_layer',
 }
 

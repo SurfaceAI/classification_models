@@ -190,7 +190,7 @@ def cfg():
     img_shape = (256, 256)
 
     # Are the convolutional layers trainable?
-    trainable_convs = True
+    trainable_convs = False
 
     # Level of shared layers
     shared_layers = 'All' #All or 2ConvBlocks
