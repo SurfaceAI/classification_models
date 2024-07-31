@@ -326,9 +326,8 @@ for epoch in range(config.get('epochs')):
             
             # if batch_index == 0:
             #     break
-        
-        
-        elif config.get('hierarchy_method') == 'use_condition_layer':
+            
+        elif config.get('hierarchy_method') == 'use_condition_layer' or config.get('hierarchy_method') == 'top_coarse_prob':
             
             coarse_output, fine_output = model.forward(model_inputs)
             
@@ -348,12 +347,14 @@ for epoch in range(config.get('epochs')):
             loss = coarse_loss + fine_loss  #weighted loss functions for different levels
             
             loss.backward()
+            if config.get('hierarchy_method') == 'use_condition_layer':
             #plot_grad_flow(model.named_parameters())
-            print(f'CPWM before optimizer step: {model.coarse_condition.weight.data}')
-            print(f'Fine output tensor: {fine_output}')
-            print("Gradients:", model.coarse_condition.weight.grad)
-            optimizer.step()
-            print(f'CPWM after optimizer step: {model.coarse_condition.weight.data}')
+                print(f'CPWM before optimizer step: {model.coarse_condition.weight.data}')
+                print(f'Fine output tensor: {fine_output}')
+                print("Gradients:", model.coarse_condition.weight.grad)
+                optimizer.step()
+                model.coarse_condition.weight.data = model.constraint(model.coarse_condition.weight.data)
+                print(f'CPWM after optimizer step: {model.coarse_condition.weight.data}')
             
             running_loss += loss.item()
             
@@ -374,6 +375,11 @@ for epoch in range(config.get('epochs')):
                 probs = model.get_class_probabilies(fine_output)
                 predictions = torch.argmax(probs, dim=1)
             fine_correct += (fine_predictions == fine_labels).sum().item()
+            
+            
+            # if batch_index == 0:
+            #     break
+            
             
         elif config.get('hierarchy_method') == 'b_cnn':
             
@@ -554,6 +560,8 @@ for epoch in range(config.get('epochs')):
                 "eval/accuracy/fine": val_epoch_fine_accuracy,
                 "trainable_params": trainable_params,
                 "learning_rate": scheduler.get_last_lr()[0],
+                "hierarchy_method": config.get("hierarchy_method"),
+                "head": config.get("head"),
             }
         )
     

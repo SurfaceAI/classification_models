@@ -380,7 +380,7 @@ C_CNN_CLM = {
     "level": const.MULTILABEL,
     "model": const.CCNNCLMPRE,
     "head": 'regression', #'regression', 'classification', 'obd'
-    "hierarchy_method": 'use_condition_layer', #'use_ground_truth', 'use_condition_layer',
+    "hierarchy_method": 'top_coarse_prob', #'use_ground_truth', 'use_condition_layer', 'top_coarse_prob'
 }
 
 B_CNN_CLM = {
