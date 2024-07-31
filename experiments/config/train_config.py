@@ -367,7 +367,7 @@ B_CNN_regression = {
 C_CNN_CLM = {
     **global_config.global_config,
     **default_params,
-    "batch_size": 16,
+    "batch_size": 64,
     "epochs": 20,
     "learning_rate": 0.01,
     "optimizer": const.OPTI_ADAM,
