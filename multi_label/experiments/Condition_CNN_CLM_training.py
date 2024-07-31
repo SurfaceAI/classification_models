@@ -577,7 +577,8 @@ for epoch in range(config.get('epochs')):
         
         """)
     
-    alpha, beta = loss_weights_modifier.on_epoch_end(epoch)
+    if lw_modifier:
+        alpha, beta = loss_weights_modifier.on_epoch_end(epoch)
     
     if early_stop:
         print(f"Early stopped training at epoch {epoch}")
