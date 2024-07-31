@@ -5,7 +5,7 @@ from collections import OrderedDict
 
 
 class VGG16_B_CNN_PRE(nn.Module):
-    def __init__(self, num_c, num_classes):
+    def __init__(self, num_c, num_classes, head):
         super(VGG16_B_CNN_PRE, self).__init__()
         
         #Load pretrained weights

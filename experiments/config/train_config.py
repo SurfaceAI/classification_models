@@ -377,7 +377,7 @@ B_CNN_CLM = {
     "project": const.PROJECT_MULTI_LABEL_FIXED,
     "name": "B_CNN_CLM",
     "level": const.MULTILABEL,
-    "model": const.BCNNREGRESSION,
+    "model": const.BCNN_PRE,
     "hierarchy_method": const.WEIGHTEDSUM
 }
 
