@@ -399,6 +399,7 @@ B_CNN_CLM = {
     "level": const.MULTILABEL,
     "model": const.BCNN_PRE,
     "head": 'clm', #'regression', 'classification', 'corn', 'clm'
-    "hierarchy_method": None, #'use_ground_truth', 'use_condition_layer',
+    "hierarchy_method": 'b_cnn', #'use_ground_truth', 'use_condition_layer', 'b_cnn'
+    "lw_modifier": True,
 }
 

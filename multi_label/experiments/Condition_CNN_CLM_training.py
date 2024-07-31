@@ -34,6 +34,7 @@ np.random.seed(config.get("seed"))
 lr_scheduler = config.get("lr_scheduler")
 head = config.get("head")
 epsilon = 1e-9
+lw_modifier = config.get("lw_modifier")
 
 
 
@@ -142,6 +143,11 @@ trainable_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
 
 if lr_scheduler:
     scheduler = StepLR(optimizer, step_size=6, gamma=0.1)
+    
+if lw_modifier:
+    alpha = torch.tensor(0.98)
+    beta = torch.tensor(0.02)
+    loss_weights_modifier = helper.LossWeightsModifier(alpha, beta)
 
 checkpointer = checkpointing.CheckpointSaver(
         dirpath=config.get("root_model"),
@@ -368,6 +374,49 @@ for epoch in range(config.get('epochs')):
                 probs = model.get_class_probabilies(fine_output)
                 predictions = torch.argmax(probs, dim=1)
             fine_correct += (fine_predictions == fine_labels).sum().item()
+            
+        elif config.get('hierarchy_method') == 'b_cnn':
+            
+            coarse_output, fine_output = model.forward(model_inputs)
+            
+            coarse_loss = coarse_criterion(coarse_output, coarse_labels)
+            
+            if head == 'clm':
+                fine_loss = fine_criterion(torch.log(fine_output + epsilon), fine_labels)
+                
+            elif head == 'regression':
+                fine_output = fine_output.flatten().float()
+                fine_labels_mapped = fine_labels_mapped.float()
+                fine_loss = fine_criterion(fine_output, fine_labels_mapped)
+                
+            elif head == 'corn':
+                corn_loss = fine_criterion(fine_output, fine_labels_mapped, num_fine_classes)
+                
+            if lw_modifier:
+                loss = alpha * coarse_loss + beta * fine_loss
+            else:
+                loss = coarse_loss + fine_loss
+            
+            loss.backward()
+        
+            running_loss += loss.item() 
+            
+            coarse_probs = model.get_class_probabilies(coarse_output)
+            coarse_predictions = torch.argmax(coarse_probs, dim=1)
+            coarse_correct += (coarse_predictions == coarse_labels).sum().item()
+            
+            if head == 'clm':
+                fine_predictions = torch.argmax(fine_output, dim=1)
+            elif head == 'regression':
+                fine_predictions = fine_output.round()
+            elif head == 'corn':
+                fine_predictions = corn_label_from_logits(fine_output).float()
+            else:
+                probs = model.get_class_probabilies(fine_output)
+                predictions = torch.argmax(probs, dim=1)
+            fine_correct += (fine_predictions == fine_labels).sum().item()
+
+            
 
 
             # if batch_index == 0:
@@ -434,9 +483,12 @@ for epoch in range(config.get('epochs')):
                 fine_labels_mapped = fine_labels_mapped.float()
                 fine_loss = fine_criterion(fine_output, fine_labels_mapped)
             elif head == 'corn':
-                fine_loss = fine_criterion(fine_output, fine_labels_mapped, num_fine_classes)
+                fine_loss = fine_criterion(fine_output, fine_labels_mapped, num_fine_classes)     
                         
-            loss = coarse_loss + fine_loss  #weighted loss functions for different levels
+            if lw_modifier:
+                loss = alpha * coarse_loss + beta * fine_loss
+            else:
+                loss = coarse_loss + fine_loss
         
             val_running_loss += loss.item()
             
@@ -524,6 +576,8 @@ for epoch in range(config.get('epochs')):
         Learning_rate: {scheduler.get_last_lr()[0]}
         
         """)
+    
+    alpha, beta = loss_weights_modifier.on_epoch_end(epoch)
     
     if early_stop:
         print(f"Early stopped training at epoch {epoch}")
