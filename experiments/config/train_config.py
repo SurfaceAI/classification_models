@@ -384,9 +384,9 @@ C_CNN_CLM = {
 B_CNN_CLM = {
     **global_config.global_config,
     **default_params,
-    "batch_size": 64,
+    "batch_size": 16,
     "epochs": 20,
-    "learning_rate": 0.01,
+    "learning_rate": 0.0003,
     "optimizer": const.OPTI_ADAM,
     "is_regression": False,
     "ordinal_method": const.CLM,

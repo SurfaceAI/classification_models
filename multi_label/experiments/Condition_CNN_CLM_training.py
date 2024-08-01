@@ -341,7 +341,7 @@ for epoch in range(config.get('epochs')):
             
             if head == 'clm':
                 fine_loss = fine_criterion(torch.log(fine_output + epsilon), fine_labels)
-                
+                            
             elif head == 'regression':
                 fine_output = fine_output.flatten().float()
                 fine_labels_mapped = fine_labels_mapped.float()
@@ -354,14 +354,23 @@ for epoch in range(config.get('epochs')):
             
             loss.backward()
             
+            print("Gradients for each layer:")
+            for name, param in model.classifier_asphalt.named_parameters():
+                if param.requires_grad:
+                    print(f"{name} gradients: {param.grad}")
+                    
+            for name, param in model.classifier_concrete.named_parameters():
+                if param.requires_grad:
+                    print(f"{name} gradients: {param.grad}")
+            
             optimizer.step()
             
             if config.get('hierarchy_method') == 'use_condition_layer':
             #plot_grad_flow(model.named_parameters())
                 print(f'Fine output tensor: {fine_output}')
-                print("Gradients:", model.coarse_condition.weight.grad)
+                #print("Gradients:", model.coarse_condition.weight.grad)
                 model.coarse_condition.weight.data = model.constraint(model.coarse_condition.weight.data)
-                print(f'CPWM after optimizer step: {model.coarse_condition.weight.data}')
+                #print(f'CPWM after optimizer step: {model.coarse_condition.weight.data}')
             
             running_loss += loss.item()
             
@@ -453,6 +462,9 @@ for epoch in range(config.get('epochs')):
     
     coarse_epoch_loss = coarse_loss_total / len(trainloader)
     fine_epoch_loss = fine_loss_total / len(trainloader)
+    
+    print(coarse_epoch_loss)
+    print(fine_epoch_loss)
 
 
 
