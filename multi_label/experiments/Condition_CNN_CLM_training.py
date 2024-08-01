@@ -559,7 +559,7 @@ for epoch in range(config.get('epochs')):
                 "eval/accuracy/coarse": val_epoch_coarse_accuracy,
                 "eval/accuracy/fine": val_epoch_fine_accuracy,
                 "trainable_params": trainable_params,
-                "learning_rate": scheduler.get_last_lr()[0],
+                #"learning_rate": scheduler.get_last_lr()[0],
                 "hierarchy_method": config.get("hierarchy_method"),
                 "head": config.get("head"),
             }
@@ -580,10 +580,10 @@ for epoch in range(config.get('epochs')):
         Validation loss: {val_epoch_loss:.3f}, 
         Validation coarse accuracy: {val_epoch_coarse_accuracy:.3f}%, 
         Validation fine accuracy: {val_epoch_fine_accuracy:.3f}% 
-        
-        Learning_rate: {scheduler.get_last_lr()[0]}
-        
+                
         """)
+    #        Learning_rate: {scheduler.get_last_lr()[0]}
+
     
     if lw_modifier:
         alpha, beta = loss_weights_modifier.on_epoch_end(epoch)

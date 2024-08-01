@@ -82,8 +82,8 @@ class Condition_CNN_CLM_PRE(nn.Module):
         self.coarse_condition.weight.data.fill_(0)  # Initialize weights to zero
         self.constraint = NonNegUnitNorm(axis=0) 
         
-        for param in self.coarse_condition.parameters():
-            param.requires_grad = False
+        # for param in self.coarse_condition.parameters():
+        #     param.requires_grad = False
 
         
         # Save the modified model as a member variable               
@@ -112,13 +112,13 @@ class Condition_CNN_CLM_PRE(nn.Module):
     
     def _create_quality_fc_regression(self):
         layers = nn.Sequential(
-            nn.Linear(512 * 8 * 8, 1024),
+            nn.Linear(512 * 8 * 8, 512),
             nn.ReLU(),
             nn.Dropout(0.5),
-            nn.Linear(1024, 1024),
+            nn.Linear(512, 256),
             nn.ReLU(),
             nn.Dropout(0.5),
-            nn.Linear(1024, 1),
+            nn.Linear(256, 1),
         )
         return layers
 
@@ -262,4 +262,4 @@ class Condition_CNN_CLM_PRE(nn.Module):
                 return coarse_output, fine_output    
     
     def get_optimizer_layers(self):
-        return self.features, self.coarse_classifier, self.classifier_asphalt, self.classifier_concrete, self.classifier_paving_stones, self.classifier_sett, self.classifier_unpaved
+        return self.features, self.coarse_classifier, self.classifier_asphalt, self.classifier_concrete, self.classifier_paving_stones, self.classifier_sett, self.classifier_unpaved, self.coarse_condition
