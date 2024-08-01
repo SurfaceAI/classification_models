@@ -182,7 +182,7 @@ class Condition_CNN_CLM_PRE(nn.Module):
                     indices_pred = torch.argmax(coarse_probs, dim=1)
                     fine_output = fine_output_combined[range(fine_output_combined.size(0)), indices_pred]
                     
-                    return coarse_output, fine_output
+                return coarse_output, fine_output
                 
             elif self.head == 'single':
                 

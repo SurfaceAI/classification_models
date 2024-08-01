@@ -354,10 +354,10 @@ for epoch in range(config.get('epochs')):
             
             loss.backward()
             
-            print("Gradients for each layer:")
-            for name, param in model.classifier.named_parameters():
-                if param.requires_grad:
-                    print(f"{name} gradients: {param.grad}")
+            # print("Gradients for each layer:")
+            # for name, param in model.classifier.named_parameters():
+            #     if param.requires_grad:
+            #         print(f"{name} gradients: {param.grad}")
             
             # print("Gradients for each layer:")
             # for name, param in model.classifier_asphalt.named_parameters():
