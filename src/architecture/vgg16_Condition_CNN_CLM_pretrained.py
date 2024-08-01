@@ -82,6 +82,10 @@ class Condition_CNN_CLM_PRE(nn.Module):
         self.coarse_condition.weight.data.fill_(0)  # Initialize weights to zero
         self.constraint = NonNegUnitNorm(axis=0) 
         
+        for param in self.coarse_condition.parameters():
+            param.requires_grad = False
+
+        
         # Save the modified model as a member variable               
         self.coarse_criterion = nn.CrossEntropyLoss
         
@@ -258,4 +262,4 @@ class Condition_CNN_CLM_PRE(nn.Module):
                 return coarse_output, fine_output    
     
     def get_optimizer_layers(self):
-        return self.features, self.coarse_classifier, self.classifier_asphalt, self.classifier_concrete, self.classifier_paving_stones, self.classifier_sett, self.classifier_unpaved, self.coarse_condition
+        return self.features, self.coarse_classifier, self.classifier_asphalt, self.classifier_concrete, self.classifier_paving_stones, self.classifier_sett, self.classifier_unpaved
