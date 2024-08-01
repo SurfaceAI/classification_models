@@ -39,6 +39,7 @@ class Condition_CNN_CLM_PRE(nn.Module):
         # self.block4 = model.features[17:24]
         # self.block5 = model.features[24:]
         self.features = model.features
+        self.classifier = model.classifier
         
         #Coarse prediction branch
         self.coarse_classifier = nn.Sequential(
@@ -66,7 +67,11 @@ class Condition_CNN_CLM_PRE(nn.Module):
             self.classifier_sett = self._create_quality_fc_regression()
             self.classifier_unpaved = self._create_quality_fc_regression()
             
-                
+        elif head == 'single':
+            in_features = model.classifier[-1].in_features
+            fc = nn.Linear(in_features, num_classes, bias=True)
+            model.classifier[-1] = fc 
+            
         ### Fine prediction branch
         # num_features = model.classifier[6].in_features
         # model.classifier[0] = nn.Linear(in_features=32768, out_features=4096, bias=True)
@@ -89,7 +94,7 @@ class Condition_CNN_CLM_PRE(nn.Module):
         # Save the modified model as a member variable               
         self.coarse_criterion = nn.CrossEntropyLoss
         
-        if head == 'regression':
+        if head == 'regression' or head == 'single':
             self.fine_criterion = nn.MSELoss
         elif head == 'clm':
             self.fine_criterion = nn.NLLLoss
@@ -131,22 +136,15 @@ class Condition_CNN_CLM_PRE(nn.Module):
         
         images, true_coarse, hierarchy_method = inputs
         
-        x = self.features(images) #[128, 64, 128, 128]
-        # x = self.features[5:10](x) #([128, 128, 64, 64])
-        # x = self.model.features[10:17] #e([128, 256, 32, 32])
-        
-        # x = self.block4(x) # [128, 512, 16, 16])
-        # x = self.block5(x) # [128, 512, 8, 8])
-        
-       # x = self.avgpool(x)
+        x = self.features(images) 
+        #x = self.avgpool(x)
         flat = x.reshape(x.size(0), -1) #([128, 32768])
         
         coarse_output = self.coarse_classifier(flat)
         coarse_probs = self.get_class_probabilies(coarse_output)
         
         if hierarchy_method == 'use_condition_layer':
-            
-        #---fine
+
             fine_output_asphalt = self.classifier_asphalt(flat) #([batch_size, 1024])  
             fine_output_concrete = self.classifier_concrete(flat)
             fine_output_paving_stones = self.classifier_paving_stones(flat)      
@@ -271,4 +269,5 @@ class Condition_CNN_CLM_PRE(nn.Module):
                 return coarse_output, fine_output    
     
     def get_optimizer_layers(self):
-        return self.features, self.coarse_classifier, self.classifier_asphalt, self.classifier_concrete, self.classifier_paving_stones, self.classifier_sett, self.classifier_unpaved, self.coarse_condition
+        return self.features, self.classifier, self.coarse_condition
+        #return self.features, self.coarse_classifier, self.classifier_asphalt, self.classifier_concrete, self.classifier_paving_stones, self.classifier_sett, self.classifier_unpaved, self.coarse_condition
