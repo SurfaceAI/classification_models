@@ -559,7 +559,7 @@ for epoch in range(config.get('epochs')):
     val_epoch_fine_accuracy = 100 * val_fine_correct / len(validloader.sampler)
     
     val_coarse_epoch_loss = val_coarse_loss_total / len(validloader.sampler)
-    val_fine_epoch_loss = val_fine_loss_total / len(validloader._index_sampler)
+    val_fine_epoch_loss = val_fine_loss_total / len(validloader.sampler)
 
     if lr_scheduler:
         scheduler.step()

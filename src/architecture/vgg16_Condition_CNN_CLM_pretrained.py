@@ -39,7 +39,7 @@ class Condition_CNN_CLM_PRE(nn.Module):
         # self.block4 = model.features[17:24]
         # self.block5 = model.features[24:]
         self.features = model.features
-        self.classifier = model.classifier
+        #self.classifier = model.classifier
         
         #Coarse prediction branch
         self.coarse_classifier = nn.Sequential(
@@ -181,8 +181,10 @@ class Condition_CNN_CLM_PRE(nn.Module):
                     # During evaluation, use predicted coarse labels
                     indices_pred = torch.argmax(coarse_probs, dim=1)
                     fine_output = fine_output_combined[range(fine_output_combined.size(0)), indices_pred]
+                    
+                    return coarse_output, fine_output
                 
-            if self.head == 'single':
+            elif self.head == 'single':
                 
                 fine_output = self.classifier(flat)
         #     if self.head == 'regression':
@@ -194,7 +196,7 @@ class Condition_CNN_CLM_PRE(nn.Module):
         #         fine_output = coarse_condition + fine_output_combined
                 #self.coarse_condition.weight.data = self.constraint(self.coarse_condition.weight.data)
         
-            return coarse_output, fine_output
+                return coarse_output, fine_output
         
         # elif hierarchy_method == 'top_coarse_prob':
             
@@ -282,5 +284,5 @@ class Condition_CNN_CLM_PRE(nn.Module):
                 return coarse_output, fine_output    
     
     def get_optimizer_layers(self):
-        return self.features, self.classifier, self.coarse_condition
-        #return self.features, self.coarse_classifier, self.classifier_asphalt, self.classifier_concrete, self.classifier_paving_stones, self.classifier_sett, self.classifier_unpaved, self.coarse_condition
+        #return self.features, self.classifier, self.coarse_condition
+        return self.features, self.coarse_classifier, self.classifier_asphalt, self.classifier_concrete, self.classifier_paving_stones, self.classifier_sett, self.classifier_unpaved, self.coarse_condition
