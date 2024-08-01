@@ -68,9 +68,18 @@ class Condition_CNN_CLM_PRE(nn.Module):
             self.classifier_unpaved = self._create_quality_fc_regression()
             
         elif head == 'single':
-            in_features = model.classifier[-1].in_features
-            fc = nn.Linear(in_features, num_classes, bias=True)
-            model.classifier[-1] = fc 
+            self.classifier = nn.Sequential(
+            nn.Linear(512 * 8 * 8, 512),
+            nn.ReLU(),
+            nn.Dropout(0.5),
+            nn.Linear(512, 256),
+            nn.ReLU(),
+            nn.Dropout(0.5),
+            nn.Linear(256, 1)
+        )
+            # in_features = model.classifier[-1].in_features
+            # fc = nn.Linear(in_features, num_classes, bias=True)
+            # model.classifier[-1] = fc 
             
         ### Fine prediction branch
         # num_features = model.classifier[6].in_features
@@ -144,34 +153,38 @@ class Condition_CNN_CLM_PRE(nn.Module):
         coarse_probs = self.get_class_probabilies(coarse_output)
         
         if hierarchy_method == 'use_condition_layer':
+            
+            if self.head == 'regression':
+                fine_output_asphalt = self.classifier_asphalt(flat) #([batch_size, 1024])  
+                fine_output_concrete = self.classifier_concrete(flat)
+                fine_output_paving_stones = self.classifier_paving_stones(flat)      
+                fine_output_sett = self.classifier_sett(flat)
+                fine_output_unpaved = self.classifier_unpaved(flat)
 
-            fine_output_asphalt = self.classifier_asphalt(flat) #([batch_size, 1024])  
-            fine_output_concrete = self.classifier_concrete(flat)
-            fine_output_paving_stones = self.classifier_paving_stones(flat)      
-            fine_output_sett = self.classifier_sett(flat)
-            fine_output_unpaved = self.classifier_unpaved(flat)
-
-            # if self.training:
-            #     coarse_condition = self.coarse_condition(true_coarse)  
-            # else:
-            #     coarse_condition = self.coarse_condition(self.get_class_probabilies(coarse_output)) 
+                # if self.training:
+                #     coarse_condition = self.coarse_condition(true_coarse)  
+                # else:
+                #     coarse_condition = self.coarse_condition(self.get_class_probabilies(coarse_output)) 
+                    
+                fine_output_combined = torch.cat([fine_output_asphalt, 
+                                                fine_output_concrete, 
+                                                fine_output_paving_stones, 
+                                                fine_output_sett, 
+                                                fine_output_unpaved], 
+                                                dim=1)
                 
-            fine_output_combined = torch.cat([fine_output_asphalt, 
-                                            fine_output_concrete, 
-                                            fine_output_paving_stones, 
-                                            fine_output_sett, 
-                                            fine_output_unpaved], 
-                                            dim=1)
-            
-            if self.training and true_coarse is not None:
-                # During training, use true coarse labels
-                indices_true = torch.argmax(true_coarse, dim=1)
-                fine_output = fine_output_combined[range(fine_output_combined.size(0)), indices_true]
-            else:
-                # During evaluation, use predicted coarse labels
-                indices_pred = torch.argmax(coarse_probs, dim=1)
-                fine_output = fine_output_combined[range(fine_output_combined.size(0)), indices_pred]
-            
+                if self.training and true_coarse is not None:
+                    # During training, use true coarse labels
+                    indices_true = torch.argmax(true_coarse, dim=1)
+                    fine_output = fine_output_combined[range(fine_output_combined.size(0)), indices_true]
+                else:
+                    # During evaluation, use predicted coarse labels
+                    indices_pred = torch.argmax(coarse_probs, dim=1)
+                    fine_output = fine_output_combined[range(fine_output_combined.size(0)), indices_pred]
+                
+            if self.head == 'single':
+                
+                fine_output = self.classifier(flat)
         #     if self.head == 'regression':
         #         fine_output = torch.sum(fine_output_combined * coarse_condition, dim=1)
         #         #self.coarse_condition.weight.data = self.constraint(self.coarse_condition.weight.data)

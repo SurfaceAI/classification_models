@@ -342,7 +342,7 @@ for epoch in range(config.get('epochs')):
             if head == 'clm':
                 fine_loss = fine_criterion(torch.log(fine_output + epsilon), fine_labels)
                             
-            elif head == 'regression':
+            elif head == 'regression' or head == 'single':
                 fine_output = fine_output.flatten().float()
                 fine_labels_mapped = fine_labels_mapped.float()
                 fine_loss = fine_criterion(fine_output, fine_labels_mapped)
@@ -355,13 +355,18 @@ for epoch in range(config.get('epochs')):
             loss.backward()
             
             print("Gradients for each layer:")
-            for name, param in model.classifier_asphalt.named_parameters():
+            for name, param in model.classifier.named_parameters():
                 if param.requires_grad:
                     print(f"{name} gradients: {param.grad}")
+            
+            # print("Gradients for each layer:")
+            # for name, param in model.classifier_asphalt.named_parameters():
+            #     if param.requires_grad:
+            #         print(f"{name} gradients: {param.grad}")
                     
-            for name, param in model.classifier_concrete.named_parameters():
-                if param.requires_grad:
-                    print(f"{name} gradients: {param.grad}")
+            # for name, param in model.classifier_concrete.named_parameters():
+            #     if param.requires_grad:
+            #         print(f"{name} gradients: {param.grad}")
             
             optimizer.step()
             
@@ -383,7 +388,7 @@ for epoch in range(config.get('epochs')):
             
             if head == 'clm':
                 fine_predictions = torch.argmax(fine_output, dim=1)
-            elif head == 'regression':
+            elif head == 'regression' or head == 'single':
                 fine_predictions = fine_output.round()
             elif head == 'corn':
                 fine_predictions = corn_label_from_logits(fine_output).float()
@@ -406,7 +411,7 @@ for epoch in range(config.get('epochs')):
             if head == 'clm':
                 fine_loss = fine_criterion(torch.log(fine_output + epsilon), fine_labels)
                 
-            elif head == 'regression':
+            elif head == 'regression' or head == 'single':
                 fine_output = fine_output.flatten().float()
                 fine_labels_mapped = fine_labels_mapped.float()
                 fine_loss = fine_criterion(fine_output, fine_labels_mapped)
@@ -429,7 +434,7 @@ for epoch in range(config.get('epochs')):
             
             if head == 'clm':
                 fine_predictions = torch.argmax(fine_output, dim=1)
-            elif head == 'regression':
+            elif head == 'regression' or head == 'single':
                 fine_predictions = fine_output.round()
             elif head == 'corn':
                 fine_predictions = corn_label_from_logits(fine_output).float()
@@ -456,12 +461,12 @@ for epoch in range(config.get('epochs')):
     # epoch_coarse_accuracy = 100 * coarse_correct / (len(inputs) * (batch_index + 1))
     # epoch_fine_accuracy = 100 * fine_correct / (len(inputs) * (batch_index + 1))
     
-    epoch_loss = running_loss /  len(trainloader)
+    epoch_loss = running_loss /  len(trainloader.sampler)
     epoch_coarse_accuracy = 100 * coarse_correct / len(trainloader.sampler)
     epoch_fine_accuracy = 100 * fine_correct / len(trainloader.sampler)
     
-    coarse_epoch_loss = coarse_loss_total / len(trainloader)
-    fine_epoch_loss = fine_loss_total / len(trainloader)
+    coarse_epoch_loss = coarse_loss_total / len(trainloader.sampler)
+    fine_epoch_loss = fine_loss_total / len(trainloader.sampler)
     
     print(coarse_epoch_loss)
     print(fine_epoch_loss)
@@ -503,7 +508,7 @@ for epoch in range(config.get('epochs')):
             
             if head == 'clm':
                 fine_loss = fine_criterion(torch.log(fine_output + epsilon), fine_labels)
-            elif head == 'regression':
+            elif head == 'regression' or head == 'single':
                 fine_output = fine_output.flatten().float()
                 fine_labels_mapped = fine_labels_mapped.float()
                 fine_loss = fine_criterion(fine_output, fine_labels_mapped)
@@ -526,7 +531,7 @@ for epoch in range(config.get('epochs')):
             
             if head == 'clm':
                 val_fine_predictions = torch.argmax(fine_output, dim=1)
-            elif head == 'regression':
+            elif head == 'regression' or head == 'single':
                 val_fine_predictions = fine_output.round()
             elif head == 'corn':
                 val_fine_predictions = corn_label_from_logits(fine_output).float()
@@ -549,12 +554,12 @@ for epoch in range(config.get('epochs')):
     # val_epoch_coarse_accuracy = 100 * val_coarse_correct / (len(inputs) * (batch_index + 1))
     # val_epoch_fine_accuracy = 100 * val_fine_correct / (len(inputs) * (batch_index + 1))
     
-    val_epoch_loss = val_running_loss /  len(validloader)
+    val_epoch_loss = val_running_loss /  len(validloader.sampler)
     val_epoch_coarse_accuracy = 100 * val_coarse_correct / len(validloader.sampler)
     val_epoch_fine_accuracy = 100 * val_fine_correct / len(validloader.sampler)
     
-    val_coarse_epoch_loss = val_coarse_loss_total / len(validloader)
-    val_fine_epoch_loss = val_fine_loss_total / len(validloader)
+    val_coarse_epoch_loss = val_coarse_loss_total / len(validloader.sampler)
+    val_fine_epoch_loss = val_fine_loss_total / len(validloader._index_sampler)
 
     if lr_scheduler:
         scheduler.step()
