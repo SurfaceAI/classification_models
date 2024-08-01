@@ -240,7 +240,7 @@ for epoch in range(config.get('epochs')):
                 fine_loss_unpaved = fine_criterion(torch.log(fine_output_unpaved + epsilon), fine_labels_mapped_unpaved)
             
                 
-            if head == 'regression':
+            elif head == 'regression':
                 
                 fine_output_asphalt = fine_output_asphalt.flatten().float()
                 fine_output_concrete = fine_output_concrete.flatten().float()
