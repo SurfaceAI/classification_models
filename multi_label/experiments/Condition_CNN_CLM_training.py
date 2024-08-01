@@ -395,7 +395,7 @@ for epoch in range(config.get('epochs')):
             else:
                 probs = model.get_class_probabilies(fine_output)
                 predictions = torch.argmax(probs, dim=1)
-            fine_correct += (fine_predictions == fine_labels).sum().item()
+            fine_correct += (fine_predictions == fine_labels_mapped).sum().item()
             
             
             # if batch_index == 0:
@@ -441,7 +441,7 @@ for epoch in range(config.get('epochs')):
             else:
                 probs = model.get_class_probabilies(fine_output)
                 predictions = torch.argmax(probs, dim=1)
-            fine_correct += (fine_predictions == fine_labels).sum().item()
+            fine_correct += (fine_predictions == fine_labels_mapped).sum().item()
 
             
 
@@ -538,7 +538,7 @@ for epoch in range(config.get('epochs')):
             else:
                 probs = model.get_class_probabilies(fine_output)
                 predictions = torch.argmax(probs, dim=1)
-            val_fine_correct += (val_fine_predictions == fine_labels).sum().item()
+            val_fine_correct += (val_fine_predictions == fine_labels_mapped).sum().item()
 
             # if batch_index == 0:
             #     break
