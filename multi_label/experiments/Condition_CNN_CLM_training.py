@@ -6,6 +6,7 @@ from src.utils import preprocessing, checkpointing
 from src.utils import helper
 from src import constants
 from src.models import training
+import matplotlib.pyplot as plt
 
 
 import torch
@@ -19,6 +20,7 @@ import time
 import wandb
 import numpy as np
 import os
+import torchvision.utils as vutils
 
 from torch.optim.lr_scheduler import StepLR
 
@@ -189,14 +191,18 @@ for epoch in range(config.get('epochs')):
     
     for batch_index, (inputs, fine_labels) in enumerate(trainloader):
               
-        
-        # if batch_index == 0:  # Print only the first batch
-        #     print("Batch Images:")
-        #     images_grid = vutils.make_grid(inputs, nrow=8, padding=2, normalize=True)  # Assuming batch size is 64
-        #     plt.figure(figsize=(16, 16))
-        #     plt.imshow(np.transpose(images_grid, (1, 2, 0)))
-        #     plt.axis('off')
-        #     plt.show()
+                
+        if batch_index == 0:
+            print("Batch Images:")
+            images_grid = vutils.make_grid(inputs, nrow=8, padding=2, normalize=True)
+            np_img = images_grid.numpy()
+            np_img = np.transpose(np_img, (1, 2, 0))
+            
+            # Plot the images
+            plt.figure(figsize=(16, 16))
+            plt.imshow(np_img)
+            plt.axis('off')  # Turn off axis
+            plt.show()
 
         inputs, labels = inputs.to(device), fine_labels.to(device)
         
@@ -347,12 +353,13 @@ for epoch in range(config.get('epochs')):
             loss = coarse_loss + fine_loss  #weighted loss functions for different levels
             
             loss.backward()
+            
+            optimizer.step()
+            
             if config.get('hierarchy_method') == 'use_condition_layer':
             #plot_grad_flow(model.named_parameters())
-                print(f'CPWM before optimizer step: {model.coarse_condition.weight.data}')
                 print(f'Fine output tensor: {fine_output}')
                 print("Gradients:", model.coarse_condition.weight.grad)
-                optimizer.step()
                 model.coarse_condition.weight.data = model.constraint(model.coarse_condition.weight.data)
                 print(f'CPWM after optimizer step: {model.coarse_condition.weight.data}')
             
