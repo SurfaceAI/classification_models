@@ -11,35 +11,29 @@ from torchvision import datasets
 from PIL import Image
 
 data_path = global_config.global_config.get('data_path')
-dataset = "V1_0/road_scenery"
-metadata = "V1_0/metadata"
-file_name = 'annotations_scenery.csv'
+dataset = "road_scenery_experiment/classified_images"
+metadata = "road_scenery_experiment/metadata"
+file_name = 'annotations_scenery_v3.csv'
 
 selected_classes = {
         '1_1_road': [
-            '1_1_parking_area',
             '1_1_rails_on_road',
             '1_1_road_general',
         ],
-        '1_2_cycleway': [
-            '1_2_hochbord',
+        '1_2_bicycle': [
+            '1_2_cycleway',
             '1_2_lane',
         ],
         '1_3_pedestrian': [
             '1_3_pedestrian_area',
             '1_3_railway_platform',
-            '1_3_sidewalk',
+            '1_3_footway',
         ],
         '1_4_path': [
             '1_4_path_unspecified',
-            '1_4_trampling_trail',
         ],
-        '2_1_no_focus': [
-            '2_1_other',
-            '2_1_vertical',
-        ],
-        '2_2_no_street': [
-            '2_2_all'
+        '2_1_no_focus_no_street': [
+            '2_1_all'
         ],
     }
 
