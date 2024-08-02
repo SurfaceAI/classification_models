@@ -26,11 +26,11 @@ from torch.optim.lr_scheduler import StepLR
 
 from coral_pytorch.dataset import corn_label_from_logits
 
-config = train_config.C_CNN_CLM
-#config = train_config.B_CNN_CLM
+#config = train_config.C_CNN_CLM
+config = train_config.B_CNN_CLM
 torch.manual_seed(config.get("seed"))
 np.random.seed(config.get("seed"))
-
+#
 
 
 lr_scheduler = config.get("lr_scheduler")
@@ -167,7 +167,10 @@ for epoch in range(config.get('epochs')):
     model.train()
     
     coarse_criterion = model.coarse_criterion(reduction="sum")
-    fine_criterion = model.fine_criterion(reduction="sum")
+    if head == 'corn':
+        pass
+    else:
+        fine_criterion = model.fine_criterion(reduction="sum")
 
     running_loss = 0.0
     coarse_loss_total = 0.0
@@ -348,7 +351,7 @@ for epoch in range(config.get('epochs')):
                 fine_loss = fine_criterion(fine_output, fine_labels_mapped)
                 
             elif head == 'corn':
-                corn_loss = fine_criterion(fine_output, fine_labels_mapped, num_fine_classes)
+                fine_loss = model.fine_criterion(fine_output, fine_labels_mapped, 18)
 
             loss = coarse_loss + fine_loss  #weighted loss functions for different levels
             
@@ -374,7 +377,8 @@ for epoch in range(config.get('epochs')):
             #plot_grad_flow(model.named_parameters())
                 print(f'Fine output tensor: {fine_output}')
                 #print("Gradients:", model.coarse_condition.weight.grad)
-                model.coarse_condition.weight.data = model.constraint(model.coarse_condition.weight.data)
+                if config == train_config.C_CNN_CLM:
+                    model.coarse_condition.weight.data = model.constraint(model.coarse_condition.weight.data)
                 #print(f'CPWM after optimizer step: {model.coarse_condition.weight.data}')
             
             running_loss += loss.item()

@@ -19,9 +19,8 @@ class VGG16_B_CNN_PRE(nn.Module):
         
         # Unfreeze training for all layers in features
         for param in model.features.parameters():
-            param.requires_grad = True
+            param.requires_grad = False
             
-        
         ### Block 1
         # self.block1 = model.features[:5]
         # self.block2 = model.features[5:10]
@@ -63,11 +62,11 @@ class VGG16_B_CNN_PRE(nn.Module):
             self.classifier_unpaved = self._create_quality_fc_regression()
             
         elif head == 'corn':
-            self.classifier_asphalt = self._create_quality_fc_corn()
-            self.classifier_concrete = self._create_quality_fc_corn()
-            self.classifier_paving_stones = self._create_quality_fc_corn()
-            self.classifier_sett = self._create_quality_fc_corn()
-            self.classifier_unpaved = self._create_quality_fc_corn()
+            self.classifier_asphalt = self._create_quality_fc_corn(num_classes=4)
+            self.classifier_concrete = self._create_quality_fc_corn(num_classes=4)
+            self.classifier_paving_stones = self._create_quality_fc_corn(num_classes=4)
+            self.classifier_sett = self._create_quality_fc_corn(num_classes=3)
+            self.classifier_unpaved = self._create_quality_fc_corn(num_classes=3)
             
         self.coarse_criterion = nn.CrossEntropyLoss
         
@@ -82,13 +81,13 @@ class VGG16_B_CNN_PRE(nn.Module):
             
     def _create_quality_fc_clm(self, num_classes=4):
         layers = nn.Sequential(
-            nn.Linear(512 * 8 * 8, 1024),
+            nn.Linear(512 * 8 * 8, 512),
             nn.ReLU(),
             nn.Dropout(0.5),
-            nn.Linear(1024, 1024),
+            nn.Linear(512, 256),
             nn.ReLU(),
             nn.Dropout(0.5),
-            nn.Linear(1024, 1),
+            nn.Linear(256, 1),
             nn.BatchNorm1d(1),
             CLM(classes=num_classes, link_function="logit", min_distance=0.0, use_slope=False, fixed_thresholds=False)
         )
@@ -96,25 +95,25 @@ class VGG16_B_CNN_PRE(nn.Module):
     
     def _create_quality_fc_regression(self):
         layers = nn.Sequential(
-            nn.Linear(512 * 8 * 8, 1024),
+            nn.Linear(512 * 8 * 8, 512),
             nn.ReLU(),
             nn.Dropout(0.5),
-            nn.Linear(1024, 1024),
+            nn.Linear(512, 256),
             nn.ReLU(),
             nn.Dropout(0.5),
-            nn.Linear(1024, 1),
+            nn.Linear(256, 1),
         )
         return layers
     
-    def _create_quality_fc_corn(self):
+    def _create_quality_fc_corn(self, num_classes):
         layers = nn.Sequential(
-            nn.Linear(512 * 8 * 8, 1024),
+            nn.Linear(512 * 8 * 8, 512),
             nn.ReLU(),
             nn.Dropout(0.5),
-            nn.Linear(1024, 1024),
+            nn.Linear(512, 256),
             nn.ReLU(),
             nn.Dropout(0.5),
-            nn.Linear(1024, self.num_classes - 1),
+            nn.Linear(256, num_classes - 1),
         )
         return layers
         
@@ -136,16 +135,13 @@ class VGG16_B_CNN_PRE(nn.Module):
         
         images, true_coarse, hierarchy_method = inputs
         
-        x = self.features[:5](images) #[128, 64, 128, 128]
-        x = self.features[5:10](x) #([128, 128, 64, 64])
-        x = self.features[10:17](x) #e([128, 256, 32, 32])
+        x = self.features[:17](images) #[128, 64, 128, 128]
         
         flat = x.reshape(x.size(0), -1) #[128, 262144])
         coarse_output = self.coarse_classifier(flat)
         coarse_probs = self.get_class_probabilies(coarse_output)
         
-        x = self.features[17:24](x) # [128, 512, 16, 16])
-        x = self.features[24:](x) 
+        x = self.features[17:](x) # [128, 512, 16, 16])
         
        # x = self.avgpool(x)
         flat = x.reshape(x.size(0), -1) #([128, 131072])
@@ -157,15 +153,12 @@ class VGG16_B_CNN_PRE(nn.Module):
         fine_output_unpaved = self.classifier_unpaved(flat)    
         
                
-        fine_output = torch.cat([fine_output_asphalt, 
+        fine_output_combined = torch.cat([fine_output_asphalt, 
                                         fine_output_concrete, 
                                         fine_output_paving_stones, 
                                         fine_output_sett, 
                                         fine_output_unpaved], 
                                         dim=1)
-        
-        if self.head == 'regression':
-            fine_output = torch.sum(fine_output * coarse_probs, dim=1)  
           
-        return coarse_output, fine_output
+        return coarse_output, fine_output_combined
     

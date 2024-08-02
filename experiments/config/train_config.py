@@ -377,7 +377,7 @@ C_CNN_CLM = {
     "name": "C_CNN_regression",
     "level": const.MULTILABEL,
     "model": const.CCNNCLMPRE,
-    "head": 'regression', #'regression', 'classification', 'obd', 'clm'
+    "head": 'clm', #'regression', 'classification', 'obd', 'clm'
     "hierarchy_method": 'use_condition_layer', #'use_ground_truth', 'use_condition_layer', 'top_coarse_prob'
 }
 
@@ -388,8 +388,6 @@ B_CNN_CLM = {
     "epochs": 5,
     "learning_rate": 0.001,
     "optimizer": const.OPTI_ADAM,
-    "is_regression": False,
-    "ordinal_method": const.CLM,
     "coarse_eval_metric": const.EVAL_METRIC_ACCURACY,
     "fine_eval_metric": const.EVAL_METRIC_ACCURACY,
     "project": const.PROJECT_MULTI_LABEL_FIXED,

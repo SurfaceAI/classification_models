@@ -3,6 +3,8 @@ import torch.nn as nn
 from torchvision import models
 #from src.utils.helper import *
 from multi_label.CLM import CLM
+from coral_pytorch.losses import corn_loss
+
 
 class NonNegUnitNorm:
     '''Enforces all weight elements to be non-negative and each column/row to be unit norm'''
@@ -67,6 +69,13 @@ class Condition_CNN_CLM_PRE(nn.Module):
             self.classifier_sett = self._create_quality_fc_regression()
             self.classifier_unpaved = self._create_quality_fc_regression()
             
+        elif head == 'corn':
+            self.classifier_asphalt = self._create_quality_fc_corn(num_classes=4)
+            self.classifier_concrete = self._create_quality_fc_corn(num_classes=4)
+            self.classifier_paving_stones = self._create_quality_fc_corn(num_classes=4)
+            self.classifier_sett = self._create_quality_fc_corn(num_classes=3)
+            self.classifier_unpaved = self._create_quality_fc_corn(num_classes=3)
+            
         elif head == 'single':
             self.classifier = nn.Sequential(
             nn.Linear(512 * 8 * 8, 512),
@@ -107,6 +116,8 @@ class Condition_CNN_CLM_PRE(nn.Module):
             self.fine_criterion = nn.MSELoss
         elif head == 'clm':
             self.fine_criterion = nn.NLLLoss
+        elif head == 'corn':
+            self.fine_criterion = corn_loss
         else:
             self.fine_criterion = nn.CrossEntropyLoss
                      
@@ -135,6 +146,18 @@ class Condition_CNN_CLM_PRE(nn.Module):
             nn.Linear(256, 1),
         )
         return layers
+    
+    def _create_quality_fc_corn(self, num_classes=4):
+        layers = nn.Sequential(
+            nn.Linear(512 * 8 * 8, 512),
+            nn.ReLU(),
+            nn.Dropout(0.5),
+            nn.Linear(512, 512),
+            nn.ReLU(),
+            nn.Dropout(0.5),
+            nn.Linear(512, num_classes - 1),
+        )
+        return layers
 
         
     @ staticmethod
@@ -154,7 +177,7 @@ class Condition_CNN_CLM_PRE(nn.Module):
         
         if hierarchy_method == 'use_condition_layer':
             
-            if self.head == 'clm' or self.head == 'regression':
+            if self.head == 'clm' or self.head == 'regression' or self.head == 'corn':
                 fine_output_asphalt = self.classifier_asphalt(flat) #([batch_size, 1024])  
                 fine_output_concrete = self.classifier_concrete(flat)
                 fine_output_paving_stones = self.classifier_paving_stones(flat)      
@@ -194,6 +217,9 @@ class Condition_CNN_CLM_PRE(nn.Module):
                 #     # During evaluation, use predicted coarse labels
                 #     indices_pred = torch.argmax(coarse_probs, dim=1)
                 #     fine_output = fine_output_combined[range(fine_output_combined.size(0)), indices_pred]
+                
+                elif self.head == 'corn':
+                    fine_output = fine_output_combined
                     
                 return coarse_output, fine_output
 
