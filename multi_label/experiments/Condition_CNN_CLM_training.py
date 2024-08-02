@@ -144,7 +144,7 @@ trainable_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
 
 
 if lr_scheduler:
-    scheduler = StepLR(optimizer, step_size=6, gamma=0.1)
+    scheduler = StepLR(optimizer, step_size=4, gamma=0.1)
     
 if lw_modifier:
     alpha = torch.tensor(0.98)

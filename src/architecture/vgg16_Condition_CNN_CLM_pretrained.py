@@ -177,8 +177,14 @@ class Condition_CNN_CLM_PRE(nn.Module):
                     fine_output = coarse_condition + fine_output_combined
                             
                 elif self.head == 'regression':
+                    
+                    #weighted sum:
                     fine_output = torch.sum(fine_output_combined * coarse_condition, dim=1)
                     #self.coarse_condition.weight.data = self.constraint(self.coarse_condition.weight.data)
+                    
+                    #take max condition weight matrix value
+                    # indices_condition_layer = torch.argmax(coarse_condition, dim=1)
+                    # fine_output = fine_output_combined[range(fine_output_combined.size(0)), indices_condition_layer]
                     
                             # if self.training and true_coarse is not None:
                 #     # During training, use true coarse labels
