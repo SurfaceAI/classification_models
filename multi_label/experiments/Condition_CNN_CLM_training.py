@@ -343,7 +343,7 @@ for epoch in range(config.get('epochs')):
                 fine_loss = fine_criterion(torch.log(fine_output + epsilon), fine_labels_mapped)
                             
             elif head == 'regression' or head == 'single':
-                fine_output = fine_output.flatten()
+                fine_output = fine_output.flatten().float()
                 fine_labels_mapped = fine_labels_mapped.float()
                 fine_loss = fine_criterion(fine_output, fine_labels_mapped)
                 

@@ -154,7 +154,7 @@ class Condition_CNN_CLM_PRE(nn.Module):
         
         if hierarchy_method == 'use_condition_layer':
             
-            if self.head == 'clm':
+            if self.head == 'clm' or self.head == 'regression':
                 fine_output_asphalt = self.classifier_asphalt(flat) #([batch_size, 1024])  
                 fine_output_concrete = self.classifier_concrete(flat)
                 fine_output_paving_stones = self.classifier_paving_stones(flat)      
@@ -173,30 +173,14 @@ class Condition_CNN_CLM_PRE(nn.Module):
                                                 fine_output_unpaved], 
                                                 dim=1)
                 
-                fine_output = coarse_condition + fine_output_combined
-                
-                return coarse_output, fine_output
-            
-            elif self.head == 'regression':
-                fine_output_asphalt = self.classifier_asphalt(flat) #([batch_size, 1024])  
-                fine_output_concrete = self.classifier_concrete(flat)
-                fine_output_paving_stones = self.classifier_paving_stones(flat)      
-                fine_output_sett = self.classifier_sett(flat)
-                fine_output_unpaved = self.classifier_unpaved(flat)
-
-                if self.training:
-                    coarse_condition = self.coarse_condition(true_coarse)  
-                else:
-                    coarse_condition = self.coarse_condition(coarse_probs) 
+                if self.head == 'clm':
+                    fine_output = coarse_condition + fine_output_combined
+                            
+                elif self.head == 'regression':
+                    fine_output = torch.sum(fine_output_combined * coarse_condition, dim=1)
+                    #self.coarse_condition.weight.data = self.constraint(self.coarse_condition.weight.data)
                     
-                fine_output_combined = torch.cat([fine_output_asphalt, 
-                                                fine_output_concrete, 
-                                                fine_output_paving_stones, 
-                                                fine_output_sett, 
-                                                fine_output_unpaved], 
-                                                dim=1)
-                
-                # if self.training and true_coarse is not None:
+                            # if self.training and true_coarse is not None:
                 #     # During training, use true coarse labels
                 #     indices_true = torch.argmax(true_coarse, dim=1)
                 #     fine_output = fine_output_combined[range(fine_output_combined.size(0)), indices_true]
@@ -204,13 +188,11 @@ class Condition_CNN_CLM_PRE(nn.Module):
                 #     # During evaluation, use predicted coarse labels
                 #     indices_pred = torch.argmax(coarse_probs, dim=1)
                 #     fine_output = fine_output_combined[range(fine_output_combined.size(0)), indices_pred]
-                
-                fine_output = torch.sum(fine_output_combined * coarse_condition, dim=1)
-                self.coarse_condition.weight.data = self.constraint(self.coarse_condition.weight.data)
-        #features = torch.add(coarse_condition, fine_raw)#
-        #Adding the conditional probabilities to the dense features
                     
                 return coarse_output, fine_output
+
+        #features = torch.add(coarse_condition, fine_raw)#
+        #Adding the conditional probabilities to the dense features
                 
             elif self.head == 'single':
                 
