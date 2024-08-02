@@ -154,7 +154,30 @@ class Condition_CNN_CLM_PRE(nn.Module):
         
         if hierarchy_method == 'use_condition_layer':
             
-            if self.head == 'regression':
+            if self.head == 'clm':
+                fine_output_asphalt = self.classifier_asphalt(flat) #([batch_size, 1024])  
+                fine_output_concrete = self.classifier_concrete(flat)
+                fine_output_paving_stones = self.classifier_paving_stones(flat)      
+                fine_output_sett = self.classifier_sett(flat)
+                fine_output_unpaved = self.classifier_unpaved(flat)
+                
+                if self.training:
+                    coarse_condition = self.coarse_condition(true_coarse)  
+                else:
+                    coarse_condition = self.coarse_condition(coarse_probs) 
+                    
+                fine_output_combined = torch.cat([fine_output_asphalt, 
+                                                fine_output_concrete, 
+                                                fine_output_paving_stones, 
+                                                fine_output_sett, 
+                                                fine_output_unpaved], 
+                                                dim=1)
+                
+                fine_output = coarse_condition + fine_output_combined
+                
+                return coarse_output, fine_output
+            
+            elif self.head == 'regression':
                 fine_output_asphalt = self.classifier_asphalt(flat) #([batch_size, 1024])  
                 fine_output_concrete = self.classifier_concrete(flat)
                 fine_output_paving_stones = self.classifier_paving_stones(flat)      
@@ -164,7 +187,7 @@ class Condition_CNN_CLM_PRE(nn.Module):
                 if self.training:
                     coarse_condition = self.coarse_condition(true_coarse)  
                 else:
-                    coarse_condition = self.coarse_condition(self.get_class_probabilies(coarse_output)) 
+                    coarse_condition = self.coarse_condition(coarse_probs) 
                     
                 fine_output_combined = torch.cat([fine_output_asphalt, 
                                                 fine_output_concrete, 
@@ -186,7 +209,6 @@ class Condition_CNN_CLM_PRE(nn.Module):
                 self.coarse_condition.weight.data = self.constraint(self.coarse_condition.weight.data)
         #features = torch.add(coarse_condition, fine_raw)#
         #Adding the conditional probabilities to the dense features
-
                     
                 return coarse_output, fine_output
                 
@@ -286,5 +308,5 @@ class Condition_CNN_CLM_PRE(nn.Module):
                 return coarse_output, fine_output    
     
     def get_optimizer_layers(self):
-        return self.features, self.classifier, self.coarse_condition
-        #return self.features, self.coarse_classifier, self.classifier_asphalt, self.classifier_concrete, self.classifier_paving_stones, self.classifier_sett, self.classifier_unpaved, self.coarse_condition
+        #return self.features, self.classifier, self.coarse_condition
+        return self.features, self.coarse_classifier, self.classifier_asphalt, self.classifier_concrete, self.classifier_paving_stones, self.classifier_sett, self.classifier_unpaved, self.coarse_condition

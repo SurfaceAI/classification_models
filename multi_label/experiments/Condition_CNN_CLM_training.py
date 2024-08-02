@@ -192,17 +192,17 @@ for epoch in range(config.get('epochs')):
     for batch_index, (inputs, fine_labels) in enumerate(trainloader):
               
                 
-        if batch_index == 0:
-            print("Batch Images:")
-            images_grid = vutils.make_grid(inputs, nrow=8, padding=2, normalize=True)
-            np_img = images_grid.numpy()
-            np_img = np.transpose(np_img, (1, 2, 0))
+        # if batch_index == 0:
+        #     print("Batch Images:")
+        #     images_grid = vutils.make_grid(inputs, nrow=8, padding=2, normalize=True)
+        #     np_img = images_grid.numpy()
+        #     np_img = np.transpose(np_img, (1, 2, 0))
             
-            # Plot the images
-            plt.figure(figsize=(16, 16))
-            plt.imshow(np_img)
-            plt.axis('off')  # Turn off axis
-            plt.show()
+        #     # Plot the images
+        #     plt.figure(figsize=(16, 16))
+        #     plt.imshow(np_img)
+        #     plt.axis('off')  # Turn off axis
+        #     plt.show()
 
         inputs, labels = inputs.to(device), fine_labels.to(device)
         
@@ -340,7 +340,7 @@ for epoch in range(config.get('epochs')):
             coarse_loss = coarse_criterion(coarse_output, coarse_labels)
             
             if head == 'clm':
-                fine_loss = fine_criterion(torch.log(fine_output + epsilon), fine_labels)
+                fine_loss = fine_criterion(torch.log(fine_output + epsilon), fine_labels_mapped)
                             
             elif head == 'regression' or head == 'single':
                 fine_output = fine_output.flatten()
@@ -507,7 +507,7 @@ for epoch in range(config.get('epochs')):
             coarse_loss = coarse_criterion(coarse_output, coarse_labels)
             
             if head == 'clm':
-                fine_loss = fine_criterion(torch.log(fine_output + epsilon), fine_labels)
+                fine_loss = fine_criterion(torch.log(fine_output + epsilon), fine_labels_mapped)
             elif head == 'regression' or head == 'single':
                 fine_output = fine_output.flatten().float()
                 fine_labels_mapped = fine_labels_mapped.float()

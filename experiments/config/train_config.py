@@ -368,16 +368,16 @@ C_CNN_CLM = {
     **global_config.global_config,
     **default_params,
     "batch_size": 64,
-    "epochs": 5,
-    "learning_rate": 0.01,
+    "epochs": 7,
+    "learning_rate": 0.001,
     "optimizer": const.OPTI_ADAM,
     "coarse_eval_metric": const.EVAL_METRIC_ACCURACY,
     "fine_eval_metric": const.EVAL_METRIC_ACCURACY,
     "project": const.PROJECT_MULTI_LABEL_FIXED,
-    "name": "C_CNN_regression",
+    "name": "C_CNN_CLM",
     "level": const.MULTILABEL,
     "model": const.CCNNCLMPRE,
-    "head": 'single', #'regression', 'classification', 'obd', 'clm'
+    "head": 'clm', #'regression', 'classification', 'obd', 'clm'
     "hierarchy_method": 'use_condition_layer', #'use_ground_truth', 'use_condition_layer', 'top_coarse_prob'
 }
 
