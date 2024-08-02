@@ -86,18 +86,18 @@ CC_V1_0 = {
     "root_data": str(global_config.ROOT_DIR / "data"),
     # "dataset": "weseraue/imgs_2048",
     # "dataset": "weseraue/original",
-    "dataset": "weseraue/paving_stones",
+    # "dataset": "weseraue/paving_stones",
     # "dataset": "V1_0/s_1024",
     # "dataset": "lndw",
-    # "dataset": "berlin",
+    "dataset": "berlin/vset_all",
     "transform": {
         "resize": (384, 384),
         # "crop": const.CROP_LOWER_MIDDLE_HALF_PANO,
-        # "crop": const.CROP_LOWER_MIDDLE_HALF,
-        "crop": "small_pano",
+        "crop": const.CROP_LOWER_MIDDLE_HALF,
+        # "crop": "small_pano",
         "normalize": (const.V1_0_ANNOTATED_MEAN, const.V1_0_ANNOTATED_SD),
     },
-    "gpu_kernel": 0,
+    "gpu_kernel": 1,
     "batch_size": 16,
 }
 
@@ -297,16 +297,25 @@ effnet_scenery = {
     "name": "effnet_scenery_prediction",
     "model_dict": {
         # "trained_model": "flatten-efficientNetV2SLinear-20240613_095915-81nd24pa_epoch12.pt",
-        "trained_model": "flatten-efficientNetV2SLinear-20240613_103053-033v1uet_epoch17.pt",
+        # "trained_model": "flatten-efficientNetV2SLinear-20240613_103053-033v1uet_epoch17.pt",
+        # "trained_model": "flatten-efficientNetV2SLinear-20240711_092043-n8x73ojw_epoch17.pt",
+        # "trained_model": "flatten-efficientNetV2SLinear-20240717_175624-hbucwrbc_epoch10.pt",
+        # "trained_model": "flatten-efficientNetV2SLinear-20240718_091851-6t2bdijv_epoch9.pt", # avg pool 6
+        "trained_model": "flatten-efficientNetV2SLinear-20240718_125004-2szn5maz_epoch10.pt", # crop None
         "level": "scenery", 
     },
     "dataset": "road_scenery",
+    # "root_data": str(global_config.ROOT_DIR / "data"),
+    # "dataset": "berlin/vset_all",
+    # "dataset": "V1_0/annotated",
+    # "dataset": "V12/annotated/no_street",
+    # "dataset": "V12/annotated/not_recognizable",
     "transform": {
         "resize": (384, 384),
-        "crop": const.CROP_LOWER_HALF,
+        # "crop": const.CROP_LOWER_HALF,
+        "crop": None,
         "normalize": (const.V1_0_ANNOTATED_MEAN, const.V1_0_ANNOTATED_SD),
     },
     "batch_size": 16,
     "gpu_kernel": 1,
-    "save_state": True,
 }

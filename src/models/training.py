@@ -102,6 +102,7 @@ def _run_training(project=None, name=None, config=None, wandb_on=True):
     trainloader, validloader, model, optimizer = prepare_train(
         model_cls=model_cls,
         optimizer_cls=optimizer_cls,
+        avg_pool=config.get("avg_pool", 1),
         transform=config.get("transform"),
         augment=config.get("augment"),
         dataset=config.get("dataset"),
@@ -153,6 +154,7 @@ def _run_training(project=None, name=None, config=None, wandb_on=True):
 def prepare_train(
     model_cls,
     optimizer_cls,
+    avg_pool,
     transform,
     augment,
     dataset,
@@ -195,7 +197,7 @@ def prepare_train(
         num_classes = len(train_data.classes)
 
     # instanciate model with number of classes
-    model = model_cls(num_classes)
+    model = model_cls(num_classes, avg_pool)
 
     # Unfreeze parameters
     for param in model.parameters():

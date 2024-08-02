@@ -44,17 +44,17 @@ class CustomEfficientNetV2SLogsoftmax(nn.Module):
 
 
 class CustomEfficientNetV2SLinear(nn.Module):
-    def __init__(self, num_classes):
+    def __init__(self, num_classes, avg_pool):
         super(CustomEfficientNetV2SLinear, self).__init__()
 
         model = models.efficientnet_v2_s(weights='IMAGENET1K_V1')
         # adapt output layer
-        in_features = model.classifier[-1].in_features
+        in_features = model.classifier[-1].in_features * (avg_pool * avg_pool)
         fc = nn.Linear(in_features, num_classes, bias=True)
         model.classifier[-1] = fc
         
         self.features = model.features
-        self.avgpool = model.avgpool
+        self.avgpool = nn.AdaptiveAvgPool2d(avg_pool)
         self.classifier = model.classifier
         if num_classes == 1:
             self.criterion = nn.MSELoss

@@ -58,9 +58,10 @@ def run_dataset_predict_csv(config):
 
     level = 0
     columns = ['Image', 'Prediction', 'Level', f'Level_{level}']
+    # TODO: rewrite csv creation without pandas dataframe
     df = pd.DataFrame(columns=columns)
 
-    recursive_predict_csv(model_dict=config.get("model_dict"), model_root=config.get("root_model"), data=predict_data, batch_size=config.get("batch_size"), device=device, df=df, level=level)
+    df = recursive_predict_csv(model_dict=config.get("model_dict"), model_root=config.get("root_model"), data=predict_data, batch_size=config.get("batch_size"), device=device, df=df, level=level)
 
     # save predictions
     start_time = datetime.fromtimestamp(time.time()).strftime("%Y%m%d_%H%M%S")
@@ -95,15 +96,25 @@ def recursive_predict_csv(model_dict, model_root, data, batch_size, device, df, 
             pre_cls_entry = [pre_cls]
         if is_regression:
             pred_classes = ["outside" if str(pred.item()) not in classes.keys() else classes[str(pred.item())] for pred in pred_outputs.round().int()]
-            for image_id, pred, is_vd, cls in zip(image_ids, pred_outputs, is_valid_data, pred_classes):
-                i = df.shape[0]
-                df.loc[i, columns] = [image_id, pred.item(), level_name, is_vd, cls] + pre_cls_entry
+            df_tmp = pd.DataFrame(columns=columns, index=range(pred_outputs.shape[0]))
+            i = 0
+            for image_id, pred, is_vd, cls in tqdm(zip(image_ids, pred_outputs, is_valid_data, pred_classes), desc="write df"):
+                df_tmp.iloc[i] = [image_id, pred.item(), level_name, is_vd, cls] + pre_cls_entry
+                i += 1
+            print(df_tmp.shape)
+            df = pd.concat([df, df_tmp], ignore_index=True)
+            print(df.shape)
         else:
             pred_classes = [classes[idx.item()] for idx in torch.argmax(pred_outputs, dim=1)]
-            for image_id, pred, is_vd in zip(image_ids, pred_outputs, is_valid_data):
+            df_tmp = pd.DataFrame(columns=columns, index=range(pred_outputs.shape[0] * pred_outputs.shape[1]))
+            i = 0
+            for image_id, pred, is_vd in tqdm(zip(image_ids, pred_outputs, is_valid_data), desc="write df"):
                 for cls, prob in zip(classes, pred.tolist()):
-                    i = df.shape[0]
-                    df.loc[i, columns] = [image_id, prob, level_name, is_vd, cls] + pre_cls_entry
+                    df_tmp.iloc[i] = [image_id, prob, level_name, is_vd, cls] + pre_cls_entry
+                    i += 1
+            print(df_tmp.shape)
+            df = pd.concat([df, df_tmp], ignore_index=True)
+            print(df.shape)
             # subclasses not for regression implemented
             for cls in classes:
                 sub_indices = [idx for idx, pred_cls in enumerate(pred_classes) if pred_cls == cls]
@@ -111,7 +122,8 @@ def recursive_predict_csv(model_dict, model_root, data, batch_size, device, df, 
                 if not sub_indices or sub_model_dict is None:
                     continue
                 sub_data = Subset(data, sub_indices)
-                recursive_predict_csv(model_dict=sub_model_dict, model_root=model_root, data=sub_data, batch_size=batch_size, device=device, df=df, level=level+1, pre_cls=cls)
+                df = recursive_predict_csv(model_dict=sub_model_dict, model_root=model_root, data=sub_data, batch_size=batch_size, device=device, df=df, level=level+1, pre_cls=cls)
+    return df
 
 
 
@@ -226,6 +238,7 @@ def load_model(model_path, device):
     model_state = torch.load(model_path, map_location=device)
     model_cls = helper.string_to_object(model_state['config']['model'])
     is_regression = model_state['config']["is_regression"]
+    avg_pool = model_state['config'].get("avg_pool", 1)
     # is_regression = False
     valid_dataset = model_state['dataset']
 
@@ -236,7 +249,7 @@ def load_model(model_path, device):
     else:
         classes = valid_dataset.classes
         num_classes = len(classes)
-    model = model_cls(num_classes)
+    model = model_cls(num_classes, avg_pool)
     model.load_state_dict(model_state['model_state_dict'])
 
     return model, classes, is_regression, valid_dataset
