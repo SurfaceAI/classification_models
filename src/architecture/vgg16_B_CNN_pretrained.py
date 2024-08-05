@@ -46,6 +46,7 @@ class VGG16_B_CNN_PRE(nn.Module):
         # features = list(model.classifier.children())[:-1]  # select features in our last layer
         # features.extend([nn.Linear(num_features, num_classes)])  # add layer with output size num_classes
         # model.classifier = nn.Sequential(*features)  # Replace the model classifier
+        self.coarse_criterion = nn.CrossEntropyLoss
         
         if head == 'clm':      
             self.classifier_asphalt = self._create_quality_fc_clm(num_classes=4)
@@ -54,12 +55,16 @@ class VGG16_B_CNN_PRE(nn.Module):
             self.classifier_sett = self._create_quality_fc_clm(num_classes=3)
             self.classifier_unpaved = self._create_quality_fc_clm(num_classes=3)
             
+            self.fine_criterion = nn.NLLLoss
+            
         elif head == 'regression':
             self.classifier_asphalt = self._create_quality_fc_regression()
             self.classifier_concrete = self._create_quality_fc_regression()
             self.classifier_paving_stones = self._create_quality_fc_regression()
             self.classifier_sett = self._create_quality_fc_regression()
             self.classifier_unpaved = self._create_quality_fc_regression()
+            
+            self.fine_criterion = nn.MSELoss
             
         elif head == 'corn':
             self.classifier_asphalt = self._create_quality_fc_corn(num_classes=4)
@@ -68,16 +73,8 @@ class VGG16_B_CNN_PRE(nn.Module):
             self.classifier_sett = self._create_quality_fc_corn(num_classes=3)
             self.classifier_unpaved = self._create_quality_fc_corn(num_classes=3)
             
-        self.coarse_criterion = nn.CrossEntropyLoss
-        
-        if head == 'regression':
-            self.fine_criterion = nn.MSELoss
-        elif head == 'clm':
-            self.fine_criterion = nn.NLLLoss
-        elif head == 'corn':
             self.fine_criterion = corn_loss
-        else:
-            self.fine_criterion = nn.CrossEntropyLoss
+            
             
     def _create_quality_fc_clm(self, num_classes=4):
         layers = nn.Sequential(
