@@ -11,12 +11,20 @@ from experiments.config import global_config
 
 def create_annotated_image_folders(input_path, output_path, df):
     
-    os.makedirs(output_path, exist_ok=True)
+    train_path = os.path.join(output_path, "train")
+    os.makedirs(train_path, exist_ok=True)
+    test_path = os.path.join(output_path, "test")
+    os.makedirs(test_path, exist_ok=True)
     
     # Iterate through each row in the DataFrame
     for _, row in df[
-        df.surface_type.notna() & df.surface_quality.notna() & df.train == True
+        df.surface_type.notna() & df.surface_quality.notna()
     ].iterrows():
+        if row.train:
+            output_path = train_path
+        else:
+            output_path = test_path
+
         # Create subfolder for surface if not exists
         surface_folder = os.path.join(output_path, row["surface_type"])
         os.makedirs(surface_folder, exist_ok=True)
@@ -34,10 +42,10 @@ def create_annotated_image_folders(input_path, output_path, df):
 
 if __name__ == "__main__":
 
-    root_data = str(global_config.ROOT_DIR / "data" / "training")
+    root_data = global_config.global_config.get("root_data")
     dataset = "V1_0"
     input_folder = "s_1024"
-    output_folder = "annotated"
+    output_folder = ""
     metadata_folder = "metadata"
     metadata_file_name = "streetSurfaceVis_v1_0.csv"
 

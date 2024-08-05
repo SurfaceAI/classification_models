@@ -5,7 +5,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from torch import optim
 from src import constants as const
-from src.architecture import Rateke_CNN, efficientnet, vgg16
+from src.architecture import efficientnet
 import json
 import argparse
 
@@ -32,10 +32,6 @@ class ActivationHook:
 def string_to_object(string):
 
     string_dict = {
-        const.RATEKE: Rateke_CNN.ConvNet,
-        const.VGG16: vgg16.CustomVGG16,
-        const.VGG16REGRESSION: vgg16.CustomVGG16,
-        const.EFFICIENTNET: efficientnet.CustomEfficientNetV2SLogsoftmax,
         const.EFFNET_LINEAR: efficientnet.CustomEfficientNetV2SLinear,
         const.OPTI_ADAM: optim.Adam,
     }

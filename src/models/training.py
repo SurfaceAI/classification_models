@@ -475,7 +475,7 @@ def extract_levels(level, selected_classes):
     return to_train_list
 
 
-def main():
+def main(): # TODO
     '''train image classifier
     
     command line args:

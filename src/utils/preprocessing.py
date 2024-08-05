@@ -95,7 +95,6 @@ def find_flatten_classes(directory, selected_classes):
 
     return flattened_classes, flattened_class_to_idx
 
-
 def make_flatten_dataset(
     directory: str,
     class_to_idx: Optional[Dict[str, int]] = None,
@@ -197,8 +196,6 @@ class FlattenFolders(datasets.ImageFolder):
             raise ValueError("The class_to_idx parameter cannot be None.")
         return make_flatten_dataset(directory, class_to_idx, extensions=extensions, is_valid_file=is_valid_file)
 
-
-
 # VisionDataset instead of Dataset only used due to __repr__
 class PredictImageFolder(datasets.VisionDataset):
     def __init__(
@@ -274,29 +271,6 @@ class PredictImageFolder(datasets.VisionDataset):
         return len(self.samples)
 
 
-# Here we read images that are not sorted in subfolders
-class TestImages(Dataset):
-    def __init__(self, data_path, transform):
-        self.data_path = data_path
-        self.transform = transform
-        self.total_imgs = os.listdir(data_path)
-
-    def __len__(self):
-        return len(self.total_imgs)
-
-    def __getitem__(self, idx):
-        img_path = os.path.join(self.data_path, self.total_imgs[idx])
-
-        # Using PIL to read the image
-        image = Image.open(img_path).convert("RGB")
-
-        # Apply transformations
-        if self.transform is not None:
-            image = self.transform(image)
-
-        return image
-
-
 def create_train_validation_datasets(
     data_root,
     dataset,
@@ -355,23 +329,6 @@ def create_train_validation_datasets(
     )
 
     return train_dataset, valid_dataset
-
-
-def create_test_dataset(data_root, dataset, general_transform, random_state):
-    # Data path
-    data_path = os.path.join(data_root, dataset)
-
-    if general_transform.get("normalize") is not None:
-        general_transform["normalize"] = load_normalization(
-            general_transform.get("normalize"), dataset
-        )
-
-    test_transform = transform(**general_transform)
-
-    # Reading complete dataset
-    complete_dataset = TestImages(data_path, transform=test_transform)
-
-    return complete_dataset
 
 
 def load_normalization(normalization, data_root, dataset):
@@ -537,21 +494,6 @@ def custom_crop(img, crop_style=None):
         left = 0
         height = im_height / 2
         width = im_width
-    elif crop_style == "lower_middle_half_pano":
-        top = im_height / 2
-        left = im_width / 4
-        height = im_height * 0.35
-        width = im_width / 2
-    elif crop_style == "small_pano": # 9 July 2024
-        top = im_height * 0.55
-        left = im_width * 0.35
-        height = im_height * 0.3
-        width = im_width * 0.3
-    elif crop_style == "super_small_pano": # 9 July 2024
-        top = im_height * 0.65
-        left = im_width * 0.4
-        height = im_height * 0.2
-        width = im_width * 0.2
     else:  # None, or not valid
         return img
 
