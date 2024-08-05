@@ -438,14 +438,20 @@ for epoch in range(config.get('epochs')):
             
             if head == 'clm':
                 fine_predictions = torch.argmax(fine_output, dim=1)
-            elif head == 'regression' or head == 'single':
+                fine_correct += (fine_predictions == fine_labels).sum().item()
+            elif head == 'regression':
                 fine_predictions = fine_output.round()
+                fine_correct += (fine_predictions == fine_labels).sum().item()
+            elif head == 'single':
+                fine_predictions = fine_output.round()
+                fine_correct += (fine_predictions == fine_labels_mapped).sum().item()
             elif head == 'corn':
-                fine_predictions = corn_label_from_logits(fine_output).float()
+                fine_predictions = corn_label_from_logits(fine_output).float() #TODO:mapped or not?
+                fine_correct += (fine_predictions == fine_labels_mapped).sum().item()
             else:
                 probs = model.get_class_probabilies(fine_output)
                 predictions = torch.argmax(probs, dim=1)
-            fine_correct += (fine_predictions == fine_labels_mapped).sum().item()
+                fine_correct += (fine_predictions == fine_labels_mapped).sum().item() #TODO:mapped or not?
 
             
 
@@ -511,7 +517,7 @@ for epoch in range(config.get('epochs')):
             coarse_loss = coarse_criterion(coarse_output, coarse_labels)
             
             if head == 'clm':
-                fine_loss = fine_criterion(torch.log(fine_output + epsilon), fine_labels_mapped)
+                fine_loss = fine_criterion(torch.log(fine_output + epsilon), fine_labels)
             elif head == 'regression' or head == 'single':
                 fine_output = fine_output.flatten().float()
                 fine_labels_mapped = fine_labels_mapped.float()
@@ -535,14 +541,17 @@ for epoch in range(config.get('epochs')):
             
             if head == 'clm':
                 val_fine_predictions = torch.argmax(fine_output, dim=1)
+                val_fine_correct += (val_fine_predictions == fine_labels).sum().item()
             elif head == 'regression' or head == 'single':
                 val_fine_predictions = fine_output.round()
+                val_fine_correct += (val_fine_predictions == fine_labels_mapped).sum().item()
             elif head == 'corn':
                 val_fine_predictions = corn_label_from_logits(fine_output).float()
+                val_fine_correct += (val_fine_predictions == fine_labels_mapped).sum().item() #TODO
             else:
                 probs = model.get_class_probabilies(fine_output)
                 predictions = torch.argmax(probs, dim=1)
-            val_fine_correct += (val_fine_predictions == fine_labels_mapped).sum().item()
+                val_fine_correct += (val_fine_predictions == fine_labels_mapped).sum().item() #TODO
 
             # if batch_index == 0:
             #     break

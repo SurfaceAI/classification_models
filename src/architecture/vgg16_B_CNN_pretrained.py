@@ -159,3 +159,7 @@ class VGG16_B_CNN_PRE(nn.Module):
           
         return coarse_output, fine_output_combined
     
+    def get_optimizer_layers(self):
+        #return self.features, self.classifier, self.coarse_condition
+        return self.features, self.coarse_classifier, self.classifier_asphalt, self.classifier_concrete, self.classifier_paving_stones, self.classifier_sett, self.classifier_unpaved
+    
