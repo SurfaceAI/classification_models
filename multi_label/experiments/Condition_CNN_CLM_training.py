@@ -8,11 +8,11 @@ from src import constants
 from src.models import training
 import matplotlib.pyplot as plt
 
-
 import torch
 import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader, WeightedRandomSampler, Subset
+import torchvision.transforms as transforms
 
 from collections import Counter
 from datetime import datetime
@@ -26,19 +26,19 @@ from torch.optim.lr_scheduler import StepLR
 
 from coral_pytorch.dataset import corn_label_from_logits
 
+from torchcam.methods import SmoothGradCAMpp
+
 #config = train_config.C_CNN_CLM
 config = train_config.B_CNN_CLM
 torch.manual_seed(config.get("seed"))
 np.random.seed(config.get("seed"))
 #
-
-
 lr_scheduler = config.get("lr_scheduler")
 head = config.get("head")
 epsilon = 1e-9
 lw_modifier = config.get("lw_modifier")
 
-
+#to_pil_image = transforms.ToPILImage()
 
 device = torch.device(
         f"cuda:{config.get('gpu_kernel')}" if torch.cuda.is_available() else "cpu"
@@ -94,6 +94,8 @@ train_data, valid_data, trainloader, validloader, model, optimizer = training.pr
                 max_class_size=config.get("max_class_size"),
                 freeze_convs=config.get("freeze_convs"),
                 )
+
+#cam_extractor = SmoothGradCAMpp(model)
 
 # Define the data loaders and transformations
 
@@ -429,7 +431,9 @@ for epoch in range(config.get('epochs')):
                 loss = coarse_loss + fine_loss
             
             loss.backward()
-        
+            
+            optimizer.step()
+            
             running_loss += loss.item() 
             
             coarse_probs = model.get_class_probabilies(coarse_output)
@@ -456,8 +460,8 @@ for epoch in range(config.get('epochs')):
             
 
 
-            # if batch_index == 0:
-            #     break
+            if batch_index == 0:
+                break
             
     # #learning rate step        
     # before_lr = optimizer.param_groups[0]["lr"]
@@ -480,7 +484,6 @@ for epoch in range(config.get('epochs')):
     
     print(coarse_epoch_loss)
     print(fine_epoch_loss)
-
 
 
     # Validation
@@ -507,12 +510,27 @@ for epoch in range(config.get('epochs')):
             coarse_labels = parent[fine_labels]
             coarse_one_hot = helper.to_one_hot_tensor(coarse_labels, num_classes).to(device)
             
+            #model_inputs = inputs
             model_inputs = (inputs, coarse_one_hot, config.get('hierarchy_method'))   
             
             fine_labels_mapped = torch.tensor([helper.map_quality_to_continuous(label) for label in fine_labels], dtype=torch.long).to(device)
-
-            
             coarse_output, fine_output = model.forward(model_inputs)
+            
+            # cams = cam_extractor(fine_output.argmax(dim=1).cpu().numpy(), fine_output)
+            
+            # for i in range(inputs.size(0)):
+            #     # Convert tensor to PIL image
+            #     input_image = to_pil_image(inputs[i].cpu())
+            #     cam_image = to_pil_image(cams[i].cpu())
+
+            #     # Overlay CAM on the input image
+            #     overlay_image = vutils.make_grid([inputs[i].cpu(), cams[i].cpu()], nrow=1)
+
+            #     # Save the image
+            #     plt.imshow(overlay_image.permute(1, 2, 0).numpy())
+            #     plt.axis('off')
+            #     plt.savefig(f"cam_{epoch}_{batch_index}_{i}.png")
+            #     plt.close()
             
             coarse_loss = coarse_criterion(coarse_output, coarse_labels)
             
