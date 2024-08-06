@@ -117,3 +117,7 @@ class HierarchyNet_Pre(nn.Module):
         fine_output = torch.cat([fine_1, fine_2, fine_3, fine_4, fine_5], dim=1)
         
         return coarse_output, fine_output
+    
+    def get_optimizer_layers(self):
+        #return self.features, self.classifier, self.coarse_condition
+        return self.block1, self.block2, self.block3, self.block4, self.block5, self.fc, self.fc_1, self.fc_2_coarse, self.fc_2_fine

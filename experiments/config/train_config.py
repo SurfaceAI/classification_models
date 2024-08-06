@@ -3,7 +3,7 @@ from experiments.config  import global_config
 
 default_params = {
     "batch_size": 64, #16,  # 48
-    "epochs": 20,
+    "epochs": 10,
     "learning_rate": 0.01,
     "optimizer": const.OPTI_ADAM,
     "is_regression": False,
@@ -11,7 +11,7 @@ default_params = {
     "eval_metric": const.EVAL_METRIC_ACCURACY,
     "max_class_size": None,
     "lr_scheduler": False,
-    "freeze_convs": True,
+    "freeze_convs": False,
 }
 
 default_search_params = {
