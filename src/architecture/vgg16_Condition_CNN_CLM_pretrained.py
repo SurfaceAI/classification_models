@@ -100,6 +100,8 @@ class Condition_CNN_CLM_PRE(nn.Module):
         ### Condition part
         if head == 'regression':
             self.coarse_condition = nn.Linear(num_c, num_c, bias=False)
+        if head == 'corn':
+            self.coarse_condition = nn.Linear(num_c, num_classes - 5, bias=False)
         else: 
             self.coarse_condition = nn.Linear(num_c, num_classes, bias=False)
         self.coarse_condition.weight.data.fill_(0)  # Initialize weights to zero
@@ -198,6 +200,8 @@ class Condition_CNN_CLM_PRE(nn.Module):
                 
                 if self.head == 'clm':
                     fine_output = coarse_condition + fine_output_combined
+                    
+                    return coarse_output, fine_output
                             
                 elif self.head == 'regression':
                     
@@ -218,10 +222,19 @@ class Condition_CNN_CLM_PRE(nn.Module):
                 #     indices_pred = torch.argmax(coarse_probs, dim=1)
                 #     fine_output = fine_output_combined[range(fine_output_combined.size(0)), indices_pred]
                 
+                    return coarse_output, fine_output
+                
                 elif self.head == 'corn':
-                    fine_output = fine_output_combined
                     
-                return coarse_output, fine_output
+                    fine_output = coarse_condition + fine_output_combined
+                    
+                    # fine_output_asphalt = fine_output_combined[:,:3]
+                    # fine_output_concrete = fine_output_combined[:,3:6]
+                    # fine_output_paving_stones = fine_output_combined[:,6:9]
+                    # fine_output_sett = fine_output_combined[:,9:11]
+                    # fine_output_unpaved = fine_output_combined[:,11:13]
+                #coarse_output, fine_output_asphalt, fine_output_concrete, fine_output_paving_stones, fine_output_sett, fine_output_unpaved
+                    return coarse_output, fine_output
 
         #features = torch.add(coarse_condition, fine_raw)#
         #Adding the conditional probabilities to the dense features

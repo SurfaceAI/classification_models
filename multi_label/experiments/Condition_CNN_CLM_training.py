@@ -340,7 +340,11 @@ for epoch in range(config.get('epochs')):
             
         elif config.get('hierarchy_method') == 'use_condition_layer' or config.get('hierarchy_method') == 'top_coarse_prob':
             
-            coarse_output, fine_output = model.forward(model_inputs)
+            if head == 'corn':
+                coarse_output, fine_output_asphalt, fine_output_concrete, fine_output_paving_stones, fine_output_sett, fine_output_unpaved= model.forward(model_inputs)
+
+            else:
+                coarse_output, fine_output = model.forward(model_inputs)
             
             coarse_loss = coarse_criterion(coarse_output, coarse_labels)
             
@@ -353,7 +357,13 @@ for epoch in range(config.get('epochs')):
                 fine_loss = fine_criterion(fine_output, fine_labels_mapped)
                 
             elif head == 'corn':
-                fine_loss = model.fine_criterion(fine_output, fine_labels_mapped, 18)
+                fine_loss = model.fine_criterion(fine_output, fine_labels_mapped, 4)
+                #fine_loss_asphalt = model.fine_criterion(fine_output_asphalt, fine_labels_mapped, 4)
+                # fine_loss_concrete = model.fine_criterion(fine_output_concrete, fine_labels_mapped, 4)
+                # fine_loss_paving_stones = model.fine_criterion(fine_output_paving_stones, fine_labels_mapped, 4)
+                # fine_loss_sett = model.fine_criterion(fine_output_sett, fine_labels_mapped, 3)
+                # fine_loss_unpaved = model.fine_criterion(fine_output_unpaved, fine_labels_mapped, 3)
+                # fine_loss = fine_loss_asphalt + fine_loss_concrete + fine_loss_paving_stones + fine_loss_sett + fine_loss_unpaved
 
             loss = coarse_loss + fine_loss  #weighted loss functions for different levels
             
@@ -377,7 +387,7 @@ for epoch in range(config.get('epochs')):
             
             if config.get('hierarchy_method') == 'use_condition_layer':
             #plot_grad_flow(model.named_parameters())
-                print(f'Fine output tensor: {fine_output}')
+                #print(f'Fine output tensor: {fine_output}')
                 #print("Gradients:", model.coarse_condition.weight.grad)
                 if config == train_config.C_CNN_CLM:
                     model.coarse_condition.weight.data = model.constraint(model.coarse_condition.weight.data)
@@ -397,7 +407,7 @@ for epoch in range(config.get('epochs')):
             elif head == 'regression' or head == 'single':
                 fine_predictions = fine_output.round()
             elif head == 'corn':
-                fine_predictions = corn_label_from_logits(fine_output).float()
+                fine_predictions_asphalt = corn_label_from_logits(fine_output_asphalt).float()
             else:
                 probs = model.get_class_probabilies(fine_output)
                 predictions = torch.argmax(probs, dim=1)
@@ -415,7 +425,7 @@ for epoch in range(config.get('epochs')):
             coarse_loss = coarse_criterion(coarse_output, coarse_labels)
             
             if head == 'clm':
-                fine_loss = fine_criterion(torch.log(fine_output + epsilon), fine_labels)
+                fine_loss = fine_criterion(torch.log(fine_output + epsilon), fine_labels_mapped)
                 
             elif head == 'regression' or head == 'single':
                 fine_output = fine_output.flatten().float()
@@ -435,6 +445,9 @@ for epoch in range(config.get('epochs')):
             optimizer.step()
             
             running_loss += loss.item() 
+            
+            coarse_loss_total += coarse_loss.item()
+            fine_loss_total += fine_loss.item()
             
             coarse_probs = model.get_class_probabilies(coarse_output)
             coarse_predictions = torch.argmax(coarse_probs, dim=1)
@@ -460,8 +473,8 @@ for epoch in range(config.get('epochs')):
             
 
 
-            if batch_index == 0:
-                break
+            # if batch_index == 0:
+            #     break
             
     # #learning rate step        
     # before_lr = optimizer.param_groups[0]["lr"]
@@ -535,7 +548,7 @@ for epoch in range(config.get('epochs')):
             coarse_loss = coarse_criterion(coarse_output, coarse_labels)
             
             if head == 'clm':
-                fine_loss = fine_criterion(torch.log(fine_output + epsilon), fine_labels)
+                fine_loss = fine_criterion(torch.log(fine_output + epsilon), fine_labels_mapped)
             elif head == 'regression' or head == 'single':
                 fine_output = fine_output.flatten().float()
                 fine_labels_mapped = fine_labels_mapped.float()

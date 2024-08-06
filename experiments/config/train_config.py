@@ -367,7 +367,7 @@ B_CNN_regression = {
 C_CNN_CLM = {
     **global_config.global_config,
     **default_params,
-    "batch_size": 64,
+    "batch_size": 16,
     "epochs": 5,
     "learning_rate": 0.01,
     "optimizer": const.OPTI_ADAM,
@@ -377,7 +377,7 @@ C_CNN_CLM = {
     "name": "C_CNN_regression",
     "level": const.MULTILABEL,
     "model": const.CCNNCLMPRE,
-    "head": 'clm', #'regression', 'classification', 'obd', 'clm'
+    "head": 'corn', #'regression', 'classification', 'obd', 'clm'
     "hierarchy_method": 'use_condition_layer', #'use_ground_truth', 'use_condition_layer', 'top_coarse_prob'
 }
 
@@ -396,6 +396,6 @@ B_CNN_CLM = {
     "model": const.BCNN_PRE,
     "head": 'clm', #'regression', 'classification', 'corn', 'clm'
     "hierarchy_method": 'b_cnn', #'use_ground_truth', 'use_condition_layer', 'b_cnn'
-    "lw_modifier": False,
+    "lw_modifier": True,
 }
 
