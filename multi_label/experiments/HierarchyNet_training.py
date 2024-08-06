@@ -179,7 +179,7 @@ for epoch in range(config.get('epochs')):
     # epoch_loss = running_loss /  len(inputs) * (batch_index + 1) 
     # epoch_coarse_accuracy = 100 * coarse_correct / (len(inputs) * (batch_index + 1))
     # epoch_fine_accuracy = 100 * fine_correct / (len(inputs) * (batch_index + 1))
-    epoch_loss = running_loss /  len(train_loader.sampler)
+    epoch_loss = running_loss /  len(train_loader)
     epoch_coarse_accuracy = 100 * coarse_correct / len(train_loader.sampler)
     epoch_fine_accuracy = 100 * fine_correct / len(train_loader.sampler)
     
@@ -219,7 +219,7 @@ for epoch in range(config.get('epochs')):
     # val_epoch_loss = val_running_loss /  (len(inputs) * (batch_index + 1))
     # val_epoch_coarse_accuracy = 100 * val_coarse_correct / (len(inputs) * (batch_index + 1))
     # val_epoch_fine_accuracy = 100 * val_fine_correct / (len(inputs) * (batch_index + 1))
-    val_epoch_loss = val_running_loss /  len(valid_loader.dataset)
+    val_epoch_loss = val_running_loss /  len(valid_loader)
     val_epoch_coarse_accuracy = 100 * val_coarse_correct / len(valid_loader.dataset)
     val_epoch_fine_accuracy = 100 * val_fine_correct / len(valid_loader.dataset)
     
