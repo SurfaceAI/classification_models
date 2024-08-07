@@ -322,7 +322,7 @@ H_NET = {
 H_NET_PRE = {
     **global_config.global_config,
     **default_params,
-    "batch_size": 64,
+    "batch_size": 16,
     "epochs": 10,
     "learning_rate": 0.01,
     "optimizer": const.OPTI_ADAM,

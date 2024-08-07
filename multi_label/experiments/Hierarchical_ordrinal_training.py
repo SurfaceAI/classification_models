@@ -7,6 +7,7 @@ from src.utils import helper
 from src import constants
 from src.models import training
 import matplotlib.pyplot as plt
+from multi_label.ordinal_metrics import accuracy_off1, minimum_sensitivity
 
 import torch
 import torch.nn as nn
@@ -186,6 +187,8 @@ for epoch in range(config.get('epochs')):
     
     coarse_correct = 0
     fine_correct = 0
+    coarse_correct_one_off = 0
+    fine_correct_one_off = 0
     
     fine_correct_asphalt = 0
     fine_correct_concrete = 0
@@ -487,7 +490,7 @@ for epoch in range(config.get('epochs')):
             coarse_loss = coarse_criterion(coarse_output, coarse_labels)
             
             if head == 'clm':
-                fine_loss = fine_criterion(torch.log(fine_output + epsilon), fine_labels_mapped)
+                fine_loss = fine_criterion(torch.log(fine_output + epsilon), fine_labels)
                             
             elif head == 'regression' or head == 'single':
                 fine_output = fine_output.flatten().float()
@@ -510,10 +513,12 @@ for epoch in range(config.get('epochs')):
             coarse_output = model.get_class_probabilies(coarse_output)
             coarse_predictions = torch.argmax(coarse_output, dim=1)
             coarse_correct += (coarse_predictions == coarse_labels).sum().item()
+            coarse_correct_one_off += accuracy_off1(coarse_predictions, coarse_labels, num_classes=num_classes) * inputs.size(0)
             
             if head == 'clm':
                 fine_predictions = torch.argmax(fine_output, dim=1)
                 fine_correct += (fine_predictions == fine_labels).sum().item()
+                fine_correct_one_off += accuracy_off1(fine_predictions, fine_labels, num_classes=num_fine_classes) * inputs.size(0)
             elif head == 'regression' or head == 'single':
                 fine_predictions = fine_output.round()
                 fine_correct += (fine_predictions == fine_labels_mapped).sum().item()
@@ -522,6 +527,9 @@ for epoch in range(config.get('epochs')):
             else:
                 probs = model.get_class_probabilies(fine_output)
                 predictions = torch.argmax(probs, dim=1)
+                
+            if batch_index == 0:
+                break
                 
                
     # #learning rate step        
@@ -539,6 +547,9 @@ for epoch in range(config.get('epochs')):
     epoch_loss = running_loss /  len(trainloader.sampler)
     epoch_coarse_accuracy = 100 * coarse_correct / len(trainloader.sampler)
     epoch_fine_accuracy = 100 * fine_correct / len(trainloader.sampler)
+    
+    epoch_coarse_accuracy_one_off = 100 * coarse_correct_one_off / len(trainloader.sampler)
+    epoch_fine_accuracy_one_off = 100 * fine_correct_one_off / len(trainloader.sampler)
     
     coarse_epoch_loss = coarse_loss_total / len(trainloader.sampler)
     fine_epoch_loss = fine_loss_total / len(trainloader.sampler)
@@ -563,6 +574,8 @@ for epoch in range(config.get('epochs')):
     
     val_coarse_correct = 0
     val_fine_correct = 0
+    val_coarse_correct_one_off = 0
+    val_fine_correct_one_off = 0
     
     with torch.no_grad():
         for batch_index, (inputs, fine_labels) in enumerate(validloader):
@@ -617,10 +630,12 @@ for epoch in range(config.get('epochs')):
             val_coarse_output = model.get_class_probabilies(coarse_output)
             val_coarse_predictions = torch.argmax(val_coarse_output, dim=1)
             val_coarse_correct += (val_coarse_predictions == coarse_labels).sum().item()
+            val_coarse_correct_one_off += accuracy_off1(val_coarse_predictions, coarse_labels, num_classes) * inputs.size(0)
             
             if head == 'clm':
                 val_fine_predictions = torch.argmax(fine_output, dim=1)
                 val_fine_correct += (val_fine_predictions == fine_labels).sum().item()
+                val_fine_correct_one_off += accuracy_off1(val_fine_predictions, fine_labels, num_fine_classes) * inputs.size(0)
             elif head == 'regression' or head == 'single':
                 val_fine_predictions = fine_output.round()
                 val_fine_correct += (val_fine_predictions == fine_labels_mapped).sum().item()
@@ -632,8 +647,8 @@ for epoch in range(config.get('epochs')):
                 predictions = torch.argmax(probs, dim=1)
                 val_fine_correct += (val_fine_predictions == fine_labels_mapped).sum().item() #TODO
 
-            # if batch_index == 0:
-            #     break
+            if batch_index == 0:
+                break
             
             # if isinstance(criterion, nn.MSELoss):
             #     coarse_output = coarse_output.flatten()
@@ -649,6 +664,10 @@ for epoch in range(config.get('epochs')):
     val_epoch_loss = val_running_loss /  len(validloader.sampler)
     val_epoch_coarse_accuracy = 100 * val_coarse_correct / len(validloader.sampler)
     val_epoch_fine_accuracy = 100 * val_fine_correct / len(validloader.sampler)
+    
+    val_epoch_coarse_accuracy_one_off = 100 * val_coarse_correct_one_off / len(validloader.sampler)
+    val_epoch_fine_accuracy_one_off = 100 * val_fine_correct_one_off / len(validloader.sampler)
+    
     
     val_coarse_epoch_loss = val_coarse_loss_total / len(validloader.sampler)
     val_fine_epoch_loss = val_fine_loss_total / len(validloader.sampler)
@@ -672,14 +691,18 @@ for epoch in range(config.get('epochs')):
                 "train/coarse/loss": coarse_epoch_loss,
                 "train/fine/loss": fine_epoch_loss,
                 "train/accuracy/coarse": epoch_coarse_accuracy,
-                "train/accuracy/fine": epoch_fine_accuracy , 
+                "train/accuracy/fine": epoch_fine_accuracy, 
+                "train/accuracy/coarse_1_off": epoch_coarse_accuracy_one_off,
+                "train/accuracy/fine_1_off": epoch_fine_accuracy_one_off,
                 "eval/loss": val_epoch_loss,
                 "eval/coarse/loss": val_coarse_epoch_loss,
                 "eval/fine/loss": val_fine_epoch_loss,
                 "eval/accuracy/coarse": val_epoch_coarse_accuracy,
                 "eval/accuracy/fine": val_epoch_fine_accuracy,
+                "eval/accuracy/coarse_1_off": val_epoch_coarse_accuracy_one_off,
+                "eval/accuracy/fine_1_off": val_epoch_fine_accuracy_one_off,
                 "trainable_params": trainable_params,
-                #"learning_rate": scheduler.get_last_lr()[0],
+                "learning_rate": scheduler.get_last_lr()[0],
                 "hierarchy_method": config.get("hierarchy_method"),
                 "head": config.get("head"),
             }
@@ -695,14 +718,18 @@ for epoch in range(config.get('epochs')):
         
         Train coarse accuracy: {epoch_coarse_accuracy:.3f}%, 
         Train fine accuracy: {epoch_fine_accuracy:.3f}%,
-
+        Train coarse 1-off accuracy: {epoch_coarse_accuracy_one_off:.3f}%,
+        Train fine 1-off accuracy: {epoch_fine_accuracy_one_off:.3f}%,
         
         Validation loss: {val_epoch_loss:.3f}, 
         Validation coarse accuracy: {val_epoch_coarse_accuracy:.3f}%, 
-        Validation fine accuracy: {val_epoch_fine_accuracy:.3f}% 
+        Validation fine accuracy: {val_epoch_fine_accuracy:.3f}%, 
+        Validation coarse 1-off accuracy: {val_epoch_coarse_accuracy_one_off:.3f}%,
+        Validation fine 1-off accuracy: {val_epoch_fine_accuracy_one_off:.3f}%
+        
+        Learning_rate: {scheduler.get_last_lr()[0]}
                 
         """)
-    #        Learning_rate: {scheduler.get_last_lr()[0]}
 
     
     if lw_modifier:
