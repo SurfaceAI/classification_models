@@ -10,8 +10,8 @@ default_params = {
     "is_hierarchical": True,
     "eval_metric": const.EVAL_METRIC_ACCURACY,
     "max_class_size": None,
-    "lr_scheduler": False,
-    "freeze_convs": False,
+    "lr_scheduler": True,
+    "freeze_convs": True,
 }
 
 default_search_params = {
@@ -322,11 +322,20 @@ H_NET = {
 H_NET_PRE = {
     **global_config.global_config,
     **default_params,
+    "batch_size": 64,
+    "epochs": 10,
+    "learning_rate": 0.01,
+    "optimizer": const.OPTI_ADAM,
+    "coarse_eval_metric": const.EVAL_METRIC_ACCURACY,
+    "fine_eval_metric": const.EVAL_METRIC_ACCURACY,
     "project": const.PROJECT_MULTI_LABEL_FIXED,
-    "name": "HiearchyNet_pretrained",
+    "name": "HierarchyNet_pretrained_clm",
     "level": const.MULTILABEL,
     "model": const.HNET_PRE,
+    "head": 'clm', #'regression', 'classification', 'obd', 'clm'
+    "hierarchy_method": None, #'use_ground_truth', 'use_condition_layer', 'top_coarse_prob'
 }
+
 
 GH_CNN = {
     **global_config.global_config,

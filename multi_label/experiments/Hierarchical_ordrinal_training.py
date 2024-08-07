@@ -29,7 +29,7 @@ from coral_pytorch.dataset import corn_label_from_logits
 from torchcam.methods import SmoothGradCAMpp
 
 #config = train_config.C_CNN_CLM
-config = train_config.B_CNN_CLM
+config = train_config.H_NET_PRE
 torch.manual_seed(config.get("seed"))
 np.random.seed(config.get("seed"))
 #
@@ -475,7 +475,55 @@ for epoch in range(config.get('epochs')):
 
             # if batch_index == 0:
             #     break
+         
+        else:
             
+            if head == 'corn':
+                coarse_output, fine_output_asphalt, fine_output_concrete, fine_output_paving_stones, fine_output_sett, fine_output_unpaved= model.forward(model_inputs)
+
+            else:
+                coarse_output, fine_output = model.forward(model_inputs)
+            
+            coarse_loss = coarse_criterion(coarse_output, coarse_labels)
+            
+            if head == 'clm':
+                fine_loss = fine_criterion(torch.log(fine_output + epsilon), fine_labels_mapped)
+                            
+            elif head == 'regression' or head == 'single':
+                fine_output = fine_output.flatten().float()
+                fine_labels_mapped = fine_labels_mapped.float()
+                fine_loss = fine_criterion(fine_output, fine_labels_mapped)
+                
+            if lw_modifier:
+                loss = alpha * coarse_loss + beta * fine_loss
+            else:
+                loss = coarse_loss + fine_loss  #weighted loss functions for different levels
+            
+            loss.backward()
+            optimizer.step()
+            
+            running_loss += loss.item()
+            
+            coarse_loss_total += coarse_loss.item()
+            fine_loss_total += fine_loss.item()
+        
+            coarse_output = model.get_class_probabilies(coarse_output)
+            coarse_predictions = torch.argmax(coarse_output, dim=1)
+            coarse_correct += (coarse_predictions == coarse_labels).sum().item()
+            
+            if head == 'clm':
+                fine_predictions = torch.argmax(fine_output, dim=1)
+                fine_correct += (fine_predictions == fine_labels).sum().item()
+            elif head == 'regression' or head == 'single':
+                fine_predictions = fine_output.round()
+                fine_correct += (fine_predictions == fine_labels_mapped).sum().item()
+            elif head == 'corn':
+                fine_predictions_asphalt = corn_label_from_logits(fine_output_asphalt).float()
+            else:
+                probs = model.get_class_probabilies(fine_output)
+                predictions = torch.argmax(probs, dim=1)
+                
+               
     # #learning rate step        
     # before_lr = optimizer.param_groups[0]["lr"]
     # scheduler.step()
