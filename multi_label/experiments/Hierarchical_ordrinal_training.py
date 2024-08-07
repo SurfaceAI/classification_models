@@ -54,8 +54,110 @@ if config.get('wandb_on'):
         config = config
     )
     
+def map_predictions_to_quality(predictions, surface_type):
+    quality_mapping = {
+        "asphalt": [0, 1, 2, 3],  # Modify as needed
+        "concrete": [4, 5, 6, 7],
+        "paving_stones": [8, 9, 10, 11],
+        "sett": [12, 13, 14],
+        "unpaved": [15, 16, 17]
+    }
+    return torch.tensor([quality_mapping[surface_type][pred] for pred in predictions], dtype=torch.long)
+
+
+def compute_fine_losses(fine_output, fine_labels_mapped, masks, head, epsilon=1e-9):
+    fine_loss = 0.0
+    
+    # Separate the fine outputs
+    fine_output_asphalt = fine_output[:, 0:4]
+    fine_output_concrete = fine_output[:, 4:8]
+    fine_output_paving_stones = fine_output[:, 8:12]
+    fine_output_sett = fine_output[:, 12:15]
+    fine_output_unpaved = fine_output[:, 15:18]
+    
+    # Extract the masks
+    asphalt_mask, concrete_mask, paving_stones_mask, sett_mask, unpaved_mask = masks
+    
+    # Get the labels for each surface type
+    fine_labels_mapped_asphalt = fine_labels_mapped[asphalt_mask]
+    fine_labels_mapped_concrete = fine_labels_mapped[concrete_mask]
+    fine_labels_mapped_paving_stones = fine_labels_mapped[paving_stones_mask]
+    fine_labels_mapped_sett = fine_labels_mapped[sett_mask]
+    fine_labels_mapped_unpaved = fine_labels_mapped[unpaved_mask]
+    
+    # Compute the loss for each surface type
+    if head == 'clm':
+        fine_loss_asphalt = nn.NLLLoss()(torch.log(fine_output_asphalt[asphalt_mask] + epsilon), fine_labels_mapped_asphalt)
+        fine_loss_concrete = nn.NLLLoss()(torch.log(fine_output_concrete[concrete_mask] + epsilon), fine_labels_mapped_concrete)
+        fine_loss_paving_stones = nn.NLLLoss()(torch.log(fine_output_paving_stones[paving_stones_mask] + epsilon), fine_labels_mapped_paving_stones)
+        fine_loss_sett = nn.NLLLoss()(torch.log(fine_output_sett[sett_mask] + epsilon), fine_labels_mapped_sett)
+        fine_loss_unpaved = nn.NLLLoss()(torch.log(fine_output_unpaved[unpaved_mask] + epsilon), fine_labels_mapped_unpaved)
+    elif head == 'regression':
+        fine_loss_asphalt = nn.MSELoss()(fine_output_asphalt[asphalt_mask].flatten(), fine_labels_mapped_asphalt.float())
+        fine_loss_concrete = nn.MSELoss()(fine_output_concrete[concrete_mask].flatten(), fine_labels_mapped_concrete.float())
+        fine_loss_paving_stones = nn.MSELoss()(fine_output_paving_stones[paving_stones_mask].flatten(), fine_labels_mapped_paving_stones.float())
+        fine_loss_sett = nn.MSELoss()(fine_output_sett.flatten(), fine_labels_mapped_sett.float())
+        fine_loss_unpaved = nn.MSELoss()(fine_output_unpaved.flatten(), fine_labels_mapped_unpaved.float())
+        
+    fine_loss_asphalt = torch.nan_to_num(fine_loss_asphalt, nan=0.0)
+    fine_loss_concrete = torch.nan_to_num(fine_loss_concrete, nan=0.0)
+    fine_loss_paving_stones = torch.nan_to_num(fine_loss_paving_stones, nan=0.0)
+    fine_loss_sett = torch.nan_to_num(fine_loss_sett, nan=0.0)
+    fine_loss_unpaved = torch.nan_to_num(fine_loss_unpaved, nan=0.0)
 
     
+    # Combine the losses
+    fine_loss += fine_loss_asphalt
+    fine_loss += fine_loss_concrete
+    fine_loss += fine_loss_paving_stones
+    fine_loss += fine_loss_sett
+    fine_loss += fine_loss_unpaved
+    
+    return fine_loss
+
+def compute_fine_accuracy(coarse_probs, fine_output, fine_labels, masks):
+    # Separate the fine outputs
+    fine_output_asphalt = fine_output[:, 0:4]
+    fine_output_concrete = fine_output[:, 4:8]
+    fine_output_paving_stones = fine_output[:, 8:12]
+    fine_output_sett = fine_output[:, 12:15]
+    fine_output_unpaved = fine_output[:, 15:18]
+    
+    # Extract the masks
+    asphalt_mask, concrete_mask, paving_stones_mask, sett_mask, unpaved_mask = masks
+    
+    # Initialize prediction tensor
+    predictions = torch.zeros_like(fine_labels)
+    
+    # Compute the weighted predictions for each sample
+    if asphalt_mask.sum().item() > 0:
+        asphalt_preds = torch.argmax(fine_output_asphalt[asphalt_mask], dim=1)
+        predictions[asphalt_mask] = map_predictions_to_quality(asphalt_preds, "asphalt")
+
+    if concrete_mask.sum().item() > 0:
+        concrete_preds = torch.argmax(fine_output_concrete[concrete_mask], dim=1)
+        predictions[concrete_mask] = map_predictions_to_quality(concrete_preds, "concrete")
+
+    if paving_stones_mask.sum().item() > 0:
+        paving_stones_preds = torch.argmax(fine_output_paving_stones[paving_stones_mask], dim=1)
+        predictions[paving_stones_mask] = map_predictions_to_quality(paving_stones_preds, "paving_stones")
+
+    if sett_mask.sum().item() > 0:
+        sett_preds = torch.argmax(fine_output_sett[sett_mask], dim=1)
+        predictions[sett_mask] = map_predictions_to_quality(sett_preds, "sett")
+
+    if unpaved_mask.sum().item() > 0:
+        unpaved_preds = torch.argmax(fine_output_unpaved[unpaved_mask], dim=1)
+        predictions[unpaved_mask] = map_predictions_to_quality(unpaved_preds, "unpaved")
+
+    # Calculate accuracy
+    correct = (predictions == fine_labels).sum().item()
+    
+    correct_1_off = ((predictions == fine_labels) | 
+               (predictions == fine_labels + 1) | 
+               (predictions == fine_labels - 1)).sum().item()
+    
+    return correct, correct_1_off
 #--- file paths ---
 
 level = config.get("level").split("/", 1)
@@ -225,6 +327,14 @@ for epoch in range(config.get('epochs')):
         model_inputs = (inputs, coarse_one_hot, config.get('hierarchy_method'))
         
         fine_labels_mapped = torch.tensor([helper.map_quality_to_continuous(label) for label in fine_labels], dtype=torch.long).to(device)
+        
+        masks = [
+        (coarse_labels == 0),  # asphalt_mask
+        (coarse_labels == 1),  # concrete_mask
+        (coarse_labels == 2),  # paving_stones_mask
+        (coarse_labels == 3),  # sett_mask
+        (coarse_labels == 4)   # unpaved_mask
+        ]
 
         
         if config.get('hierarchy_method') == 'use_ground_truth':
@@ -490,7 +600,8 @@ for epoch in range(config.get('epochs')):
             coarse_loss = coarse_criterion(coarse_output, coarse_labels)
             
             if head == 'clm':
-                fine_loss = fine_criterion(torch.log(fine_output + epsilon), fine_labels)
+                fine_loss = compute_fine_losses(fine_output, fine_labels_mapped, masks, head, epsilon)
+                #fine_loss = fine_criterion(torch.log(fine_output + epsilon), fine_labels)
                             
             elif head == 'regression' or head == 'single':
                 fine_output = fine_output.flatten().float()
@@ -510,15 +621,19 @@ for epoch in range(config.get('epochs')):
             coarse_loss_total += coarse_loss.item()
             fine_loss_total += fine_loss.item()
         
-            coarse_output = model.get_class_probabilies(coarse_output)
-            coarse_predictions = torch.argmax(coarse_output, dim=1)
+            coarse_probs = model.get_class_probabilies(coarse_output)
+            coarse_predictions = torch.argmax(coarse_probs, dim=1)
             coarse_correct += (coarse_predictions == coarse_labels).sum().item()
             coarse_correct_one_off += accuracy_off1(coarse_predictions, coarse_labels, num_classes=num_classes) * inputs.size(0)
             
             if head == 'clm':
-                fine_predictions = torch.argmax(fine_output, dim=1)
-                fine_correct += (fine_predictions == fine_labels).sum().item()
-                fine_correct_one_off += accuracy_off1(fine_predictions, fine_labels, num_classes=num_fine_classes) * inputs.size(0)
+                fine_correct_item, fine_correct_one_off_item = compute_fine_accuracy(coarse_probs, fine_output, fine_labels, masks)
+                fine_correct += fine_correct_item
+                fine_correct_one_off += fine_correct_one_off_item
+                #fine_correct += (fine_accuracy * fine_labels.size(0))
+                #fine_predictions = torch.argmax(fine_output, dim=1)
+                #fine_correct += (fine_predictions == fine_labels).sum().item()
+                #fine_correct_one_off += accuracy_off1(fine_predictions, fine_labels, num_classes=num_fine_classes) * inputs.size(0)
             elif head == 'regression' or head == 'single':
                 fine_predictions = fine_output.round()
                 fine_correct += (fine_predictions == fine_labels_mapped).sum().item()
@@ -528,8 +643,8 @@ for epoch in range(config.get('epochs')):
                 probs = model.get_class_probabilies(fine_output)
                 predictions = torch.argmax(probs, dim=1)
                 
-            if batch_index == 0:
-                break
+            # if batch_index == 0:
+            #     break
                 
                
     # #learning rate step        
@@ -607,9 +722,22 @@ for epoch in range(config.get('epochs')):
             #     plt.close()
             
             coarse_loss = coarse_criterion(coarse_output, coarse_labels)
+            val_coarse_output = model.get_class_probabilies(coarse_output)
+            val_coarse_predictions = torch.argmax(val_coarse_output, dim=1)
+            val_coarse_correct += (val_coarse_predictions == coarse_labels).sum().item()
+            val_coarse_correct_one_off += accuracy_off1(val_coarse_predictions, coarse_labels, num_classes) * inputs.size(0)
+            
+            val_masks = [
+            (val_coarse_predictions == 0),  # asphalt_mask
+            (val_coarse_predictions == 1),  # concrete_mask
+            (val_coarse_predictions == 2),  # paving_stones_mask
+            (val_coarse_predictions == 3),  # sett_mask
+            (val_coarse_predictions == 4)   # unpaved_mask
+            ]
             
             if head == 'clm':
-                fine_loss = fine_criterion(torch.log(fine_output + epsilon), fine_labels_mapped)
+                fine_loss = compute_fine_losses(fine_output, fine_labels_mapped, val_masks, head, epsilon)
+                #fine_loss = fine_criterion(torch.log(fine_output + epsilon), fine_labels)
             elif head == 'regression' or head == 'single':
                 fine_output = fine_output.flatten().float()
                 fine_labels_mapped = fine_labels_mapped.float()
@@ -627,15 +755,15 @@ for epoch in range(config.get('epochs')):
             val_coarse_loss_total += coarse_loss.item()
             val_fine_loss_total += fine_loss.item()
             
-            val_coarse_output = model.get_class_probabilies(coarse_output)
-            val_coarse_predictions = torch.argmax(val_coarse_output, dim=1)
-            val_coarse_correct += (val_coarse_predictions == coarse_labels).sum().item()
-            val_coarse_correct_one_off += accuracy_off1(val_coarse_predictions, coarse_labels, num_classes) * inputs.size(0)
+
             
             if head == 'clm':
-                val_fine_predictions = torch.argmax(fine_output, dim=1)
-                val_fine_correct += (val_fine_predictions == fine_labels).sum().item()
-                val_fine_correct_one_off += accuracy_off1(val_fine_predictions, fine_labels, num_fine_classes) * inputs.size(0)
+                val_fine_correct_item, val_fine_correct_one_off_item = compute_fine_accuracy(coarse_probs, fine_output, fine_labels, val_masks)
+                val_fine_correct += val_fine_correct_item
+                val_fine_correct_one_off += val_fine_correct_one_off_item
+                # val_fine_predictions = torch.argmax(fine_output, dim=1)
+                # val_fine_correct += (val_fine_predictions == fine_labels).sum().item()
+                # val_fine_correct_one_off += accuracy_off1(val_fine_predictions, fine_labels, num_fine_classes) * inputs.size(0)
             elif head == 'regression' or head == 'single':
                 val_fine_predictions = fine_output.round()
                 val_fine_correct += (val_fine_predictions == fine_labels_mapped).sum().item()
@@ -647,8 +775,8 @@ for epoch in range(config.get('epochs')):
                 predictions = torch.argmax(probs, dim=1)
                 val_fine_correct += (val_fine_predictions == fine_labels_mapped).sum().item() #TODO
 
-            if batch_index == 0:
-                break
+            # if batch_index == 0:
+            #     break
             
             # if isinstance(criterion, nn.MSELoss):
             #     coarse_output = coarse_output.flatten()
@@ -749,3 +877,5 @@ if config.get('wandb_on'):
         # Fine asphalt train loss: {sett_fine_epoch_loss:.3f},
         # Fine asphalt train loss: {paving_stones_fine_epoch_loss:.3f},
         # Fine asphalt train loss: {unpaved_fine_epoch_loss:.3f},
+        
+    

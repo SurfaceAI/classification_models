@@ -11,7 +11,7 @@ default_params = {
     "eval_metric": const.EVAL_METRIC_ACCURACY,
     "max_class_size": None,
     "lr_scheduler": True,
-    "freeze_convs": True,
+    "freeze_convs": False,
 }
 
 default_search_params = {
@@ -322,9 +322,9 @@ H_NET = {
 H_NET_PRE = {
     **global_config.global_config,
     **default_params,
-    "batch_size": 16,
+    "batch_size": 64,
     "epochs": 10,
-    "learning_rate": 0.01,
+    "learning_rate": 0.001,
     "optimizer": const.OPTI_ADAM,
     "coarse_eval_metric": const.EVAL_METRIC_ACCURACY,
     "fine_eval_metric": const.EVAL_METRIC_ACCURACY,
