@@ -656,8 +656,8 @@ for epoch in range(config.get('epochs')):
                 probs = model.get_class_probabilies(fine_output)
                 predictions = torch.argmax(probs, dim=1)
                 
-            if batch_index == 0:
-                break
+            # if batch_index == 0:
+            #     break
                 
                
     # #learning rate step        
@@ -785,8 +785,8 @@ for epoch in range(config.get('epochs')):
                 predictions = torch.argmax(probs, dim=1)
                 val_fine_correct += (val_fine_predictions == fine_labels_mapped).sum().item() #TODO
 
-            if batch_index == 0:
-                break
+            # if batch_index == 0:
+            #     break
             
             # if isinstance(criterion, nn.MSELoss):
             #     coarse_output = coarse_output.flatten()
