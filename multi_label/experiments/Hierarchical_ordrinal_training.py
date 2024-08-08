@@ -82,8 +82,14 @@ def compute_fine_losses(fine_output, fine_labels_mapped, masks, head, epsilon=1e
     fine_labels_mapped_asphalt = fine_labels_mapped[asphalt_mask]
     fine_labels_mapped_concrete = fine_labels_mapped[concrete_mask]
     fine_labels_mapped_paving_stones = fine_labels_mapped[paving_stones_mask]
-    fine_labels_mapped_sett = fine_labels_mapped[sett_mask]
-    fine_labels_mapped_unpaved = fine_labels_mapped[unpaved_mask]
+    
+    three_mask_sett = (fine_labels_mapped_sett != 3)
+    fine_labels_mapped_sett = fine_labels_mapped[three_mask_sett]
+    fine_labels_mapped_sett = fine_labels_mapped_sett[three_mask_sett]
+    
+    three_mask_unpaved = (fine_labels_mapped_unpaved != 3)
+    fine_labels_mapped_unpaved = fine_labels_mapped[three_mask_unpaved]
+    fine_labels_mapped_unpaved = fine_labels_mapped_unpaved[three_mask_unpaved]
     
     # Compute the loss for each surface type
     if head == 'clm':
@@ -650,8 +656,8 @@ for epoch in range(config.get('epochs')):
                 probs = model.get_class_probabilies(fine_output)
                 predictions = torch.argmax(probs, dim=1)
                 
-            # if batch_index == 0:
-            #     break
+            if batch_index == 0:
+                break
                 
                
     # #learning rate step        
@@ -779,8 +785,8 @@ for epoch in range(config.get('epochs')):
                 predictions = torch.argmax(probs, dim=1)
                 val_fine_correct += (val_fine_predictions == fine_labels_mapped).sum().item() #TODO
 
-            # if batch_index == 0:
-            #     break
+            if batch_index == 0:
+                break
             
             # if isinstance(criterion, nn.MSELoss):
             #     coarse_output = coarse_output.flatten()
