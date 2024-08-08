@@ -295,7 +295,6 @@ for epoch in range(config.get('epochs')):
     
     coarse_correct = 0
     fine_correct = 0
-    coarse_correct_one_off = 0
     fine_correct_one_off = 0
     
     fine_correct_asphalt = 0
@@ -633,7 +632,6 @@ for epoch in range(config.get('epochs')):
             coarse_probs = model.get_class_probabilies(coarse_output)
             coarse_predictions = torch.argmax(coarse_probs, dim=1)
             coarse_correct += (coarse_predictions == coarse_labels).sum().item()
-            coarse_correct_one_off += accuracy_off1(coarse_predictions, coarse_labels, num_classes=num_classes) * inputs.size(0)
             
             if head == 'clm':
                 fine_correct_item, fine_correct_one_off_item = compute_fine_accuracy(coarse_probs, fine_output, fine_labels, masks)
@@ -672,7 +670,6 @@ for epoch in range(config.get('epochs')):
     epoch_coarse_accuracy = 100 * coarse_correct / len(trainloader.sampler)
     epoch_fine_accuracy = 100 * fine_correct / len(trainloader.sampler)
     
-    epoch_coarse_accuracy_one_off = 100 * coarse_correct_one_off / len(trainloader.sampler)
     epoch_fine_accuracy_one_off = 100 * fine_correct_one_off / len(trainloader.sampler)
     
     coarse_epoch_loss = coarse_loss_total / len(trainloader.sampler)
@@ -698,7 +695,6 @@ for epoch in range(config.get('epochs')):
     
     val_coarse_correct = 0
     val_fine_correct = 0
-    val_coarse_correct_one_off = 0
     val_fine_correct_one_off = 0
     
     with torch.no_grad():
@@ -734,7 +730,6 @@ for epoch in range(config.get('epochs')):
             val_coarse_output = model.get_class_probabilies(coarse_output)
             val_coarse_predictions = torch.argmax(val_coarse_output, dim=1)
             val_coarse_correct += (val_coarse_predictions == coarse_labels).sum().item()
-            val_coarse_correct_one_off += accuracy_off1(val_coarse_predictions, coarse_labels, num_classes) * inputs.size(0)
             
             val_masks = [
             (val_coarse_predictions == 0),  # asphalt_mask
@@ -802,7 +797,6 @@ for epoch in range(config.get('epochs')):
     val_epoch_coarse_accuracy = 100 * val_coarse_correct / len(validloader.sampler)
     val_epoch_fine_accuracy = 100 * val_fine_correct / len(validloader.sampler)
     
-    val_epoch_coarse_accuracy_one_off = 100 * val_coarse_correct_one_off / len(validloader.sampler)
     val_epoch_fine_accuracy_one_off = 100 * val_fine_correct_one_off / len(validloader.sampler)
     
     
@@ -829,14 +823,12 @@ for epoch in range(config.get('epochs')):
                 "train/fine/loss": fine_epoch_loss,
                 "train/accuracy/coarse": epoch_coarse_accuracy,
                 "train/accuracy/fine": epoch_fine_accuracy, 
-                "train/accuracy/coarse_1_off": epoch_coarse_accuracy_one_off,
                 "train/accuracy/fine_1_off": epoch_fine_accuracy_one_off,
                 "eval/loss": val_epoch_loss,
                 "eval/coarse/loss": val_coarse_epoch_loss,
                 "eval/fine/loss": val_fine_epoch_loss,
                 "eval/accuracy/coarse": val_epoch_coarse_accuracy,
                 "eval/accuracy/fine": val_epoch_fine_accuracy,
-                "eval/accuracy/coarse_1_off": val_epoch_coarse_accuracy_one_off,
                 "eval/accuracy/fine_1_off": val_epoch_fine_accuracy_one_off,
                 "trainable_params": trainable_params,
                 "learning_rate": scheduler.get_last_lr()[0],
@@ -855,13 +847,11 @@ for epoch in range(config.get('epochs')):
         
         Train coarse accuracy: {epoch_coarse_accuracy:.3f}%, 
         Train fine accuracy: {epoch_fine_accuracy:.3f}%,
-        Train coarse 1-off accuracy: {epoch_coarse_accuracy_one_off:.3f}%,
         Train fine 1-off accuracy: {epoch_fine_accuracy_one_off:.3f}%,
         
         Validation loss: {val_epoch_loss:.3f}, 
         Validation coarse accuracy: {val_epoch_coarse_accuracy:.3f}%, 
         Validation fine accuracy: {val_epoch_fine_accuracy:.3f}%, 
-        Validation coarse 1-off accuracy: {val_epoch_coarse_accuracy_one_off:.3f}%,
         Validation fine 1-off accuracy: {val_epoch_fine_accuracy_one_off:.3f}%
         
         Learning_rate: {scheduler.get_last_lr()[0]}
