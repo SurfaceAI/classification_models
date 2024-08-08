@@ -324,7 +324,7 @@ H_NET_PRE = {
     **default_params,
     "batch_size": 64,
     "epochs": 10,
-    "learning_rate": 0.001,
+    "learning_rate": 0.0001,
     "optimizer": const.OPTI_ADAM,
     "coarse_eval_metric": const.EVAL_METRIC_ACCURACY,
     "fine_eval_metric": const.EVAL_METRIC_ACCURACY,

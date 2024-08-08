@@ -92,6 +92,12 @@ def compute_fine_losses(fine_output, fine_labels_mapped, masks, head, epsilon=1e
         fine_loss_paving_stones = nn.NLLLoss()(torch.log(fine_output_paving_stones[paving_stones_mask] + epsilon), fine_labels_mapped_paving_stones)
         fine_loss_sett = nn.NLLLoss()(torch.log(fine_output_sett[sett_mask] + epsilon), fine_labels_mapped_sett)
         fine_loss_unpaved = nn.NLLLoss()(torch.log(fine_output_unpaved[unpaved_mask] + epsilon), fine_labels_mapped_unpaved)
+    elif head == 'corn':
+        fine_loss_asphalt = model.fine_criterion(fine_output_asphalt, fine_labels_mapped, 4)
+        fine_loss_concrete = model.fine_criterion(fine_output_concrete, fine_labels_mapped, 4)
+        fine_loss_paving_stones = model.fine_criterion(fine_output_paving_stones, fine_labels_mapped, 4)
+        fine_loss_sett = model.fine_criterion(fine_output_sett, fine_labels_mapped, 3)
+        fine_loss_unpaved = model.fine_criterion(fine_output_unpaved, fine_labels_mapped, 3)
     elif head == 'regression':
         fine_loss_asphalt = nn.MSELoss()(fine_output_asphalt[asphalt_mask].flatten(), fine_labels_mapped_asphalt.float())
         fine_loss_concrete = nn.MSELoss()(fine_output_concrete[concrete_mask].flatten(), fine_labels_mapped_concrete.float())
@@ -591,17 +597,20 @@ for epoch in range(config.get('epochs')):
          
         else:
             
-            if head == 'corn':
-                coarse_output, fine_output_asphalt, fine_output_concrete, fine_output_paving_stones, fine_output_sett, fine_output_unpaved= model.forward(model_inputs)
+            # if head == 'corn':
+            #     coarse_output, fine_output_asphalt, fine_output_concrete, fine_output_paving_stones, fine_output_sett, fine_output_unpaved= model.forward(model_inputs)
 
-            else:
-                coarse_output, fine_output = model.forward(model_inputs)
+            # else:
+            coarse_output, fine_output = model.forward(model_inputs)
             
             coarse_loss = coarse_criterion(coarse_output, coarse_labels)
             
             if head == 'clm':
                 fine_loss = compute_fine_losses(fine_output, fine_labels_mapped, masks, head, epsilon)
                 #fine_loss = fine_criterion(torch.log(fine_output + epsilon), fine_labels)
+                
+            elif head == 'corn':
+                fine_loss = compute_fine_losses(fine_output, fine_labels_mapped, masks, head, epsilon)
                             
             elif head == 'regression' or head == 'single':
                 fine_output = fine_output.flatten().float()

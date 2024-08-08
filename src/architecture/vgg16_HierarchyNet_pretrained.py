@@ -59,15 +59,17 @@ class HierarchyNet_Pre(nn.Module):
         # model.classifier[0] = nn.Linear(in_features=512*8*8, out_features=1024, bias=True)
 
         # # Save the modified classifier layers as member variables
-        # self.fc = nn.Sequential(*list(model.classifier.children())[0:3])
-        # self.fc_1 = nn.Sequential(*list(model.classifier.children())[3:6])
+        #self.fc = nn.Sequential(*list(model.classifier.children())[0:3])
+        #self.fc_1 = nn.Sequential(*list(model.classifier.children())[3:6])
         
         self.coarse_classifier = nn.Sequential(
             nn.Linear(32768, 1024),
             nn.ReLU(),
+            nn.BatchNorm1d(1024),
             nn.Dropout(0.5),
             nn.Linear(1024, 1024),
             nn.ReLU(),
+            nn.BatchNorm1d(1024),
             nn.Dropout(0.5),
             nn.Linear(1024, num_c)
         )
