@@ -126,8 +126,49 @@ beta = torch.tensor(0)
 
 # Initialize the model, loss function, and optimizer
 model = GH_CNN(num_c=num_c, num_classes=num_classes)
-criterion = nn.CrossEntropyLoss(reduction='none')
-optimizer = optim.SGD(model.parameters(), lr=config.get('learning_rate'), momentum=0.9)
+
+
+if freeze_convs:
+    for param in model.features.parameters():
+        param.requires_grad = False
+        
+else:
+    for param in model.features.parameters():
+        param.requires_grad = True
+    
+# for param in model.classifier.parameters():
+#     param.requires_grad = True
+
+optimizer_layers = None
+if hasattr(model, "get_optimizer_layers") and callable(model.get_optimizer_layers):
+    optimizer_layers = model.get_optimizer_layers()
+
+# setup optimizer
+if optimizer_layers is None:
+    #optimizer_params = model.parameters()
+    optimizer_params = model.parameters()
+else:
+    optimizer_params = []
+    for layer in optimizer_layers:
+        optimizer_params += [p for p in layer.parameters()]
+
+#print(f"{len(optimizer_params)} optimizer params")
+
+for name, param in model.named_parameters():
+    print(f"{name} requires_grad: {param.requires_grad}")
+    
+# Count parameters and print
+total_params, trainable_params, non_trainable_params = helper.count_parameters(model)
+print(f"Total params: {total_params}")
+print(f"Trainable params: {trainable_params}")
+print(f"Non-trainable params: {non_trainable_params}")
+
+
+
+coarse_criterion = model.coarse_criterion(reduction="sum")
+fine_criterion = model.fine_criterion(reduction="sum")
+
+optimizer = optim.SGD(optimizer_params, lr=config.get('learning_rate'), momentum=0.9)
 
 trainable_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
 

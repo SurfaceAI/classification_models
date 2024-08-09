@@ -44,11 +44,12 @@ class GH_CNN_PRE(nn.Module):
             
               
         ### Block 1
-        self.block1 = model.features[:5]
-        self.block2 = model.features[5:10]
-        self.block3 = model.features[10:17]
-        self.block4 = model.features[17:24]
-        self.block5 = model.features[24:]
+        self.features = model.features
+        # self.block1 = model.features[:5]
+        # self.block2 = model.features[5:10]
+        # self.block3 = model.features[10:17]
+        # self.block4 = model.features[17:24]
+        # self.block5 = model.features[24:]
         
         num_features = model.classifier[6].in_features
         # Modify the first fully connected layer to accept the correct input size
@@ -81,11 +82,7 @@ class GH_CNN_PRE(nn.Module):
     
     def forward(self, inputs):
 
-        x = self.block1(inputs)   #128, 64, 128, 128    
-        x = self.block2(x)
-        x = self.block3(x)
-        x = self.block4(x)
-        x = self.block5(x) #128, 512, 8, 8]
+        x = self.features(inputs) #128, 512, 8, 8]
         
         flat = x.reshape(x.size(0), -1)#torch.Size([16, 32.768])
         
@@ -147,3 +144,6 @@ class GH_CNN_PRE(nn.Module):
         fine_output = torch.cat([y_2_1, y_2_2, y_2_3, y_2_4, y_2_5], dim=1)
         
         return coarse_output, fine_output 
+    
+    def get_optimizer_layers(self):
+        return self.features, self.coarse_classifier, self.fc_1, self.fc_2_coarse, self.fc_2_fine
