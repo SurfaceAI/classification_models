@@ -7,7 +7,7 @@ default_params = {
     "learning_rate": 0.01,
     "optimizer": const.OPTI_ADAM,
     "is_regression": False,
-    "is_hierarchical": True,
+    "is_hierarchical": False,
     "eval_metric": const.EVAL_METRIC_ACCURACY,
     "max_class_size": None,
     "lr_scheduler": True,
@@ -70,24 +70,88 @@ rateke_flatten_params = {
     "model": const.RATEKE,
 }
 
-efficientnet_params = {
+vgg16_surface_params = {
+    **global_config.global_config,
+    **default_params,
+    "project": const.PROJECT_SURFACE_FIXED,
+    "name": "vgg16",
+    "level": const.SURFACE,
+    "model": const.VGG16,
+    "is_regression": False,
+    "eval_metric": const.EVAL_METRIC_ACCURACY,
+    "learning_rate": 0.00056,
+    #"dataset": "V1_0/train",
+    #"metadata": "V1_0/metadata",
+    #"train_valid_split_list": "train_valid_split.csv",
+    # "gpu_kernel": 0,
+}
+
+vgg16_quality_params = {
+    **global_config.global_config,
+    **default_params,
+    "project": const.PROJECT_SMOOTHNESS_FIXED,
+    "name": "vgg16",
+    "level": const.SMOOTHNESS,
+    "model": const.VGG16,
+    "learning_rate": 0.0006,
+    #"dataset": "V1_0/train",
+    #"metadata": "V1_0/metadata",
+    #"train_valid_split_list": "train_valid_split.csv",
+    "is_regression": True,
+    "eval_metric": const.EVAL_METRIC_MSE,
+    # "gpu_kernel": 0,
+}
+
+efficientnet_surface_params = {
     **global_config.global_config,
     **default_params,
     "project": const.PROJECT_SURFACE_FIXED,
     "name": "efficientnet",
     "level": const.SURFACE,
-    "model": const.EFFICIENTNET,
-    # "max_class_size": 2,
+    "model": const.EFFNET_LINEAR,
+    "is_regression": False,
+    "eval_metric": const.EVAL_METRIC_ACCURACY,
+    "learning_rate": 0.00056,
+    "dataset": "V1_0/train",
+    "metadata": "V1_0/metadata",
+    "train_valid_split_list": "train_valid_split.csv",
+    # "gpu_kernel": 0,
 }
 
-efficientnet_flatten_params = {
+efficientnet_quality_params = {
     **global_config.global_config,
     **default_params,
-    "project": const.PROJECT_FLATTEN_FIXED,
+    "project": const.PROJECT_SMOOTHNESS_FIXED,
     "name": "efficientnet",
-    "level": const.FLATTEN,
-    "model": const.EFFICIENTNET,
+    "level": const.SMOOTHNESS,
+    "model": const.EFFNET_LINEAR,
+    "learning_rate": 0.0006,
+    "dataset": "V1_0/train",
+    "metadata": "V1_0/metadata",
+    "train_valid_split_list": "train_valid_split.csv",
+    "is_regression": True,
+    "eval_metric": const.EVAL_METRIC_MSE,
+    # "gpu_kernel": 0,
 }
+
+# efficientnet_params = {
+#     **global_config.global_config,
+#     **default_params,
+#     "project": const.PROJECT_SURFACE_FIXED,
+#     "name": "efficientnet",
+#     "level": const.SURFACE,
+#     "model": const.EFFICIENTNET,
+#     # "max_class_size": 2,
+# }
+
+# efficientnet_flatten_params = {
+#     **global_config.global_config,
+#     **default_params,
+#     "project": const.PROJECT_FLATTEN_FIXED,
+#     "name": "efficientnet",
+#     "level": const.FLATTEN,
+#     "model": const.EFFICIENTNET,
+# }
 
 sweep_params = {
     **global_config.global_config,
