@@ -80,6 +80,20 @@ class HierarchyNet_Pre(nn.Module):
             self.classifier_paving_stones = self._create_quality_fc_clm(num_classes=4)
             self.classifier_sett = self._create_quality_fc_clm(num_classes=3)
             self.classifier_unpaved = self._create_quality_fc_clm(num_classes=3)
+         
+        elif head == 'regression':      
+            self.classifier_asphalt = self._create_quality_fc_regression()
+            self.classifier_concrete = self._create_quality_fc_regression()
+            self.classifier_paving_stones = self._create_quality_fc_regression()
+            self.classifier_sett = self._create_quality_fc_regression()
+            self.classifier_unpaved = self._create_quality_fc_regression()
+            
+        elif head == 'corn':
+            self.classifier_asphalt = self._create_quality_fc_corn(num_classes=4)
+            self.classifier_concrete = self._create_quality_fc_corn(num_classes=4)
+            self.classifier_paving_stones = self._create_quality_fc_corn(num_classes=4)
+            self.classifier_sett = self._create_quality_fc_corn(num_classes=3)
+            self.classifier_unpaved = self._create_quality_fc_corn(num_classes=3)
             
         elif head == 'classification':
             self.fine_classifier = nn.Sequential(
@@ -91,7 +105,6 @@ class HierarchyNet_Pre(nn.Module):
                 nn.Dropout(0.5),
                 nn.Linear(1024, num_classes) 
             )
-            
             
         self.coarse_criterion = nn.CrossEntropyLoss
         
@@ -115,16 +128,15 @@ class HierarchyNet_Pre(nn.Module):
             nn.Linear(1024, 1),
             nn.BatchNorm1d(1),
             CLM(classes=num_classes, link_function="logit", min_distance=0.0, use_slope=False, fixed_thresholds=False)
-        )
-            
+        )    
         return layers
     
     def _create_quality_fc_regression(self):
         layers = nn.Sequential(
-            nn.Linear(512 * 8 * 8, 1024),
+            nn.Linear(512 * 8 * 8, 512),
             nn.ReLU(),
             nn.Dropout(0.5),
-            nn.Linear(1024, 1024),
+            nn.Linear(512, 256),
             nn.ReLU(),
             nn.Dropout(0.5),
             nn.Linear(256, 1),
@@ -133,15 +145,16 @@ class HierarchyNet_Pre(nn.Module):
     
     def _create_quality_fc_corn(self, num_classes=4):
         layers = nn.Sequential(
-            nn.Linear(512 * 8 * 8, 1024),
+            nn.Linear(512 * 8 * 8, 512),
             nn.ReLU(),
             nn.Dropout(0.5),
-            nn.Linear(1024, 1024),
+            nn.Linear(512, 512),
             nn.ReLU(),
             nn.Dropout(0.5),
             nn.Linear(512, num_classes - 1),
         )
         return layers
+    
     
         # self.coarse_criterion = nn.CrossEntropyLoss()
         
@@ -208,7 +221,14 @@ class HierarchyNet_Pre(nn.Module):
             fine_3 = self.custom_layer(coarse_3, fine_3)
             fine_4 = self.custom_layer(coarse_4, fine_4)
             fine_5 = self.custom_layer(coarse_5, fine_5)
-                    
+           
+        if self.head == 'regression' or self.head == 'corn':
+            fine_1 = self.classifier_asphalt(flat) #([batch_size, 1024])
+            fine_2 = self.classifier_concrete(flat)
+            fine_3 = self.classifier_paving_stones(flat)           
+            fine_4 = self.classifier_sett(flat)
+            fine_5 = self.classifier_unpaved(flat)
+                   
         else:
             raw_fine_asphalt = self.classifier_asphalt(flat) #([batch_size, 1024])
             raw_fine_concrete = self.classifier_concrete(flat)
