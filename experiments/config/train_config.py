@@ -3,7 +3,7 @@ from experiments.config  import global_config
 
 default_params = {
     "batch_size": 64, #16,  # 48
-    "epochs": 10,
+    "epochs": 2,
     "learning_rate": 0.01,
     "optimizer": const.OPTI_ADAM,
     "is_regression": False,
@@ -73,8 +73,8 @@ rateke_flatten_params = {
 vgg16_surface_params = {
     **global_config.global_config,
     **default_params,
-    "project": const.PROJECT_SURFACE_FIXED,
-    "name": "vgg16",
+    "project": const.PROJECT_MULTI_LABEL_FIXED,
+    "name": "vgg16_coarse",
     "level": const.SURFACE,
     "model": const.VGG16,
     "is_regression": False,
@@ -89,8 +89,8 @@ vgg16_surface_params = {
 vgg16_quality_params = {
     **global_config.global_config,
     **default_params,
-    "project": const.PROJECT_SMOOTHNESS_FIXED,
-    "name": "vgg16",
+    "project": const.PROJECT_MULTI_LABEL_FIXED,
+    "name": "vgg16_fine",
     "level": const.SMOOTHNESS,
     "model": const.VGG16,
     "learning_rate": 0.0006,
@@ -105,7 +105,7 @@ vgg16_quality_params = {
 efficientnet_surface_params = {
     **global_config.global_config,
     **default_params,
-    "project": const.PROJECT_SURFACE_FIXED,
+    "project": const.PROJECT_MULTI_LABEL_FIXED,
     "name": "efficientnet",
     "level": const.SURFACE,
     "model": const.EFFNET_LINEAR,
@@ -121,7 +121,7 @@ efficientnet_surface_params = {
 efficientnet_quality_params = {
     **global_config.global_config,
     **default_params,
-    "project": const.PROJECT_SMOOTHNESS_FIXED,
+    "project": const.PROJECT_MULTI_LABEL_FIXED,
     "name": "efficientnet",
     "level": const.SMOOTHNESS,
     "model": const.EFFNET_LINEAR,

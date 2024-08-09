@@ -16,7 +16,7 @@ import random
 import wandb
 from src import constants as const
 from src.utils import checkpointing, helper, preprocessing
-from multi_label import QWK
+from multi_label import QWK, helper_hierarchical
 import argparse
 import matplotlib.pyplot as plt
 
@@ -127,25 +127,48 @@ def _run_training(project=None, name=None, config=None, wandb_on=True):
         freeze_convs=config.get("freeze_convs"),
     )
 
-    trained_model = train(
-        model=model,
-        model_saving_path=config.get("root_model"),
-        model_saving_name=saving_name,
-        trainloader=trainloader,
-        validloader=validloader,
-        optimizer=optimizer,
-        eval_metric=config.get("eval_metric"),
-        clm = config.get("clm"), 
-        is_hierarchical = config.get("is_hierarchical"),
-        device=device,
-        epochs=config.get("epochs"),
-        wandb_on=wandb_on,
-        checkpoint_top_n=config.get("checkpoint_top_n", const.CHECKPOINT_DEFAULT_TOP_N),
-        early_stop_thresh=config.get("early_stop_thresh", const.EARLY_STOPPING_DEFAULT),
-        save_state=config.get("save_state", True),
-        config=config,
-        lr_scheduler=config.get("lr_scheduler"),
-    )
+
+    if config.get("is_hierarchical"):
+        trained_model = train_hierarchical(
+            model=model,
+            model_saving_path=config.get("root_model"),
+            model_saving_name=saving_name,
+            trainloader=trainloader,
+            validloader=validloader,
+            optimizer=optimizer,
+            head=config.get("head"),
+            hierarchy_method=config.get("hierarchy_method"),
+            device=device,
+            epochs=config.get("epochs"),
+            wandb_on=wandb_on,
+            checkpoint_top_n=config.get("checkpoint_top_n", const.CHECKPOINT_DEFAULT_TOP_N),
+            early_stop_thresh=config.get("early_stop_thresh", const.EARLY_STOPPING_DEFAULT),
+            save_state=config.get("save_state", True),
+            lr_scheduler=config.get("lr_scheduler"),
+            config=config,
+        )
+        
+    else:
+        trained_model = train(
+            model=model,
+            model_saving_path=config.get("root_model"),
+            model_saving_name=saving_name,
+            trainloader=trainloader,
+            validloader=validloader,
+            optimizer=optimizer,
+            eval_metric=config.get("eval_metric"),
+            clm = config.get("clm"), 
+            is_hierarchical = config.get("is_hierarchical"),
+            device=device,
+            epochs=config.get("epochs"),
+            wandb_on=wandb_on,
+            checkpoint_top_n=config.get("checkpoint_top_n", const.CHECKPOINT_DEFAULT_TOP_N),
+            early_stop_thresh=config.get("early_stop_thresh", const.EARLY_STOPPING_DEFAULT),
+            save_state=config.get("save_state", True),
+            config=config,
+            lr_scheduler=config.get("lr_scheduler"),
+        )
+    
 
     # TODO: save best instead of last model (if checkpoint used)
     # TODO: save dict incl. config .. + model param (compare checkpoints)
@@ -471,6 +494,178 @@ def train(
 
     return model
 
+def train_hierarchical(
+    model,
+    model_saving_path,
+    model_saving_name,
+    trainloader,
+    validloader,
+    optimizer,
+    head,
+    hierarchy_method,
+    device,
+    epochs,
+    wandb_on,
+    checkpoint_top_n=const.CHECKPOINT_DEFAULT_TOP_N,
+    early_stop_thresh=const.EARLY_STOPPING_DEFAULT,
+    save_state=True,
+    lr_scheduler=None,
+    config=None,
+):
+    model.to(device)
+
+    # TODO: decresing depending on metric
+    checkpointer = checkpointing.CheckpointSaver(
+        dirpath=model_saving_path,
+        saving_name=model_saving_name,
+        decreasing=True,
+        config=config,
+        dataset=validloader.dataset,
+        top_n=checkpoint_top_n,
+        early_stop_thresh=early_stop_thresh,
+        save_state=save_state,
+    )
+    
+    # if wandb_on:
+    #     wandb.watch(model, log_freq=27)
+    if lr_scheduler:
+        scheduler = StepLR(optimizer, step_size=6, gamma=0.1) 
+    
+    if lw_modifier:
+            alpha = torch.tensor(0.98)
+            beta = torch.tensor(0.02)
+            loss_weights_modifier = helper.LossWeightsModifier(alpha, beta)
+        
+    trainable_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
+
+    for epoch in range(epochs):
+        (epoch_loss, 
+         epoch_coarse_accuracy, 
+         epoch_fine_accuracy, 
+         epoch_fine_accuracy_one_off, 
+         coarse_epoch_loss, 
+         fine_epoch_loss) = train_epoch_hierarchical(
+            model, 
+            dataloader, 
+            optimizer, 
+            device, 
+            head, 
+            hierarchy_method,
+            wandb_on
+        )
+
+        (val_epoch_loss, 
+         val_epoch_coarse_accuracy, 
+         val_epoch_fine_accuracy, 
+         val_epoch_fine_accuracy_one_off, 
+         val_coarse_epoch_loss, 
+         val_fine_epoch_loss) = validate_epoch_hierarchical(
+            model, 
+            dataloader, 
+            device, 
+            head, 
+            hierarchy_method,
+            #wandb_on
+        )
+        
+        if lr_scheduler:
+            scheduler.step()
+        
+        #helper.save_gradient_plots(epoch, gradients, first_moments, second_moments)
+
+        # checkpoint saving with early stopping
+        early_stop = checkpointer(
+            model=model, epoch=epoch, metric_val=val_loss, optimizer=optimizer
+        )
+
+        if wandb_on:
+            if lr_scheduler:
+                wandb.log(
+                    {
+                        "epoch": epoch + 1,
+                        "train/loss": train_loss,
+                        "train/coarse/loss": coarse_epoch_loss,
+                        "train/fine/loss": fine_epoch_loss,
+                        "train/accuracy/coarse": epoch_coarse_accuracy,
+                        "train/accuracy/fine": epoch_fine_accuracy, 
+                        "train/accuracy/fine_1_off": epoch_fine_accuracy_one_off,
+                        "train/mse/fine":,
+                        "train/mae/fine":,
+                        "eval/loss": val_loss,
+                        "eval/coarse/loss": val_coarse_epoch_loss,
+                        "eval/fine/loss": val_fine_epoch_loss,
+                        "eval/accuracy/coarse": val_epoch_coarse_accuracy,
+                        "eval/accuracy/fine": val_epoch_fine_accuracy,
+                        "eval/accuracy/fine_1_off": val_epoch_fine_accuracy_one_off,
+                        "trainable_params": trainable_params,
+                        "learning_rate": scheduler.get_last_lr()[0],
+                    }
+                )
+                
+                print(f"""
+                    Epoch: {epoch+1}:,
+                    Train loss: {epoch_loss:.3f},
+                    Coarse train loss: {coarse_epoch_loss:.3f},
+                    Fine train loss: {fine_epoch_loss:.3f}, 
+                    Train coarse accuracy: {epoch_coarse_accuracy:.3f}%, 
+                    Train fine accuracy: {epoch_fine_accuracy:.3f}%,
+                    Train fine 1-off accuracy: {epoch_fine_accuracy_one_off:.3f}%,
+                    Validation loss: {val_epoch_loss:.3f}, 
+                    Validation coarse accuracy: {val_epoch_coarse_accuracy:.3f}%, 
+                    Validation fine accuracy: {val_epoch_fine_accuracy:.3f}%, 
+                    Validation fine 1-off accuracy: {val_epoch_fine_accuracy_one_off:.3f}%
+                    Learning_rate: {scheduler.get_last_lr()[0]}
+                            
+                    """)
+            else:
+                wandb.log(
+                    {
+                        "epoch": epoch + 1,
+                        "train/loss": train_loss,
+                        "train/coarse/loss": coarse_epoch_loss,
+                        "train/fine/loss": fine_epoch_loss,
+                        "train/accuracy/coarse": epoch_coarse_accuracy,
+                        "train/accuracy/fine": epoch_fine_accuracy, 
+                        "train/accuracy/fine_1_off": epoch_fine_accuracy_one_off,
+                        "train/mse/fine":,
+                        "train/mae/fine":,
+                        "eval/loss": val_loss,
+                        "eval/coarse/loss": val_coarse_epoch_loss,
+                        "eval/fine/loss": val_fine_epoch_loss,
+                        "eval/accuracy/coarse": val_epoch_coarse_accuracy,
+                        "eval/accuracy/fine": val_epoch_fine_accuracy,
+                        "eval/accuracy/fine_1_off": val_epoch_fine_accuracy_one_off,
+                        "trainable_params": trainable_params,
+                    }
+                )
+                
+
+                  print(f"""
+                    Epoch: {epoch+1}:,
+                    Train loss: {epoch_loss:.3f},
+                    Coarse train loss: {coarse_epoch_loss:.3f},
+                    Fine train loss: {fine_epoch_loss:.3f}, 
+                    Train coarse accuracy: {epoch_coarse_accuracy:.3f}%, 
+                    Train fine accuracy: {epoch_fine_accuracy:.3f}%,
+                    Train fine 1-off accuracy: {epoch_fine_accuracy_one_off:.3f}%,
+                    Validation loss: {val_epoch_loss:.3f}, 
+                    Validation coarse accuracy: {val_epoch_coarse_accuracy:.3f}%, 
+                    Validation fine accuracy: {val_epoch_fine_accuracy:.3f}%, 
+                    Validation fine 1-off accuracy: {val_epoch_fine_accuracy_one_off:.3f}%,
+                            
+                    """)
+
+        if lw_modifier:
+            alpha, beta = helper.loss_weights_modifier.on_epoch_end(epoch)
+        
+        if early_stop:
+            print(f"Early stopped training at epoch {epoch}")
+            break
+
+    print("Done.")
+
+    return model
+
 
 # train a single epoch
 def train_epoch(model, dataloader, optimizer, device, eval_metric, clm, is_hierarchical, wandb_on):
@@ -508,43 +703,9 @@ def train_epoch(model, dataloader, optimizer, device, eval_metric, clm, is_hiera
         loss = criterion(outputs, labels)
             
         loss.backward()
-        
-        # Print gradients
-        # for name, param in model.named_parameters():
-        #     if param.grad is not None:
-        #         print(f"{name} gradient: {param.grad.norm()}")
-        #         print(f"{name} gradient values: {param.grad}")
 
         optimizer.step()
-        
-        #log gradients in w&b
-        # if wandb_on:
-        #     wandb.log(
-        #         {
-        #             "batch": batch_idx + 1,
-        #             "batch/loss": loss.item(),
-        #         }
-        #     )
-            
-        # # Collect gradients
-        # for name, param in model.named_parameters():
-        #     if param.requires_grad and param.grad is not None:
-        #         gradients.append(param.grad.norm().item())
-        #         if param in optimizer.state:
-        #             param_state = optimizer.state[param]
-        #             if 'exp_avg' in param_state and 'exp_avg_sq' in param_state:
-        #                 first_moment = param_state['exp_avg'].norm().item()
-        #                 second_moment = param_state['exp_avg_sq'].norm().item()
-        #                 first_moments.append(first_moment)
-        #                 second_moments.append(second_moment)
-                
-        #         # Debugging: Print gradients and optimizer state
-        #         print(f"{name} gradient: {param.grad.norm().item()}")
-        #         if param in optimizer.state:
-        #             print(f"{name} optimizer state: {optimizer.state[param]}")
-        
-        #print(f"Thresholds after optimizer step: b: {model.classifier[-1].thresholds_b.data}, a: {model.classifier[-1].thresholds_a.data}")
-
+  
         running_loss += loss.item()
 
         # TODO: metric as function, metric_name as input argument
@@ -568,32 +729,6 @@ def train_epoch(model, dataloader, optimizer, device, eval_metric, clm, is_hiera
         else:
             raise ValueError(f"Unknown eval_metric: {eval_metric}")
         #break
-    
-    # plt.figure(figsize=(12, 6))
-
-    # plt.subplot(1, 3, 1)
-    # plt.plot(gradients, label="Gradients")
-    # plt.title("Gradients of Last CLM Layer")
-    # plt.xlabel("Batch")
-    # plt.ylabel("Gradient Norm")
-    # plt.legend()
-
-    # plt.subplot(1, 3, 2)
-    # plt.plot(first_moments, label="First Moment (m_t)")
-    # plt.title("First Moment (m_t) of Last CLM Layer")
-    # plt.xlabel("Batch")
-    # plt.ylabel("First Moment Norm")
-    # plt.legend()
-
-    # plt.subplot(1, 3, 3)
-    # plt.plot(second_moments, label="Second Moment (v_t)")
-    # plt.title("Second Moment (v_t) of Last CLM Layer")
-    # plt.xlabel("Batch")
-    # plt.ylabel("Second Moment Norm")
-    # plt.legend()
-
-    # plt.tight_layout()
-    # plt.show()
 
     return running_loss / len(dataloader.sampler), eval_metric_value / len(
         dataloader.sampler), 
@@ -656,6 +791,155 @@ def validate_epoch(model, dataloader, device, eval_metric, clm, is_hierarchical)
         dataloader.sampler
     )
 
+def train_epoch_hierarchical(model, dataloader, optimizer, device, head, wandb_on):
+    model.train()
+    
+
+    coarse_criterion = model.coarse_criterion(reduction="sum")
+    if head == 'corn':
+        pass
+    else:
+        fine_criterion = model.fine_criterion(reduction="sum")
+    
+        
+    running_loss = 0.0
+    coarse_loss_total = 0.0
+    fine_loss_total = 0.0
+    
+    coarse_correct = 0
+    fine_correct = 0
+    fine_correct_one_off = 0
+
+    for batch_idx, (inputs, labels) in enumerate(dataloader):
+        # helper.multi_imshow(inputs, labels)
+
+        inputs, labels = inputs.to(device), labels.to(device)
+
+        optimizer.zero_grad()
+        
+        coarse_labels = parent[fine_labels]
+        coarse_one_hot = helper.to_one_hot_tensor(coarse_labels, num_classes).to(device)
+        fine_labels_mapped = torch.tensor([helper.map_quality_to_continuous(label) for label in fine_labels], dtype=torch.long).to(device)
+        
+        masks = [
+        (coarse_labels == 0),  # asphalt_mask
+        (coarse_labels == 1),  # concrete_mask
+        (coarse_labels == 2),  # paving_stones_mask
+        (coarse_labels == 3),  # sett_mask
+        (coarse_labels == 4)   # unpaved_mask
+        ]
+        
+        model_inputs = (inputs, coarse_one_hot, config.get('hierarchy_method'))
+
+        coarse_output, fine_output = model.forward(model_inputs)
+            
+        coarse_loss = coarse_criterion(coarse_output, coarse_labels)
+      
+        fine_loss = helper_hierarchical.compute_fine_losses(fine_output, fine_labels_mapped, masks, head)                
+           
+        if lw_modifier:
+            loss = alpha * coarse_loss + beta * fine_loss
+        else:
+            loss = coarse_loss + fine_loss  #weighted loss functions for different levels
+        
+        loss.backward()
+        optimizer.step()
+        
+        running_loss += loss.item()
+        coarse_loss_total += coarse_loss.item()
+        fine_loss_total += fine_loss.item()
+    
+        coarse_probs = model.get_class_probabilies(coarse_output)
+        coarse_predictions = torch.argmax(coarse_probs, dim=1)
+        coarse_correct += (coarse_predictions == coarse_labels).sum().item()
+
+        # TODO: metric as function, metric_name as input argument
+
+        if head == 'classification':
+            fine_output = model.get_class_probabilies(fine_output)
+        fine_correct_item, fine_correct_one_off_item = helper_hierarchical.compute_fine_metrics(coarse_probs, fine_output, fine_labels, masks, head)
+        fine_correct += fine_correct_item
+        fine_correct_one_off += fine_correct_one_off_item
+        
+        epoch_loss = running_loss /  len(trainloader.sampler)
+        epoch_coarse_accuracy = 100 * coarse_correct / len(trainloader.sampler)
+        epoch_fine_accuracy = 100 * fine_correct / len(trainloader.sampler)
+        epoch_fine_accuracy_one_off = 100 * fine_correct_one_off / len(trainloader.sampler)
+        
+        coarse_epoch_loss = coarse_loss_total / len(trainloader.sampler)
+        fine_epoch_loss = fine_loss_total / len(trainloader.sampler)
+        #break
+
+    return epoch_loss, epoch_coarse_accuracy, epoch_fine_accuracy, epoch_fine_accuracy_one_off, coarse_epoch_loss, fine_epoch_loss
+
+def validate_epoch_hierarchical(model, dataloader, optimizer, device, head, wandb_on):
+    model.eval()
+    
+    coarse_criterion = model.coarse_criterion(reduction="sum")
+    if head == 'corn':
+        pass
+    else:
+        fine_criterion = model.fine_criterion(reduction="sum")
+    
+    val_running_loss = 0.0
+    val_coarse_loss_total = 0.0
+    val_fine_loss_total = 0.0
+    
+    val_coarse_correct = 0
+    val_fine_correct = 0
+    val_fine_correct_one_off = 0
+
+    for batch_idx, (inputs, labels) in enumerate(dataloader):
+        # helper.multi_imshow(inputs, labels)
+
+        inputs, labels = inputs.to(device), labels.to(device)
+        
+        coarse_labels = parent[fine_labels]
+        coarse_one_hot = helper.to_one_hot_tensor(coarse_labels, num_classes).to(device)
+        fine_labels_mapped = torch.tensor([helper.map_quality_to_continuous(label) for label in fine_labels], dtype=torch.long).to(device)
+        
+        model_inputs = (inputs, coarse_one_hot, config.get('hierarchy_method'))
+        coarse_output, fine_output = model.forward(model_inputs)
+        
+        coarse_loss = coarse_criterion(coarse_output, coarse_labels)
+        val_coarse_output = model.get_class_probabilies(coarse_output)
+        val_coarse_predictions = torch.argmax(val_coarse_output, dim=1)
+        val_coarse_correct += (val_coarse_predictions == coarse_labels).sum().item()
+        
+        val_masks = [
+            (val_coarse_predictions == 0),  # asphalt_mask
+            (val_coarse_predictions == 1),  # concrete_mask
+            (val_coarse_predictions == 2),  # paving_stones_mask
+            (val_coarse_predictions == 3),  # sett_mask
+            (val_coarse_predictions == 4)   # unpaved_mask
+            ]
+              
+        fine_loss = compute_fine_losses(fine_output, fine_labels_mapped, val_masks, head)        
+           
+        if lw_modifier:
+            loss = alpha * coarse_loss + beta * fine_loss
+        else:
+            loss = coarse_loss + fine_loss  #weighted loss functions for different levels
+        
+        val_running_loss += loss.item()
+        val_coarse_loss_total += coarse_loss.item()
+        val_fine_loss_total += fine_loss.item()
+
+        if head == 'classification':
+            fine_output = model.get_class_probabilies(fine_output)
+        val_fine_correct_item, val_fine_correct_one_off_item = compute_fine_accuracy(coarse_probs, fine_output, fine_labels, val_masks, head)
+        val_fine_correct += val_fine_correct_item
+        val_fine_correct_one_off += val_fine_correct_one_off_item
+
+        val_epoch_loss = val_running_loss /  len(validloader.sampler)
+        val_epoch_coarse_accuracy = 100 * val_coarse_correct / len(validloader.sampler)
+        val_epoch_fine_accuracy = 100 * val_fine_correct / len(validloader.sampler)
+        val_epoch_fine_accuracy_one_off = 100 * val_fine_correct_one_off / len(validloader.sampler)
+        
+        val_coarse_epoch_loss = val_coarse_loss_total / len(validloader.sampler)
+        val_fine_epoch_loss = val_fine_loss_total / len(validloader.sampler)
+
+    return val_epoch_loss, val_epoch_coarse_accuracy, val_epoch_fine_accuracy, val_epoch_fine_accuracy_one_off, val_coarse_epoch_loss, val_fine_epoch_loss
 
 # save model locally
 def save_model(model, saving_path, saving_name):
