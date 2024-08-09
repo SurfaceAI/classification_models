@@ -58,7 +58,7 @@ def map_predictions_to_quality(predictions, surface_type):
     quality_mapping = {
         "asphalt": [0, 1, 2, 3, 4, 5, 6, 7],  # Modify as needed
         "concrete": [4, 5, 6, 7, 8, 9],
-        "paving_stones": [8, 9, 10, 11, 12, 13],
+        "paving_stones": [8, 9, 10, 11, 12, 13, 14, 15],
         "sett": [12, 13, 14, 15, 16],
         "unpaved": [15, 16, 17, 18,]
     }
@@ -696,7 +696,7 @@ for epoch in range(config.get('epochs')):
             coarse_correct += (coarse_predictions == coarse_labels).sum().item()
             
             if head == 'clm':
-                fine_correct_item, fine_correct_one_off_item = compute_fine_accuracy(coarse_probs, fine_output, fine_labels, masks. head)
+                fine_correct_item, fine_correct_one_off_item = compute_fine_accuracy(coarse_probs, fine_output, fine_labels, masks, head)
                 fine_correct += fine_correct_item
                 fine_correct_one_off += fine_correct_one_off_item
                 #fine_correct += (fine_accuracy * fine_labels.size(0))
