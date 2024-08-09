@@ -105,7 +105,7 @@ def _run_training(project=None, name=None, config=None, wandb_on=True):
     )
     print(device)
 
-    trainloader, validloader, model, optimizer = prepare_train(
+    train_data, valid_data, trainloader, validloader, model, optimizer = prepare_train(
         model_cls=model_cls,
         optimizer_cls=optimizer_cls,
         transform=config.get("transform"),
@@ -386,7 +386,7 @@ def train(
         scheduler = StepLR(optimizer, step_size=6, gamma=0.1) 
 
     for epoch in range(epochs):
-        train_loss, train_metric_value, gradients, first_moments, second_moments = train_epoch(
+        train_loss, train_metric_value = train_epoch(
             model,
             trainloader,
             optimizer,
@@ -409,7 +409,7 @@ def train(
         if lr_scheduler:
             scheduler.step()
         
-        helper.save_gradient_plots(epoch, gradients, first_moments, second_moments)
+        #helper.save_gradient_plots(epoch, gradients, first_moments, second_moments)
 
         # checkpoint saving with early stopping
         early_stop = checkpointer(
@@ -425,10 +425,10 @@ def train(
                         f"train/{eval_metric}": train_metric_value,
                         "eval/loss": val_loss,
                         f"eval/{eval_metric}": val_metric_value,
-                        "learning_rate": scheduler.get_last_lr()[0],
-                        "threshold_b": model.classifier[-1].thresholds_b.data,
-                        "threshold_a_1": model.classifier[-1].thresholds_a.data[0].item(),
-                        "threshold_a_2": model.classifier[-1].thresholds_a.data[1].item(),
+                        #"learning_rate": scheduler.get_last_lr()[0],
+                        #"threshold_b": model.classifier[-1].thresholds_b.data,
+                        #"threshold_a_1": model.classifier[-1].thresholds_a.data[0].item(),
+                        #"threshold_a_2": model.classifier[-1].thresholds_a.data[1].item(),
                     }
                 )
                 
@@ -448,9 +448,9 @@ def train(
                         f"train/{eval_metric}": train_metric_value,
                         "eval/loss": val_loss,
                         f"eval/{eval_metric}": val_metric_value,
-                        "threshold_b": model.classifier[-1].thresholds_b.data,
-                        "threshold_a_1": model.classifier[-1].thresholds_a.data[0],
-                        "threshold_a_2": model.classifier[-1].thresholds_a.data[1],
+                        #"threshold_b": model.classifier[-1].thresholds_b.data,
+                        #"threshold_a_1": model.classifier[-1].thresholds_a.data[0],
+                        #"threshold_a_2": model.classifier[-1].thresholds_a.data[1],
                     }
                 )
                 
@@ -486,9 +486,9 @@ def train_epoch(model, dataloader, optimizer, device, eval_metric, clm, is_hiera
     running_loss = 0.0
     eval_metric_value = 0
 
-    gradients = []
-    first_moments = []
-    second_moments = []
+    # gradients = []
+    # first_moments = []
+    # second_moments = []
 
     for batch_idx, (inputs, labels) in enumerate(dataloader):
         # helper.multi_imshow(inputs, labels)
@@ -515,10 +515,6 @@ def train_epoch(model, dataloader, optimizer, device, eval_metric, clm, is_hiera
         #         print(f"{name} gradient: {param.grad.norm()}")
         #         print(f"{name} gradient values: {param.grad}")
 
-        
-        print(f"Thresholds before optimizer step: b: {model.classifier[-1].thresholds_b.data}, a: {model.classifier[-1].thresholds_a.data}")
-        print(loss.item()/ 64)
-        
         optimizer.step()
         
         #log gradients in w&b
@@ -547,7 +543,7 @@ def train_epoch(model, dataloader, optimizer, device, eval_metric, clm, is_hiera
         #         if param in optimizer.state:
         #             print(f"{name} optimizer state: {optimizer.state[param]}")
         
-        print(f"Thresholds after optimizer step: b: {model.classifier[-1].thresholds_b.data}, a: {model.classifier[-1].thresholds_a.data}")
+        #print(f"Thresholds after optimizer step: b: {model.classifier[-1].thresholds_b.data}, a: {model.classifier[-1].thresholds_a.data}")
 
         running_loss += loss.item()
 
@@ -600,7 +596,8 @@ def train_epoch(model, dataloader, optimizer, device, eval_metric, clm, is_hiera
     # plt.show()
 
     return running_loss / len(dataloader.sampler), eval_metric_value / len(
-        dataloader.sampler), gradients, first_moments, second_moments
+        dataloader.sampler), 
+    #gradients, first_moments, second_moments
 
 
 # validate a single epoch
