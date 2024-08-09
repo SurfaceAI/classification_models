@@ -230,12 +230,19 @@ for epoch in range(config.get('epochs')):
             
         #added calculating the loss_v (greatest error on a prediction where coarse and subclass prediction dont match)
         else:
-            mismatched_indices = (coarse_predictions != parent[fine_predictions])
-            max_mismatched_coarse_loss = max(coarse_loss[mismatched_indices])
-            max_mismatched_fine_loss = max(fine_loss[mismatched_indices])
-            loss_v = max(max_mismatched_coarse_loss, max_mismatched_fine_loss)
-            loss = loss_h + loss_v
-            
+            try:
+                mismatched_indices = (coarse_predictions != parent[fine_predictions])
+                max_mismatched_coarse_loss = coarse_loss[mismatched_indices].max()
+                max_mismatched_fine_loss = fine_loss[mismatched_indices].max()
+                loss_v = max(max_mismatched_coarse_loss, max_mismatched_fine_loss)
+                loss = loss_h + loss_v
+            except IndexError as e:
+                print(f"IndexError encountered: {e}. Skipping this iteration and continuing.")
+                loss = loss_h  # Optionally, handle the loss in some other way or set it to a default
+            except Exception as e:
+                print(f"An error occurred: {e}. Skipping this iteration and continuing.")
+                loss = loss_h  # Optionally, handle the loss in some other way or set it to a default
+
         #backward step
         loss.backward()
         optimizer.step()
@@ -250,7 +257,8 @@ for epoch in range(config.get('epochs')):
     after_lr = optimizer.param_groups[0]["lr"]
     
     #loss weights step
-    alpha, beta = loss_weights_modifier.on_epoch_end(epoch)
+    if config.get('lw_modifier'):
+        alpha, beta = loss_weights_modifier.on_epoch_end(epoch)
     
     # epoch_loss = running_loss /  len(inputs) * (batch_index + 1) 
     # epoch_coarse_accuracy = 100 * coarse_correct / (len(inputs) * (batch_index + 1))
