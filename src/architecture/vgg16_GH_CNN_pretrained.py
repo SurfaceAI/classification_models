@@ -28,7 +28,7 @@ class CustomBayesLayer(nn.Module):
 #         return torch.mul(tensor_1, tensor_2)   
     
 class GH_CNN_PRE(nn.Module):
-    def __init__(self, num_c, num_classes):
+    def __init__(self, num_c, num_classes, head):
         super(GH_CNN_PRE, self).__init__()
         
         #Custom layer
@@ -63,12 +63,12 @@ class GH_CNN_PRE(nn.Module):
         self.fc_2_fine = nn.Linear(num_features, num_classes) 
 
         
-        self.coarse_criterion = nn.CrossEntropyLoss()
+        self.coarse_criterion = nn.CrossEntropyLoss
         
         if num_classes == 1:
-            self.fine_criterion = nn.MSELoss()
+            self.fine_criterion = nn.MSELoss
         else:
-            self.fine_criterion = nn.CrossEntropyLoss()   
+            self.fine_criterion = nn.CrossEntropyLoss   
                 
     @ staticmethod
     def get_class_probabilies(x):
@@ -146,4 +146,4 @@ class GH_CNN_PRE(nn.Module):
         return coarse_output, fine_output 
     
     def get_optimizer_layers(self):
-        return self.features, self.coarse_classifier, self.fc_1, self.fc_2_coarse, self.fc_2_fine
+        return self.features, self.fc, self.fc_1, self.fc_2_coarse, self.fc_2_fine

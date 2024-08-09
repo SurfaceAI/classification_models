@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 import torch
 from torch import optim
 from src import constants as const
-from src.architecture import Rateke_CNN, efficientnet, vgg16, vgg16_B_CNN, vgg16_CLM, vgg16_Condition_CNN_CLM_pretrained, vgg16_B_CNN_pretrained, vgg16_HierarchyNet_pretrained
+from src.architecture import Rateke_CNN, efficientnet, vgg16, vgg16_B_CNN, vgg16_CLM, vgg16_Condition_CNN_CLM_pretrained, vgg16_B_CNN_pretrained, vgg16_HierarchyNet_pretrained, vgg16_GH_CNN_pretrained
 import json
 import argparse
 from matplotlib.lines import Line2D
@@ -29,7 +29,8 @@ def string_to_object(string):
         const.VGG16_CLM: vgg16_CLM.CustomVGG16_CLM,
         const.CCNNCLMPRE: vgg16_Condition_CNN_CLM_pretrained.Condition_CNN_CLM_PRE,
         const.BCNN_PRE: vgg16_B_CNN_pretrained.VGG16_B_CNN_PRE,
-        const.HNET_PRE: vgg16_HierarchyNet_pretrained.HierarchyNet_Pre
+        const.HNET_PRE: vgg16_HierarchyNet_pretrained.HierarchyNet_Pre,
+        const.GHCNN_PRE: vgg16_GH_CNN_pretrained.GH_CNN_PRE,
 
     }
 

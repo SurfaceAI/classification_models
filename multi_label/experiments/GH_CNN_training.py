@@ -16,15 +16,17 @@ from torch.utils.data import DataLoader
 import torch.nn.functional as F
 from torch.optim import lr_scheduler
 
-from src.architecture.vgg16_GH_CNN import GH_CNN
+from src.architecture.vgg16_GH_CNN_pretrained import GH_CNN_PRE
 
 from datetime import datetime
 import time
 import numpy as np
 import os
 
+from torch.optim.lr_scheduler import StepLR
 
-config = train_config.GH_CNN
+
+config = train_config.GH_CNN_PRE
 torch.manual_seed(config.get("seed"))
 np.random.seed(config.get("seed"))
 
@@ -60,18 +62,38 @@ saving_name = (
 
 
 # Define the data loaders and transformations
-train_data, valid_data = preprocessing.create_train_validation_datasets(data_root=config.get('root_data'),
-                                                                        dataset=config.get('dataset'),
-                                                                        selected_classes=config.get('selected_classes'),
-                                                                        validation_size=config.get('validation_size'),
-                                                                        general_transform=config.get('transform'),
-                                                                        augmentation=config.get('augment'),
-                                                                        random_state=config.get('random_seed'),
-                                                                        is_regression=config.get('is_regression'),
-                                                                        level=config.get('level'),
-                                                                        )
+model_cls = string_to_object(config.get("model"))
+optimizer_cls = string_to_object(config.get("optimizer"))
 
+train_data, valid_data, trainloader, validloader, model, optimizer = training.prepare_train(model_cls=model_cls,
+                optimizer_cls=optimizer_cls,
+                transform=config.get("transform"),
+                augment=config.get("augment"),
+                dataset=config.get("dataset"),
+                data_root=config.get("root_data"),
+                level=level[0],
+                type_class=type_class,
+                selected_classes=config.get("selected_classes"),
+                validation_size=config.get("validation_size"),
+                batch_size=config.get("batch_size"),
+                valid_batch_size=config.get("valid_batch_size"),
+                learning_rate=config.get("learning_rate"),
+                random_seed=config.get("seed"),
+                is_regression=config.get("is_regression"),
+                is_hierarchical=config.get("is_hierarchical"),
+                head=config.get("head"),
+                max_class_size=config.get("max_class_size"),
+                freeze_convs=config.get("freeze_convs"),
+                )
 
+if config.get('lr_scheduler'):
+    scheduler = StepLR(optimizer, step_size=4, gamma=0.1)
+    
+if config.get('lw_modifier'):
+    alpha = torch.tensor(0.98)
+    beta = torch.tensor(0.02)
+    loss_weights_modifier = LossWeightsModifier(alpha, beta)
+    
 #fine classes
 num_classes = len(train_data.classes)
 #coarse classes
@@ -121,54 +143,8 @@ class LossWeightsModifier_GH():
 
 # Initialize the loss weights
 
-alpha = torch.tensor(1)
-beta = torch.tensor(0)
-
-# Initialize the model, loss function, and optimizer
-model = GH_CNN(num_c=num_c, num_classes=num_classes)
 
 
-if freeze_convs:
-    for param in model.features.parameters():
-        param.requires_grad = False
-        
-else:
-    for param in model.features.parameters():
-        param.requires_grad = True
-    
-# for param in model.classifier.parameters():
-#     param.requires_grad = True
-
-optimizer_layers = None
-if hasattr(model, "get_optimizer_layers") and callable(model.get_optimizer_layers):
-    optimizer_layers = model.get_optimizer_layers()
-
-# setup optimizer
-if optimizer_layers is None:
-    #optimizer_params = model.parameters()
-    optimizer_params = model.parameters()
-else:
-    optimizer_params = []
-    for layer in optimizer_layers:
-        optimizer_params += [p for p in layer.parameters()]
-
-#print(f"{len(optimizer_params)} optimizer params")
-
-for name, param in model.named_parameters():
-    print(f"{name} requires_grad: {param.requires_grad}")
-    
-# Count parameters and print
-total_params, trainable_params, non_trainable_params = helper.count_parameters(model)
-print(f"Total params: {total_params}")
-print(f"Trainable params: {trainable_params}")
-print(f"Non-trainable params: {non_trainable_params}")
-
-
-
-coarse_criterion = model.coarse_criterion(reduction="sum")
-fine_criterion = model.fine_criterion(reduction="sum")
-
-optimizer = optim.SGD(optimizer_params, lr=config.get('learning_rate'), momentum=0.9)
 
 trainable_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
 
@@ -176,7 +152,8 @@ trainable_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
 # Set up learning rate scheduler
 #scheduler = lr_scheduler.StepLR(optimizer, step_size=3, gamma=0.1)
 scheduler = lr_scheduler.LambdaLR(optimizer, lr_lambda)
-loss_weights_modifier = LossWeightsModifier_GH(alpha, beta)
+if config.get('lw_modifier'):
+    loss_weights_modifier = LossWeightsModifier_GH(alpha, beta)
 
 # Train the model
 checkpointer = checkpointing.CheckpointSaver(
@@ -192,6 +169,14 @@ checkpointer = checkpointing.CheckpointSaver(
 
 for epoch in range(config.get('epochs')):
     model.train()
+    
+    coarse_criterion = model.coarse_criterion(reduction="sum")
+    if config.get('head') == 'corn':
+        pass
+    else:
+        fine_criterion = model.fine_criterion(reduction="sum")
+    
+    
     running_loss = 0.0
     coarse_correct = 0
     fine_correct = 0
@@ -217,8 +202,8 @@ for epoch in range(config.get('epochs')):
         else:
             coarse_outputs, fine_outputs = model.bayesian_adjustment(raw_coarse, raw_fine)
 
-        coarse_loss = criterion(coarse_outputs, coarse_labels)
-        fine_loss = criterion(fine_outputs, fine_labels)
+        coarse_loss = coarse_criterion(coarse_outputs, coarse_labels)
+        fine_loss = fine_criterion(fine_outputs, fine_labels)
         
         coarse_probs = model.get_class_probabilies(coarse_outputs)
         coarse_predictions = torch.argmax(coarse_probs, dim=1)
@@ -228,7 +213,10 @@ for epoch in range(config.get('epochs')):
         fine_predictions = torch.argmax(fine_probs, dim=1)
         fine_correct += (fine_predictions == fine_labels).sum().item()
         
-        loss_h = torch.sum(alpha * coarse_loss + beta * fine_loss)
+        if config.get('lw_modifier'):
+            loss_h = torch.sum(alpha * coarse_loss + beta * fine_loss)
+        else:
+            loss_h = coarse_loss + fine_loss
         
         #coarse only, weights should be (1,0)
         if epoch < 0.15 * config.get('epochs'):
@@ -273,6 +261,14 @@ for epoch in range(config.get('epochs')):
     
     # Validation
     model.eval()
+    
+    coarse_criterion = model.coarse_criterion(reduction="sum")
+    if config.get('head') == 'corn':
+        fine_criterion = model.fine_criterion
+    else:
+        fine_criterion = model.fine_criterion(reduction="sum")
+    
+    
     val_running_loss = 0.0
     val_coarse_correct = 0
     val_fine_correct = 0
@@ -285,10 +281,13 @@ for epoch in range(config.get('epochs')):
             
             coarse_outputs, fine_outputs = model.forward(inputs)
             
-            coarse_loss = criterion(coarse_outputs, coarse_labels)
-            fine_loss = criterion(fine_outputs, fine_labels)
+            coarse_loss = coarse_criterion(coarse_outputs, coarse_labels)
+            fine_loss = fine_criterion(fine_outputs, fine_labels)
             
-            loss = torch.sum(alpha * coarse_loss + beta * fine_loss)
+            if config.get('lw_modifier'):
+                loss = torch.sum(alpha * coarse_loss + beta * fine_loss)
+            else:
+                loss = coarse_loss + fine_loss
             val_running_loss += loss.item() 
             
             coarse_probs = model.get_class_probabilies(coarse_outputs)
@@ -330,13 +329,14 @@ for epoch in range(config.get('epochs')):
 
     print(f"""
         Epoch: {epoch+1}: 
-        Loss Weights: [alpha, beta] = [{alpha}, {beta}],
         Train loss: {epoch_loss:.3f}, 
         Train coarse accuracy: {epoch_coarse_accuracy:.3f}%, 
         Train fine accuracy: {epoch_fine_accuracy:.3f}%,
         Validation loss: {val_epoch_loss:.3f}, 
         Validation coarse accuracy: {val_epoch_coarse_accuracy:.3f}%, 
         Validation fine accuracy: {val_epoch_fine_accuracy:.3f}% """)
+    
+    #Loss Weights: [alpha, beta] = [{alpha}, {beta}],
     
     if early_stop:
         print(f"Early stopped training at epoch {epoch}")

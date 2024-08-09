@@ -60,7 +60,7 @@ def map_predictions_to_quality(predictions, surface_type):
         "concrete": [4, 5, 6, 7, 8, 9],
         "paving_stones": [8, 9, 10, 11, 12, 13],
         "sett": [12, 13, 14, 15, 16],
-        "unpaved": [15, 16, 17, 18, 19]
+        "unpaved": [15, 16, 17, 18,]
     }
     return torch.tensor([quality_mapping[surface_type][pred] for pred in predictions], dtype=torch.long)
 

@@ -349,11 +349,20 @@ GH_CNN = {
 GH_CNN_PRE = {
     **global_config.global_config,
     **default_params,
+    "batch_size": 64,
+    "epochs": 10,
+    "learning_rate": 0.0001,
+    "optimizer": const.OPTI_ADAM,
+    "coarse_eval_metric": const.EVAL_METRIC_ACCURACY,
+    "fine_eval_metric": const.EVAL_METRIC_ACCURACY,
     "project": const.PROJECT_MULTI_LABEL_FIXED,
-    "name": "GH_CNN_pretrained",
+    "name": "GH_CNN_classification",
     "level": const.MULTILABEL,
     "model": const.GHCNN_PRE,
+    "head": 'classification', #'regression', 'classification', 'obd', 'clm'
+    "hierarchy_method": None, #'use_ground_truth', 'use_condition_layer', 'top_coarse_prob'
 }
+
 
 B_CNN_regression = {
     **global_config.global_config,
