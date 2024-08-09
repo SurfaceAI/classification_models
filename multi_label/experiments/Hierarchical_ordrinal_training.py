@@ -176,6 +176,7 @@ def compute_fine_accuracy(coarse_probs, fine_output, fine_labels, masks, head):
             asphalt_preds = torch.argmax(fine_output_asphalt[asphalt_mask], dim=1)
         elif head == 'regression':
             asphalt_preds = fine_output_asphalt[asphalt_mask].round().long()
+            print(asphalt_preds)
         elif head == 'corn':
             asphalt_preds = corn_label_from_logits(fine_output_asphalt[asphalt_mask]).long()
         predictions[asphalt_mask] = map_predictions_to_quality(asphalt_preds, "asphalt")
