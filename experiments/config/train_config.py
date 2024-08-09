@@ -55,7 +55,7 @@ efficientnet_surface_params = {
     "is_regression": False,
     "eval_metric": const.EVAL_METRIC_ACCURACY,
     "learning_rate": 0.00056,
-    "dataset": "V1_0/train",
+    "dataset": "V1_0/annotated",
     "metadata": "V1_0/metadata",
     "train_valid_split_list": "train_valid_split.csv",
     # "gpu_kernel": 0,
@@ -69,7 +69,7 @@ efficientnet_quality_params = {
     "level": const.SMOOTHNESS,
     "model": const.EFFNET_LINEAR,
     "learning_rate": 0.0006,
-    "dataset": "V1_0/train",
+    "dataset": "V1_0/annotated",
     "metadata": "V1_0/metadata",
     "train_valid_split_list": "train_valid_split.csv",
     "is_regression": True,
@@ -81,5 +81,71 @@ train_valid_split_params = {
     **global_config.global_config,
     "dataset": "V1_0/train", # TODO
     "metadata": "V1_0/metadata", # TODO
+    "train_valid_split_list": "train_valid_split.csv",
+}
+
+default_rtk_params = {
+    "transform": {
+        **global_config.global_config.get("transform"),
+        "normalize": (const.V1_0_ANNOTATED_MEAN, const.V1_0_ANNOTATED_SD),
+        "crop": "lower_middle_half",
+    },
+    "selected_classes": {
+        const.ASPHALT: [
+            const.GOOD,
+            const.REGULAR,
+            const.BAD,
+        ],
+        const.PAVED: [
+            const.GOOD,
+            const.REGULAR,
+            const.BAD,
+        ],
+        const.UNPAVED: [
+            const.REGULAR,
+            const.BAD,
+        ],
+    },
+}
+
+efficientnet_surface_params_rtk = {
+    **global_config.global_config,
+    **default_params,
+    **default_rtk_params,
+    "project": const.PROJECT_SURFACE_FIXED,
+    "name": "rtk_efficientnet",
+    "level": const.SURFACE,
+    "model": const.EFFNET_LINEAR,
+    "is_regression": False,
+    "eval_metric": const.EVAL_METRIC_ACCURACY,
+    "learning_rate": 0.00056,
+    "dataset": "RTK/GT",
+    "metadata": "RTK/metadata",
+    "train_valid_split_list": "train_valid_split.csv",
+    # "gpu_kernel": 0,
+}
+
+efficientnet_quality_params_rtk = {
+    **global_config.global_config,
+    **default_params,
+    **default_rtk_params,
+    "project": const.PROJECT_SMOOTHNESS_FIXED,
+    "name": "rtk_efficientnet",
+    "level": const.SMOOTHNESS,
+    "model": const.EFFNET_LINEAR,
+    "learning_rate": 0.0006,
+    "dataset": "RTK/GT",
+    "metadata": "RTK/metadata",
+    "train_valid_split_list": "train_valid_split.csv",
+    "is_regression": True,
+    "eval_metric": const.EVAL_METRIC_MSE,
+    # "gpu_kernel": 0,
+}
+
+train_valid_split_params_rtk = {
+    **global_config.global_config,
+    **default_rtk_params,
+    "dataset": "RTK/GT", # TODO
+    "metadata": "RTK/metadata", # TODO
     "train_valid_split_list": "train_valid_split.csv",
 }

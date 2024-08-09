@@ -9,7 +9,7 @@ from sklearn.model_selection import train_test_split
 from experiments.config import train_config
 from src.utils import preprocessing
 
-config=train_config.train_valid_split_params
+config=train_config.train_valid_split_params_rtk
 
 data_path = os.path.join(config.get("root_data"), config.get("dataset"))
 metadata_path = os.path.join(config.get("root_data"), config.get("metadata"))

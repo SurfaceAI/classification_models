@@ -6,8 +6,8 @@ ROOT_DIR = Path(__file__).parent.parent.parent
 
 global_config = dict(
     gpu_kernel = 0,
-    wandb_mode = constants.WANDB_MODE_OFF, # TODO
-    wandb_on=False,# TODO
+    wandb_mode = constants.WANDB_MODE_ON, # TODO
+    wandb_on=True,# TODO
     # root_data = str(ROOT_DIR / "data" / "training"),
     root_data = str(ROOT_DIR / "data"),
     root_model = str(ROOT_DIR / "trained_models"),

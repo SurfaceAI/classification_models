@@ -13,11 +13,13 @@ CONCRETE = "concrete"
 SETT = "sett"
 UNPAVED = "unpaved"
 PAVING_STONES = "paving_stones"
+PAVED = "paved"
 
 # smoothness types
 EXCELLENT = "excellent"
 GOOD = "good"
 INTERMEDIATE = "intermediate"
+REGULAR = "regular"
 BAD = "bad"
 VERY_BAD = "very_bad"
 HORRIBLE = "horrible"
@@ -26,6 +28,7 @@ SMOOTHNESS_INT = {
     EXCELLENT: 1,
     GOOD: 2,
     INTERMEDIATE: 3,
+    REGULAR: 3,
     BAD: 4,
     VERY_BAD: 5,
     HORRIBLE: 6,
@@ -34,7 +37,7 @@ SMOOTHNESS_INT = {
 # classification level
 SURFACE = "surface"
 SMOOTHNESS = "smoothness"
-# FLATTEN = "flatten"
+FLATTEN = "flatten"
 
 TYPE = "type"
 QUALITY = "quality"
@@ -74,6 +77,7 @@ CROP_LOWER_MIDDLE_HALF = "lower_middle_half"
 # CROP_LOWER_HALF = "lower_half"
 # CROP_SMALL_PANO = "small_pano"
 # CROP_SUPER_SMALL_PANO = "super_small_pano"
+CROP_LOWER_HALF_RTK = "lower_half_rtk"
 
 # normalization
 NORM_IMAGENET = "imagenet"

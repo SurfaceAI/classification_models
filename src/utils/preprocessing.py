@@ -494,6 +494,11 @@ def custom_crop(img, crop_style=None):
         left = 0
         height = im_height / 2
         width = im_width
+    elif crop_style == "lower_half_rtk":
+        top = im_height / 2 - 5
+        left = 0
+        height = im_height / 2 - 45
+        width = im_width
     else:  # None, or not valid
         return img
 
