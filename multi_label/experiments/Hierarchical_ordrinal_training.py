@@ -56,11 +56,11 @@ if config.get('wandb_on'):
     
 def map_predictions_to_quality(predictions, surface_type):
     quality_mapping = {
-        "asphalt": [0, 1, 2, 3],  # Modify as needed
-        "concrete": [4, 5, 6, 7],
-        "paving_stones": [8, 9, 10, 11],
-        "sett": [12, 13, 14],
-        "unpaved": [15, 16, 17]
+        "asphalt": [0, 1, 2, 3, 4, 5, 6, 7],  # Modify as needed
+        "concrete": [4, 5, 6, 7, 8, 9],
+        "paving_stones": [8, 9, 10, 11, 12, 13],
+        "sett": [12, 13, 14, 15, 16],
+        "unpaved": [15, 16, 17, 18, 19]
     }
     return torch.tensor([quality_mapping[surface_type][pred] for pred in predictions], dtype=torch.long)
 
