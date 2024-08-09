@@ -25,6 +25,8 @@ import os
 
 from torch.optim.lr_scheduler import StepLR
 
+print('hi')
+
 
 config = train_config.GH_CNN_PRE
 torch.manual_seed(config.get("seed"))
