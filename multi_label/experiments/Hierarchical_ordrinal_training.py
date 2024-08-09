@@ -721,8 +721,8 @@ for epoch in range(config.get('epochs')):
                 fine_correct_one_off += fine_correct_one_off_item
                 #predictions = torch.argmax(probs, dim=1)
                 
-            if batch_index == 0:
-                break
+            # if batch_index == 0:
+            #     break
                 
                
     # #learning rate step        
