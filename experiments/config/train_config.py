@@ -343,7 +343,7 @@ B_CNN = {
     **default_params,
     "project": const.PROJECT_MULTI_LABEL_FIXED,
     "name": "B_CNN",
-    "level": const.MULTILABEL,
+    "level": const.HIERARCHICAL,
     "model": const.BCNN,
 }
 
@@ -352,7 +352,7 @@ B_CNN_PRE = {
     **default_params,
     "project": const.PROJECT_MULTI_LABEL_FIXED,
     "name": "B_CNN_pretrained",
-    "level": const.MULTILABEL,
+    "level": const.HIERARCHICAL,
     "model": const.BCNN_PRE,
 }
 
@@ -361,7 +361,7 @@ C_CNN = {
     **default_params,
     "project": const.PROJECT_MULTI_LABEL_FIXED,
     "name": "Condition_CNN",
-    "level": const.MULTILABEL,
+    "level": const.HIERARCHICAL,
     "model": const.CCNN,
 }
 
@@ -370,7 +370,7 @@ C_CNN_PRE = {
     **default_params,
     "project": const.PROJECT_MULTI_LABEL_FIXED,
     "name": "Condition_CNN_pretrained",
-    "level": const.MULTILABEL,
+    "level": const.HIERARCHICAL,
     "model": const.CCNN_PRE,
 }
 
@@ -379,7 +379,7 @@ H_NET = {
     **default_params,
     "project": const.PROJECT_MULTI_LABEL_FIXED,
     "name": "HiearchyNet",
-    "level": const.MULTILABEL,
+    "level": const.HIERARCHICAL,
     "model": const.HNET,
 }
 
@@ -394,7 +394,7 @@ H_NET_PRE = {
     "fine_eval_metric": const.EVAL_METRIC_ACCURACY,
     "project": const.PROJECT_MULTI_LABEL_FIXED,
     "name": "HierarchyNet_regression",
-    "level": const.MULTILABEL,
+    "level": const.HIERARCHICAL,
     "model": const.HNET_PRE,
     "head": 'regression', #'regression', 'classification', 'obd', 'clm'
     "hierarchy_method": None, #'use_ground_truth', 'use_condition_layer', 'top_coarse_prob'
@@ -406,7 +406,7 @@ GH_CNN = {
     **default_params,
     "project": const.PROJECT_MULTI_LABEL_FIXED,
     "name": "GH_CNN",
-    "level": const.MULTILABEL,
+    "level": const.HIERARCHICAL,
     "model": const.GHCNN,
 }
 
@@ -421,7 +421,7 @@ GH_CNN_PRE = {
     "fine_eval_metric": const.EVAL_METRIC_ACCURACY,
     "project": const.PROJECT_MULTI_LABEL_FIXED,
     "name": "GH_CNN_classification",
-    "level": const.MULTILABEL,
+    "level": const.HIERARCHICAL,
     "model": const.GHCNN_PRE,
     "head": 'classification', #'regression', 'classification', 'obd', 'clm'
     "hierarchy_method": None, #'use_ground_truth', 'use_condition_layer', 'top_coarse_prob'
@@ -440,7 +440,7 @@ B_CNN_regression = {
     "fine_eval_metric": const.EVAL_METRIC_ACCURACY,
     "project": const.PROJECT_MULTI_LABEL_FIXED,
     "name": "B_CNN_Regression",
-    "level": const.MULTILABEL,
+    "level": const.HIERARCHICAL,
     "model": const.BCNNREGRESSION,
     "hierarchy_method": const.WEIGHTEDSUM
 }
@@ -451,16 +451,16 @@ C_CNN_CLM = {
     **default_params,
     "batch_size": 16,
     "epochs": 5,
-    "learning_rate": 0.01,
+    "learning_rate": 0.0001,
     "optimizer": const.OPTI_ADAM,
     "coarse_eval_metric": const.EVAL_METRIC_ACCURACY,
     "fine_eval_metric": const.EVAL_METRIC_ACCURACY,
     "project": const.PROJECT_MULTI_LABEL_FIXED,
-    "name": "C_CNN_regression",
-    "level": const.MULTILABEL,
+    "name": "C_CNN_classification",
+    "level": const.HIERARCHICAL,
     "model": const.CCNNCLMPRE,
-    "head": 'corn', #'regression', 'classification', 'obd', 'clm'
-    "hierarchy_method": 'use_condition_layer', #'use_ground_truth', 'use_condition_layer', 'top_coarse_prob'
+    "head": 'classification', #'regression', 'classification', 'obd', 'clm'
+    "hierarchy_method": 'use_model_structure', #'use_ground_truth', 'None'
 }
 
 B_CNN_CLM = {
@@ -474,7 +474,7 @@ B_CNN_CLM = {
     "fine_eval_metric": const.EVAL_METRIC_ACCURACY,
     "project": const.PROJECT_MULTI_LABEL_FIXED,
     "name": "B_CNN_CLM",
-    "level": const.MULTILABEL,
+    "level": const.HIERARCHICAL,
     "model": const.BCNN_PRE,
     "head": 'clm', #'regression', 'classification', 'corn', 'clm'
     "hierarchy_method": 'b_cnn', #'use_ground_truth', 'use_condition_layer', 'b_cnn'
