@@ -78,7 +78,7 @@ def _run_training(project=None, name=None, config=None, wandb_on=True):
         config = wandb.config
         # TODO: wandb best instead of last value for metric
         summary = "max" if config.get("val_metric")==const.EVAL_METRIC_ACCURACY else "min"
-        wandb.define_metric(f'val/{config.get("val_metric")}', summary=summary)
+        wandb.define_metric(f'eval/{config.get("val_metric")}', summary=summary)
         # wandb.define_metric("val/acc", summary="max")
         # wandb.define_metric("val/mse", summary="min")
     model_cls = helper.string_to_object(config.get("model"))
@@ -437,8 +437,8 @@ def train(
                     "epoch": epoch + 1,
                     "train/loss": train_loss,
                     f"train/{val_metric}": train_metric_value,
-                    "val/loss": val_loss,
-                    f"val/{val_metric}": val_metric_value,
+                    "eval/loss": val_loss,
+                    f"eval/{val_metric}": val_metric_value,
                 }
             )
             
@@ -567,14 +567,14 @@ def train_hierarchical(
                         "train/accuracy/fine_1_off": epoch_fine_accuracy_one_off,
                         "train/mse/fine":epoch_fine_mse,
                         "train/mae/fine":epoch_fine_mae,
-                        "val/loss": val_epoch_loss,
-                        "val/coarse/loss": val_coarse_epoch_loss,
-                        "val/fine/loss": val_fine_epoch_loss,
-                        "val/accuracy/coarse": val_epoch_coarse_accuracy,
-                        "val/accuracy/fine": val_epoch_fine_accuracy,
-                        "val/accuracy/fine_1_off": val_epoch_fine_accuracy_one_off,
-                        "val/mse/fine":val_epoch_fine_mse,
-                        "val/mae/fine":val_epoch_fine_mae,
+                        "eval/loss": val_epoch_loss,
+                        "eval/coarse/loss": val_coarse_epoch_loss,
+                        "eval/fine/loss": val_fine_epoch_loss,
+                        "eval/accuracy/coarse": val_epoch_coarse_accuracy,
+                        "eval/accuracy/fine": val_epoch_fine_accuracy,
+                        "eval/accuracy/fine_1_off": val_epoch_fine_accuracy_one_off,
+                        "eval/mse/fine":val_epoch_fine_mse,
+                        "eval/mae/fine":val_epoch_fine_mae,
                         "trainable_params": trainable_params,
                         "learning_rate": scheduler.get_last_lr()[0],
                     }
@@ -607,14 +607,14 @@ def train_hierarchical(
                         "train/accuracy/fine_1_off": epoch_fine_accuracy_one_off,
                         "train/mse/fine":epoch_fine_mse,
                         "train/mae/fine":epoch_fine_mae,
-                        "val/loss": val_epoch_loss,
-                        "val/coarse/loss": val_coarse_epoch_loss,
-                        "val/fine/loss": val_fine_epoch_loss,
-                        "val/accuracy/coarse": val_epoch_coarse_accuracy,
-                        "val/accuracy/fine": val_epoch_fine_accuracy,
-                        "val/accuracy/fine_1_off": val_epoch_fine_accuracy_one_off,
-                        "val/mse/fine":val_epoch_fine_mse,
-                        "val/mae/fine":val_epoch_fine_mae,
+                        "eval/loss": val_epoch_loss,
+                        "eval/coarse/loss": val_coarse_epoch_loss,
+                        "eval/fine/loss": val_fine_epoch_loss,
+                        "eval/accuracy/coarse": val_epoch_coarse_accuracy,
+                        "eval/accuracy/fine": val_epoch_fine_accuracy,
+                        "eval/accuracy/fine_1_off": val_epoch_fine_accuracy_one_off,
+                        "eval/mse/fine":val_epoch_fine_mse,
+                        "eval/mae/fine":val_epoch_fine_mae,
                         "trainable_params": trainable_params,
                     }
                 )
@@ -648,7 +648,7 @@ def train_hierarchical(
 
 
 # train a single epoch
-def train_epoch(model, dataloader, optimizer, device, val_metric, clm, wandb_on):
+def train_epoch(model, dataloader, optimizer, device, val_metric, head, wandb_on):
     model.train()
     
     criterion = model.criterion(reduction="sum")
@@ -668,14 +668,18 @@ def train_epoch(model, dataloader, optimizer, device, val_metric, clm, wandb_on)
         optimizer.zero_grad()
 
         outputs = model.forward(inputs)
-        if isinstance(criterion, nn.MSELoss):
+        
+        if head == 'regression':
             outputs = outputs.flatten()
             labels = labels.float()
+            loss = criterion(outputs, labels)
         #loss = criterion(helper.to_one_hot_tensor(labels, 4), outputs) Todo: for QWK
-        if clm:
-            outputs = torch.log(outputs)
-            
-        loss = criterion(outputs, labels)
+        elif head == 'clm':
+            loss = criterion(torch.log(outputs + 1e-9), labels)
+        elif head == 'corn':
+            loss = criterion(outputs, labels, num_classes) #TODO: numclasses
+        else:
+            loss = criterion(outputs, labels)
             
         loss.backward()
 
