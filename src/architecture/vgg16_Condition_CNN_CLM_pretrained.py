@@ -80,7 +80,7 @@ class Condition_CNN_CLM_PRE(nn.Module):
             self.classifier_unpaved = self._create_quality_fc_corn(num_classes=3)
             
         elif head == 'single':
-            self.classifier = nn.Sequential(
+            self.fine_classifier = nn.Sequential(
             nn.Linear(512 * 8 * 8, 512),
             nn.ReLU(),
             nn.Dropout(0.5),
@@ -89,6 +89,18 @@ class Condition_CNN_CLM_PRE(nn.Module):
             nn.Dropout(0.5),
             nn.Linear(256, 1)
         )
+                
+        elif head == 'classification':
+            self.fine_classifier = nn.Sequential(
+                nn.Linear(512 * 8 * 8, 1024),
+                nn.ReLU(),
+                nn.Dropout(0.5),
+                nn.Linear(1024, 1024),
+                nn.ReLU(),
+                nn.Dropout(0.5),
+                nn.Linear(1024, num_classes) 
+            )
+            
             # in_features = model.classifier[-1].in_features
             # fc = nn.Linear(in_features, num_classes, bias=True)
             # model.classifier[-1] = fc 
@@ -101,7 +113,7 @@ class Condition_CNN_CLM_PRE(nn.Module):
         # model.classifier = nn.Sequential(*features)  # Replace the model classifier
         
         ### Condition part
-        if head == 'regression':
+        if head == 'regression' or head == 'single':
             self.coarse_condition = nn.Linear(num_c, num_c, bias=False)
         if head == 'corn':
             self.coarse_condition = nn.Linear(num_c, num_classes - 5, bias=False)
@@ -180,73 +192,46 @@ class Condition_CNN_CLM_PRE(nn.Module):
         coarse_output = self.coarse_classifier(flat)
         coarse_probs = self.get_class_probabilies(coarse_output)
         
-        if hierarchy_method == 'use_condition_layer':
+    
             
-            if self.head == 'clm' or self.head == 'regression' or self.head == 'corn':
-                fine_output_asphalt = self.classifier_asphalt(flat) #([batch_size, 1024])  
-                fine_output_concrete = self.classifier_concrete(flat)
-                fine_output_paving_stones = self.classifier_paving_stones(flat)      
-                fine_output_sett = self.classifier_sett(flat)
-                fine_output_unpaved = self.classifier_unpaved(flat)
+        if self.head == 'clm' or self.head == 'regression' or self.head == 'corn':
+            fine_output_asphalt = self.classifier_asphalt(flat) #([batch_size, 1024])  
+            fine_output_concrete = self.classifier_concrete(flat)
+            fine_output_paving_stones = self.classifier_paving_stones(flat)      
+            fine_output_sett = self.classifier_sett(flat)
+            fine_output_unpaved = self.classifier_unpaved(flat)
                 
-                if self.training:
-                    coarse_condition = self.coarse_condition(true_coarse)  
-                else:
-                    coarse_condition = self.coarse_condition(coarse_probs) 
+            fine_output = torch.cat([fine_output_asphalt, 
+                                            fine_output_concrete, 
+                                            fine_output_paving_stones, 
+                                            fine_output_sett, 
+                                            fine_output_unpaved], 
+                                            dim=1)
                     
-                fine_output_combined = torch.cat([fine_output_asphalt, 
-                                                fine_output_concrete, 
-                                                fine_output_paving_stones, 
-                                                fine_output_sett, 
-                                                fine_output_unpaved], 
-                                                dim=1)
                 
-                if self.head == 'clm':
-                    fine_output = coarse_condition + fine_output_combined
-                    
-                    return coarse_output, fine_output
-                            
-                elif self.head == 'regression':
-                    
-                    #weighted sum:
-                    fine_output = torch.sum(fine_output_combined * coarse_condition, dim=1)
-                    #self.coarse_condition.weight.data = self.constraint(self.coarse_condition.weight.data)
-                    
-                    #take max condition weight matrix value
-                    # indices_condition_layer = torch.argmax(coarse_condition, dim=1)
-                    # fine_output = fine_output_combined[range(fine_output_combined.size(0)), indices_condition_layer]
-                    
-                            # if self.training and true_coarse is not None:
-                #     # During training, use true coarse labels
-                #     indices_true = torch.argmax(true_coarse, dim=1)
-                #     fine_output = fine_output_combined[range(fine_output_combined.size(0)), indices_true]
-                # else:
-                #     # During evaluation, use predicted coarse labels
-                #     indices_pred = torch.argmax(coarse_probs, dim=1)
-                #     fine_output = fine_output_combined[range(fine_output_combined.size(0)), indices_pred]
+        elif self.head == 'single':
+            
+            fine_output = self.fine_classifier(flat)
+        
+        elif self.head == 'classification':
+            
+            fine_output = self.fine_classifier(flat)
                 
-                    return coarse_output, fine_output
-                
-                elif self.head == 'corn':
-                    
-                    fine_output = coarse_condition + fine_output_combined
-                    
-                    # fine_output_asphalt = fine_output_combined[:,:3]
-                    # fine_output_concrete = fine_output_combined[:,3:6]
-                    # fine_output_paving_stones = fine_output_combined[:,6:9]
-                    # fine_output_sett = fine_output_combined[:,9:11]
-                    # fine_output_unpaved = fine_output_combined[:,11:13]
-                #coarse_output, fine_output_asphalt, fine_output_concrete, fine_output_paving_stones, fine_output_sett, fine_output_unpaved
-                    return coarse_output, fine_output
-
-        #features = torch.add(coarse_condition, fine_raw)#
-        #Adding the conditional probabilities to the dense features
-                
-            elif self.head == 'single':
-                
-                fine_output = self.classifier(flat)
-                
-                return coarse_output, fine_output
+            
+        if hierarchy_method == 'use_model_structure':
+    
+            if self.training:
+                coarse_condition = self.coarse_condition(true_coarse)  
+            else:
+                coarse_condition = self.coarse_condition(coarse_probs) 
+            
+            if self.head == 'regression' or self.head == 'corn':    
+                fine_output = torch.sum(fine_output * coarse_condition, dim=1)
+            else:
+                fine_output = coarse_condition + fine_output
+            
+        return coarse_output, fine_output     
+            
             
                         # else:
             #     fine_output = coarse_condition + fine_output_combined
@@ -288,55 +273,57 @@ class Condition_CNN_CLM_PRE(nn.Module):
         #     return coarse_output, fine_output    
             
         
-        elif hierarchy_method == 'use_ground_truth': 
+        # elif hierarchy_method == 'filter_by_ground_truth': 
             
-            if self.training:
-                #fine_predictions = torch.zeros(x.size(0), device=x.device, dtype=torch.long)                
-                #we seperate out one-hot encoded tensor to seperate one hot tensors 1=belonging to surface type, 0 not 
+        #     if self.training:
+        #         #fine_predictions = torch.zeros(x.size(0), device=x.device, dtype=torch.long)                
+        #         #we seperate out one-hot encoded tensor to seperate one hot tensors 1=belonging to surface type, 0 not 
 
-                fine_output_asphalt = self.classifier_asphalt(flat[true_coarse[:, 0].bool()])
-                fine_output_concrete = self.classifier_concrete(flat[true_coarse[:, 1].bool()])
-                fine_output_paving_stones = self.classifier_paving_stones(flat[true_coarse[:, 2].bool()])
-                fine_output_sett = self.classifier_sett(flat[true_coarse[:, 3].bool()])
-                fine_output_unpaved = self.classifier_unpaved(flat[true_coarse[:, 4].bool()])
+        #         fine_output_asphalt = self.classifier_asphalt(flat[true_coarse[:, 0].bool()])
+        #         fine_output_concrete = self.classifier_concrete(flat[true_coarse[:, 1].bool()])
+        #         fine_output_paving_stones = self.classifier_paving_stones(flat[true_coarse[:, 2].bool()])
+        #         fine_output_sett = self.classifier_sett(flat[true_coarse[:, 3].bool()])
+        #         fine_output_unpaved = self.classifier_unpaved(flat[true_coarse[:, 4].bool()])
                 
-                # if head == 'clm':
-                #     fine_predictions[true_coarse[:, 0].bool()] = torch.argmax(fine_output_asphalt, dim=1)
-                #     fine_predictions[true_coarse[:, 1].bool()] = torch.argmax(fine_output_concrete, dim=1)   
-                #     fine_predictions[true_coarse[:, 2].bool()] = torch.argmax(fine_output_paving_stones, dim=1)    
-                #     fine_predictions[true_coarse[:, 3].bool()] = torch.argmax(fine_output_sett, dim=1)                          
-                #     fine_predictions[true_coarse[:, 4].bool()] = torch.argmax(fine_output_unpaved, dim=1)  
+        #         # if head == 'clm':
+        #         #     fine_predictions[true_coarse[:, 0].bool()] = torch.argmax(fine_output_asphalt, dim=1)
+        #         #     fine_predictions[true_coarse[:, 1].bool()] = torch.argmax(fine_output_concrete, dim=1)   
+        #         #     fine_predictions[true_coarse[:, 2].bool()] = torch.argmax(fine_output_paving_stones, dim=1)    
+        #         #     fine_predictions[true_coarse[:, 3].bool()] = torch.argmax(fine_output_sett, dim=1)                          
+        #         #     fine_predictions[true_coarse[:, 4].bool()] = torch.argmax(fine_output_unpaved, dim=1)  
                     
-                # elif head == 'regression':
-                #     fine_predictions[true_coarse[:, 0].bool()] = fine_output_asphalt.round()
-                #     fine_predictions[true_coarse[:, 0].bool()] = fine_output_concrete.round()
-                #     fine_predictions[true_coarse[:, 0].bool()] = fine_output_paving_stones.round()
-                #     fine_predictions[true_coarse[:, 0].bool()] = fine_output_sett.round()
-                #     fine_predictions[true_coarse[:, 0].bool()] = fine_output_unpaved.round()
+        #         # elif head == 'regression':
+        #         #     fine_predictions[true_coarse[:, 0].bool()] = fine_output_asphalt.round()
+        #         #     fine_predictions[true_coarse[:, 0].bool()] = fine_output_concrete.round()
+        #         #     fine_predictions[true_coarse[:, 0].bool()] = fine_output_paving_stones.round()
+        #         #     fine_predictions[true_coarse[:, 0].bool()] = fine_output_sett.round()
+        #         #     fine_predictions[true_coarse[:, 0].bool()] = fine_output_unpaved.round()
                     
                 
-                return coarse_output, fine_output_asphalt, fine_output_concrete, fine_output_paving_stones, fine_output_sett, fine_output_unpaved    
+        #         return coarse_output, fine_output_asphalt, fine_output_concrete, fine_output_paving_stones, fine_output_sett, fine_output_unpaved    
                 
-            else:
-                fine_output_asphalt = self.classifier_asphalt(flat) #([batch_size, 1024])
+        #     else:
+        #         fine_output_asphalt = self.classifier_asphalt(flat) #([batch_size, 1024])
                 
-                fine_output_concrete = self.classifier_concrete(flat)
+        #         fine_output_concrete = self.classifier_concrete(flat)
                 
-                fine_output_paving_stones = self.classifier_paving_stones(flat)
+        #         fine_output_paving_stones = self.classifier_paving_stones(flat)
                             
-                fine_output_sett = self.classifier_sett(flat)
+        #         fine_output_sett = self.classifier_sett(flat)
                 
-                fine_output_unpaved = self.classifier_unpaved(flat)
+        #         fine_output_unpaved = self.classifier_unpaved(flat)
                 
-                fine_output = torch.cat([fine_output_asphalt, 
-                                        fine_output_concrete, 
-                                        fine_output_paving_stones, 
-                                        fine_output_sett, 
-                                        fine_output_unpaved], 
-                                        dim=1)        
+        #         fine_output = torch.cat([fine_output_asphalt, 
+        #                                 fine_output_concrete, 
+        #                                 fine_output_paving_stones, 
+        #                                 fine_output_sett, 
+        #                                 fine_output_unpaved], 
+        #                                 dim=1)        
                     
-                return coarse_output, fine_output    
+        #         return coarse_output, fine_output    
     
     def get_optimizer_layers(self):
-        #return self.features, self.classifier, self.coarse_condition
-        return self.features, self.coarse_classifier, self.classifier_asphalt, self.classifier_concrete, self.classifier_paving_stones, self.classifier_sett, self.classifier_unpaved, self.coarse_condition
+        if self.head == 'classification' or self.head == 'single':
+            return self.features, self.coarse_classifier, self.fine_classifier, self.coarse_condition
+        else:
+            return self.features, self.coarse_classifier, self.classifier_asphalt, self.classifier_concrete, self.classifier_paving_stones, self.classifier_sett, self.classifier_unpaved, self.coarse_condition

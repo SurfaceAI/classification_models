@@ -310,7 +310,7 @@ def create_train_validation_datasets(
     data_path = os.path.join(data_root, dataset)
 
     # flatten if level is flatten
-    if level == const.FLATTEN or level == const.MULTILABEL:
+    if level == const.FLATTEN or level == const.HIERARCHICAL:
         complete_dataset = FlattenFolders(data_path,
                                           is_regression,
                                           selected_classes=selected_classes)

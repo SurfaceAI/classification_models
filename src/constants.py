@@ -86,7 +86,7 @@ FLATTENED_INT = {
 SURFACE = "surface"
 SMOOTHNESS = "smoothness"
 FLATTEN = "flatten"
-MULTILABEL = "multilabel"
+HIERARCHICAL = "hierarchical"
 
 # dataset
 V0 = "V0"
