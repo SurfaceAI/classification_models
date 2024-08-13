@@ -16,6 +16,7 @@ import os
 import tensorflow as tf
 from coral_pytorch.dataset import corn_label_from_logits
 import torch.nn as nn
+import torch.nn.functional as F
 
 
 def string_to_object(string):
@@ -410,7 +411,7 @@ def compute_fine_losses(model, fine_criterion, fine_output, fine_labels, device,
         
         # Compute the loss for each surface type
         if head == 'clm':
-            fine_loss_asphalt = fine_criterion(torch.log(fine_output_asphalt[asphalt_mask] + 1e-9), fine_labels_mapped_asphalt) #TODO: check if that works
+            fine_loss_asphalt = fine_criterion(torch.log(fine_output_asphalt[asphalt_mask] + 1e-9), fine_labels_mapped_asphalt) #TODO: check if that works 
             fine_loss_concrete = fine_criterion(torch.log(fine_output_concrete[concrete_mask] + 1e-9), fine_labels_mapped_concrete)
             fine_loss_paving_stones = fine_criterion(torch.log(fine_output_paving_stones[paving_stones_mask] + 1e-9), fine_labels_mapped_paving_stones)
             fine_loss_sett = fine_criterion(torch.log(fine_output_sett[sett_mask][three_mask_sett] + 1e-9), fine_labels_mapped_sett)
@@ -418,7 +419,7 @@ def compute_fine_losses(model, fine_criterion, fine_output, fine_labels, device,
         elif head == 'corn':
             fine_loss_asphalt = fine_criterion(fine_output_asphalt[asphalt_mask], fine_labels_mapped_asphalt, 4)
             fine_loss_concrete = fine_criterion(fine_output_concrete[concrete_mask], fine_labels_mapped_concrete, 4)
-            fine_loss_paving_stones = fine_criterion(fine_output_paving_stones[paving_stones_mask], fine_labels_mapped_paving_stones, 4)
+            fine_loss_paving_stones = fine_criterion(fine_output_paving_stones[paving_stones_mask], fine_labels_mapped_paving_stones, 4) #TODO: hard coding num_classes vermeiden
             fine_loss_sett = fine_criterion(fine_output_sett[sett_mask][three_mask_sett], fine_labels_mapped_sett, 3)
             fine_loss_unpaved = fine_criterion(fine_output_unpaved[unpaved_mask][three_mask_unpaved], fine_labels_mapped_unpaved, 3)
         elif head == 'regression':
@@ -446,7 +447,7 @@ def compute_fine_losses(model, fine_criterion, fine_output, fine_labels, device,
             fine_loss = fine_criterion(fine_output, fine_labels)
         
         elif head == 'clm':
-            fine_loss = fine_criterion(torch.log(fine_output + 1e-9), fine_labels_mapped)
+            fine_loss = fine_criterion(torch.log(fine_output + 1e-9), fine_labels_mapped) #TODO wie kann das berechnet werden?
                             
         # elif head == 'regression' or head == 'single':
         #     fine_output = fine_output.flatten().float()
@@ -458,7 +459,7 @@ def compute_fine_losses(model, fine_criterion, fine_output, fine_labels, device,
     
     return fine_loss
 
-import torch.nn.functional as F
+
 
 def compute_fine_metrics(fine_output, fine_labels, coarse_filter, hierarchy_method, head):
     
@@ -551,6 +552,39 @@ def compute_fine_metrics(fine_output, fine_labels, coarse_filter, hierarchy_meth
 
     # Return the sum of MSE and MAE
     return correct, correct_1_off, total_mse, total_mae
+
+
+def compute_all_metrics(outputs, labels, head, model):
+    
+    if head == 'regression': 
+        predictions = outputs.round()
+    elif head == 'clm':
+        predictions = torch.argmax(outputs, dim=1)
+    elif head == 'corn':
+        predictions = corn_label_from_logits(outputs).long()
+    else:  #classification
+        probs = model.get_class_probabilities(outputs)
+        predictions = torch.argmax(probs, dim=1)
+
+    # Calculate accuracy
+    correct = (predictions == labels).sum().item()
+
+    # Calculate 1-off accuracy
+    correct_1_off = ((predictions == labels) |
+                     (predictions == labels + 1) |
+                     (predictions == labels - 1)).sum().item()
+
+    # Calculate MSE and MAE
+    if head == 'regression':
+        total_mse = F.mse_loss(outputs, labels.float(), reduction='sum').item()
+        total_mae = F.l1_loss(outputs, labels.float(), reduction='sum').item()
+    else:
+        # For classification and other head types, compare with predicted classes
+        total_mse = F.mse_loss(predictions.float(), labels.float(), reduction='sum').item()
+        total_mae = F.l1_loss(predictions.float(), labels.float(), reduction='sum').item()
+
+    return correct, correct_1_off, total_mse, total_mae
+
 
 
 # def compute_fine_metrics(coarse_probs, fine_output, fine_labels, masks, head):

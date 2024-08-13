@@ -23,6 +23,7 @@ import matplotlib.pyplot as plt
 from sklearn.model_selection import StratifiedShuffleSplit
 
 from torch.optim.lr_scheduler import StepLR
+from coral_pytorch.dataset import corn_label_from_logits
 
 
 
@@ -77,8 +78,8 @@ def _run_training(project=None, name=None, config=None, wandb_on=True):
         run = wandb.init(project=project, name=name, config=config)
         config = wandb.config
         # TODO: wandb best instead of last value for metric
-        summary = "max" if config.get("val_metric")==const.EVAL_METRIC_ACCURACY else "min"
-        wandb.define_metric(f'eval/{config.get("val_metric")}', summary=summary)
+        summary = "max" if config.get("eval_metric")==const.EVAL_METRIC_ACCURACY else "min"
+        wandb.define_metric(f'eval/{config.get("eval_metric")}', summary=summary)
         # wandb.define_metric("val/acc", summary="max")
         # wandb.define_metric("val/mse", summary="min")
     model_cls = helper.string_to_object(config.get("model"))
@@ -120,7 +121,6 @@ def _run_training(project=None, name=None, config=None, wandb_on=True):
         valid_batch_size=config.get("valid_batch_size"),
         learning_rate=config.get("learning_rate"),
         random_seed=config.get("seed"),
-        is_regression=config.get("is_regression"),
         head=config.get("head"),
         max_class_size=config.get("max_class_size"),
         freeze_convs=config.get("freeze_convs"),
@@ -155,8 +155,8 @@ def _run_training(project=None, name=None, config=None, wandb_on=True):
             trainloader=trainloader,
             validloader=validloader,
             optimizer=optimizer,
-            val_metric=config.get("val_metric"),
-            clm = config.get("clm"), 
+            eval_metric=config.get("eval_metric"),
+            head = config.get("head"), 
             device=device,
             epochs=config.get("epochs"),
             wandb_on=wandb_on,
@@ -196,7 +196,6 @@ def prepare_train(
     valid_batch_size,
     learning_rate,
     random_seed,
-    is_regression,
     head,
     max_class_size,
     freeze_convs,
@@ -210,7 +209,7 @@ def prepare_train(
         general_transform=transform,
         augmentation=augment,
         random_state=random_seed,
-        is_regression=is_regression,
+        head=head,
         level=level,
         type_class=type_class,
     )
@@ -261,15 +260,20 @@ def prepare_train(
     # validloader = DataLoader(valid_data, batch_size=valid_batch_size)
 
     # load model
-  
-    num_fine_classes = 18
-    num_coarse_classes = 5
+    if level == 'hierarchical': #TODO: adapt num_coarse_classes automatically
+        num_coarse_classes = 5
+     
+    #head for fine classes hierarchical models or classifier chain quality part   
+    if head == const.REGRESSION:
+        num_classes = 1
+    else:
+        num_classes = len(selected_classes)
 
     # instanciate model with number of classes
     if level == 'hierarchical':
-        model = model_cls(num_coarse_classes, num_fine_classes, head)
+        model = model_cls(num_coarse_classes, num_classes, head)
     else:
-        model = model_cls(num_coarse_classes)
+        model = model_cls(num_classes, head)
 
     # Unfreeze parameters
     if freeze_convs:
@@ -374,8 +378,8 @@ def train(
     trainloader,
     validloader,
     optimizer,
-    val_metric,
-    clm,
+    eval_metric,
+    head,
     device,
     epochs,
     wandb_on,
@@ -405,21 +409,44 @@ def train(
         scheduler = StepLR(optimizer, step_size=6, gamma=0.1) 
 
     for epoch in range(epochs):
-        train_loss, train_metric_value = train_epoch(
-            model,
-            trainloader,
-            optimizer,
-            device,
-            val_metric=val_metric,
-            wandb_on=wandb_on,
-        )
+        if eval_metric == const.EVAL_METRIC_ALL:
+            train_loss, accuracy, accuracy_one_off, mse, mae  = train_epoch(
+                model,
+                trainloader,
+                optimizer,
+                device,
+                eval_metric,
+                head,
+                wandb_on=wandb_on,
+            )
 
-        val_loss, val_metric_value = validate_epoch(
-            model,
-            validloader,
-            device,
-            val_metric,
-        )
+            val_loss, val_accuracy, val_accuracy_one_off, val_mse, val_mae  = validate_epoch(
+                model,
+                validloader,
+                device,
+                eval_metric,
+                head,
+            )
+            
+        else:
+            train_loss, train_metric_value = train_epoch(
+                model,
+                trainloader,
+                optimizer,
+                device,
+                eval_metric,
+                head,
+                wandb_on=wandb_on,
+            )
+
+            val_loss, eval_metric_value = validate_epoch(
+                model,
+                validloader,
+                device,
+                eval_metric,
+                head,
+            )
+            
         
         if lr_scheduler:
             scheduler.step()
@@ -432,24 +459,58 @@ def train(
         )
 
         if wandb_on:
-            wandb.log(
-                {
-                    "epoch": epoch + 1,
-                    "train/loss": train_loss,
-                    f"train/{val_metric}": train_metric_value,
-                    "eval/loss": val_loss,
-                    f"eval/{val_metric}": val_metric_value,
-                }
-            )
+            if eval_metric == const.EVAL_METRIC_ALL:
+                wandb.log(
+                    {
+                        "epoch": epoch + 1,
+                        "train/loss": train_loss,
+                        "train/accuracy": accuracy,
+                        "train/accuracy_one_off": accuracy_one_off,
+                        "train/mse": mse,
+                        "train/mae": mae, 
+                        "eval/loss": val_loss,
+                        "eval/accuracy": val_accuracy,
+                        "eval/accuracy_one_off":val_accuracy_one_off,
+                        "eval/mse": val_mse,
+                        "eval/mae": val_mae,
+                    }
+                )
+                
+                print(
+                    f"Epoch {epoch+1:>{len(str(epochs))}}/{epochs}.. ",
+                    f"Train loss: {train_loss:.3f}.. ",
+                    f"Test loss: {val_loss:.3f}.. ",
+                    f"Train accuracy: {accuracy:.3f}.. ",
+                    f"Test accuracy: {val_accuracy:.3f}",
+                    f"Train accuracy_1_off: {accuracy_one_off:.3f}.. ",
+                    f"Test accuracy_1_off: {val_accuracy_one_off:.3f}",
+                    f"Train MSE: {mse:.3f}.. ",
+                    f"Test MSE: {mae:.3f}",
+                    f"Train MAE: {mae:.3f}.. ",
+                    f"Test MAE: {mae:.3f}",
+                    )
+                
+            else:
+                wandb.log(
+                    {
+                        "epoch": epoch + 1,
+                        "train/loss": train_loss,
+                        f"train/{eval_metric}": train_metric_value,
+                        "eval/loss": val_loss,
+                        f"eval/{eval_metric}": eval_metric_value,
+                    }
+                )
+                
+                print(
+                    f"Epoch {epoch+1:>{len(str(epochs))}}/{epochs}.. ",
+                    f"Train loss: {train_loss:.3f}.. ",
+                    f"Test loss: {val_loss:.3f}.. ",
+                    f"Train {eval_metric}: {train_metric_value:.3f}.. ",
+                    f"Test {eval_metric}: {eval_metric_value:.3f}",
+                    f"Learning Rate: {scheduler.get_last_lr()[0]}"
+                    )
             
-        print(
-            f"Epoch {epoch+1:>{len(str(epochs))}}/{epochs}.. ",
-            f"Train loss: {train_loss:.3f}.. ",
-            f"Test loss: {val_loss:.3f}.. ",
-            f"Train {val_metric}: {train_metric_value:.3f}.. ",
-            f"Test {val_metric}: {val_metric_value:.3f}",
-            f"Learning Rate: {scheduler.get_last_lr()[0]}"
-    )
+        
             
         if early_stop:
             print(f"Early stopped training at epoch {epoch}")
@@ -648,14 +709,25 @@ def train_hierarchical(
 
 
 # train a single epoch
-def train_epoch(model, dataloader, optimizer, device, val_metric, head, wandb_on):
+def train_epoch(model, dataloader, optimizer, device, eval_metric, head, wandb_on):
     model.train()
     
-    criterion = model.criterion(reduction="sum")
+    if head == const.CORN:
+        pass 
+    #corn_loss has no reduction parameter
+    else:
+        criterion = model.criterion(reduction="sum")
         
     running_loss = 0.0
-    val_metric_value = 0
-
+        
+    if eval_metric == const.EVAL_METRIC_ALL:
+        correct = 0
+        correct_one_off = 0
+        mse = 0
+        mae = 0
+        
+    else:
+        eval_metric_value = 0
     # gradients = []
     # first_moments = []
     # second_moments = []
@@ -677,7 +749,7 @@ def train_epoch(model, dataloader, optimizer, device, val_metric, head, wandb_on
         elif head == 'clm':
             loss = criterion(torch.log(outputs + 1e-9), labels)
         elif head == 'corn':
-            loss = criterion(outputs, labels, num_classes) #TODO: numclasses
+            loss = criterion(outputs, labels, model.num_classes) #TODO: numclasses
         else:
             loss = criterion(outputs, labels)
             
@@ -686,85 +758,139 @@ def train_epoch(model, dataloader, optimizer, device, val_metric, head, wandb_on
         optimizer.step()
   
         running_loss += loss.item()
+        
+        if eval_metric == const.EVAL_METRIC_ALL:
+            correct_item, correct_one_off_item, mse_item, mae_item = helper.compute_all_metrics(outputs, labels, head, model)
+            correct += correct_item
+            correct_one_off += correct_one_off_item
+            mse += mse_item
+            mae += mae_item
+            
+            #break
 
         # TODO: metric as function, metric_name as input argument
-
-        if val_metric == const.EVAL_METRIC_ACCURACY:
-            if isinstance(criterion, nn.MSELoss): # compare with is_regression for generalization?
-                predictions = outputs.round()
-            elif clm:
-                predictions = torch.argmax(outputs, dim=1)
-            else:
-                probs = model.get_class_probabilies(outputs)
-                predictions = torch.argmax(probs, dim=1)
-            val_metric_value += (predictions == labels).sum().item()
-
-        elif val_metric == const.EVAL_METRIC_MSE:
-            if not isinstance(criterion, nn.MSELoss): # compare with is_regression for generalization?
-                raise ValueError(
-                    f"Criterion must be nn.MSELoss for val_metric {val_metric}"
-                )
-            val_metric_value = running_loss
         else:
-            raise ValueError(f"Unknown val_metric: {val_metric}")
-        #break
+            if eval_metric == const.EVAL_METRIC_ACCURACY:
+                if head == 'regression': # compare with is_regression for generalization?
+                    predictions = outputs.round()
+                elif head == 'clm':
+                    predictions = torch.argmax(outputs, dim=1)
+                elif head == 'corn':
+                    predictions = corn_label_from_logits(outputs.long())    
+                else:
+                    probs = model.get_class_probabilies(outputs)
+                    predictions = torch.argmax(probs, dim=1)
+                eval_metric_value += (predictions == labels).sum().item()
 
-    return running_loss / len(dataloader.sampler), val_metric_value / len(
-        dataloader.sampler), 
+            elif eval_metric == const.EVAL_METRIC_MSE:
+                if not isinstance(criterion, nn.MSELoss): # compare with is_regression for generalization?
+                    raise ValueError(
+                        f"Criterion must be nn.MSELoss for eval_metric {eval_metric}"
+                    )
+                eval_metric_value = running_loss
+            else:
+                raise ValueError(f"Unknown eval_metric: {eval_metric}")
+            
+            #break
+            
+            
+    if eval_metric == const.EVAL_METRIC_ALL:
+        epoch_accuracy = 100 * correct / len(dataloader.sampler)
+        epoch_accuracy_one_off = 100 * correct_one_off / len(dataloader.sampler)
+        epoch_mse = mse / len(dataloader)
+        epoch_mae = mae / len(dataloader)
+        epoch_loss = running_loss / len(dataloader.sampler)
+
+        return epoch_loss, epoch_accuracy, epoch_accuracy_one_off, epoch_mse, epoch_mae 
+    
+    else:
+        return running_loss / len(dataloader.sampler), eval_metric_value / len(
+            dataloader.sampler), 
     #gradients, first_moments, second_moments
 
 
 # validate a single epoch
-def validate_epoch(model, dataloader, device, val_metric, clm):
-    model.val()
+def validate_epoch(model, dataloader, device, eval_metric, head):
+    model.eval()
      
-
-    criterion = model.criterion(reduction="sum")
+    if head == const.CORN:
+        pass 
+    #corn_loss has no reduction parameter
+    else:
+        criterion = model.criterion(reduction="sum")
     
     running_loss = 0.0
-    val_metric_value = 0
+    eval_metric_value = 0
+    
+    if eval_metric == const.EVAL_METRIC_ALL:
+        eval_correct = 0
+        eval_correct_one_off = 0
+        eval_mse = 0
+        eval_mae = 0
 
     with torch.no_grad():
         for inputs, labels in dataloader:
             inputs, labels = inputs.to(device), labels.to(device)
 
             outputs = model.forward(inputs)
-
-            if isinstance(criterion, nn.MSELoss):
+            
+            if head == 'regression':
                 outputs = outputs.flatten()
                 labels = labels.float()
-                
-            if clm:
-                outputs = torch.log(outputs)
-                
-            loss = criterion(outputs, labels)
+                loss = criterion(outputs, labels)
+            #loss = criterion(helper.to_one_hot_tensor(labels, 4), outputs) Todo: for QWK
+            elif head == 'clm':
+                loss = criterion(torch.log(outputs + 1e-9), labels)
+            elif head == 'corn':
+                loss = criterion(outputs, labels, model.num_classes) #TODO: numclasses
+            else:
+                loss = criterion(outputs, labels)
 
             running_loss += loss.item()
-
-            if val_metric == const.EVAL_METRIC_ACCURACY:
-                if isinstance(criterion, nn.MSELoss):
-                    predictions = outputs.round()
-                elif clm:
-                    predictions = torch.argmax(outputs, dim=1)
-                else:
-                    probs = model.get_class_probabilies(outputs)
-                    predictions = torch.argmax(probs, dim=1)
-                val_metric_value += (predictions == labels).sum().item()
-
-            elif val_metric == const.EVAL_METRIC_MSE:
-                if not isinstance(criterion, nn.MSELoss):
-                    raise ValueError(
-                        f"Criterion must be nn.MSELoss for val_metric {val_metric}"
-                    )
-                val_metric_value = running_loss
+            
+            if eval_metric == const.EVAL_METRIC_ALL:
+                eval_correct_item, eval_correct_one_off_item, eval_mse_item, eval_mae_item = helper.compute_all_metrics(outputs, labels, head, model)
+                eval_correct += eval_correct_item
+                eval_correct_one_off += eval_correct_one_off_item
+                eval_mse += eval_mse_item
+                eval_mae += eval_mae_item
+                
             else:
-                raise ValueError(f"Unknown val_metric: {val_metric}")
+                if eval_metric == const.EVAL_METRIC_ACCURACY:
+                    if head == 'regression': # compare with is_regression for generalization?
+                        predictions = outputs.round()
+                    elif head == 'clm':
+                        predictions = torch.argmax(outputs, dim=1)
+                    elif head == 'corn':
+                        predictions = corn_label_from_logits(outputs.long())    
+                    else:
+                        probs = model.get_class_probabilies(outputs)
+                        predictions = torch.argmax(probs, dim=1)
+                    eval_metric_value += (predictions == labels).sum().item()
+
+                elif eval_metric == const.EVAL_METRIC_MSE:
+                    if not isinstance(criterion, nn.MSELoss):
+                        raise ValueError(
+                            f"Criterion must be nn.MSELoss for eval_metric {eval_metric}"
+                        )
+                    eval_metric_value = running_loss
+                else:
+                    raise ValueError(f"Unknown eval_metric: {eval_metric}")
             
             #break
+        if eval_metric == const.EVAL_METRIC_ALL:
+            epoch_eval_accuracy = 100 * eval_correct / len(dataloader.sampler)
+            epoch_eval_accuracy_one_off = 100 * eval_correct_one_off / len(dataloader.sampler)
+            epoch_eval_mse = eval_mse / len(dataloader.sampler)
+            epoch_eval_mae = eval_mae / len(dataloader.sampler)
+            val_epoch_loss = running_loss / len(dataloader.sampler)
 
-    return running_loss / len(dataloader.sampler), val_metric_value / len(
-        dataloader.sampler
-    )
+            return val_epoch_loss, epoch_eval_accuracy, epoch_eval_accuracy_one_off, epoch_eval_mse, epoch_eval_mae 
+        
+        else:
+            return running_loss / len(dataloader.sampler), eval_metric_value / len(
+                dataloader.sampler
+)
 
 def train_epoch_hierarchical(model, dataloader, optimizer, device, head, hierarchy_method, lw_modifier, wandb_on, alpha, beta,):
     model.train()

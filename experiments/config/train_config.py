@@ -77,8 +77,8 @@ vgg16_surface_params = {
     "name": "vgg16_coarse",
     "level": const.SURFACE,
     "model": const.VGG16,
-    "is_regression": False,
-    "eval_metric": const.EVAL_METRIC_ACCURACY,
+    "head": const.CLASSIFICATION,
+    "eval_metric": const.EVAL_METRIC_ALL,
     "learning_rate": 0.00056,
     #"dataset": "V1_0/train",
     #"metadata": "V1_0/metadata",
@@ -97,8 +97,9 @@ vgg16_quality_params = {
     #"dataset": "V1_0/train",
     #"metadata": "V1_0/metadata",
     #"train_valid_split_list": "train_valid_split.csv",
-    "is_regression": True,
-    "eval_metric": const.EVAL_METRIC_MSE,
+    "head": const.REGRESSION,
+    "hierarchy_method": const.CC,
+    "eval_metric": const.EVAL_METRIC_ALL,
     # "gpu_kernel": 0,
 }
 
@@ -442,7 +443,7 @@ B_CNN_regression = {
     "name": "B_CNN_Regression",
     "level": const.HIERARCHICAL,
     "model": const.BCNNREGRESSION,
-    "hierarchy_method": const.WEIGHTEDSUM
+    #"hierarchy_method": const.WEIGHTEDSUM
 }
 
 

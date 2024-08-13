@@ -24,7 +24,7 @@ class PartialImageFolder(datasets.ImageFolder):
     def __init__(
         self,
         root,
-        is_regression,
+        head,
         selected_classes=None,
         transform=None,
         target_transform=None,
@@ -32,7 +32,7 @@ class PartialImageFolder(datasets.ImageFolder):
         is_valid_file=None,
     ):
         self.selected_classes = selected_classes
-        self.is_regression = is_regression
+        self.head = head
         super(PartialImageFolder, self).__init__(
             root,
             transform=transform,
@@ -51,7 +51,7 @@ class PartialImageFolder(datasets.ImageFolder):
         if not classes:
             raise FileNotFoundError(f"Couldn't find any class folder in {directory}.")
 
-        if self.is_regression:
+        if self.head == const.REGRESSION:
             class_to_idx = {
                 cls_name: const.SMOOTHNESS_INT[cls_name] for cls_name in classes
             }
@@ -164,7 +164,7 @@ class FlattenFolders(datasets.ImageFolder):
     def __init__(
         self,
         root,
-        is_regression,
+        head,
         transform=None,
         target_transform=None,
         loader=datasets.folder.default_loader,
@@ -172,7 +172,7 @@ class FlattenFolders(datasets.ImageFolder):
         selected_classes=None,
     ):
         self.selected_classes = selected_classes
-        self.is_regression = is_regression
+        self.head = head
         
         super(FlattenFolders, self).__init__(
             root,
@@ -300,7 +300,7 @@ def create_train_validation_datasets(
     general_transform,
     augmentation,
     random_state,
-    is_regression,
+    head,
     level=None,
     type_class=None,
 ):
@@ -312,7 +312,7 @@ def create_train_validation_datasets(
     # flatten if level is flatten
     if level == const.FLATTEN or level == const.HIERARCHICAL:
         complete_dataset = FlattenFolders(data_path,
-                                          is_regression,
+                                          head,
                                           selected_classes=selected_classes)
     # surface or smoothness for surface type if level is not flatten
     else:
@@ -322,7 +322,7 @@ def create_train_validation_datasets(
         # create complete dataset
         complete_dataset = PartialImageFolder(
             data_path,
-            is_regression=is_regression,
+            head=head,
             selected_classes=selected_classes,
         )
 
