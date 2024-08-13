@@ -86,5 +86,5 @@ class CustomVGG16(nn.Module):
         return x
     
     def get_optimizer_layers(self):
-        return self.classifier
+        return self.features, self.classifier
         
