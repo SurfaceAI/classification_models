@@ -185,13 +185,28 @@ class LossWeightsModifier():
         return self.alpha, self.beta
     
 #this helps us adopt a regression on the second level for multi-label models  
-def map_quality_to_continuous(quality_label):
+def map_flatten_to_ordinal(quality_label):
     quality_mapping = {
         0: 0.0, 1: 1.0, 2: 2.0, 3: 3.0, 4: 0.0, 5: 1.0,
         6: 2.0, 7: 3.0, 8: 0.0, 9: 1.0, 10: 2.0, 11: 3.0,
         12: 0.0, 13: 1.0, 14: 2.0, 15: 0.0, 16: 1.0, 17: 2.0
     }
     return quality_mapping[quality_label.item()]
+
+def map_ordinal_to_flatten(label, type):
+    if type == 'asphalt':
+        return label  
+    elif type == 'concrete':
+        return label + 4
+    elif type == 'paving_stones':
+        return label + 8
+    elif type == 'sett':
+        return label + 12
+    elif type == 'unpaved':
+        return label + 15
+    else:
+        raise ValueError("Unknown type")
+
 
 def plot_grad_flow(named_parameters):
     '''Plots the gradients flowing through different layers in the net during training.
@@ -383,7 +398,7 @@ def compute_fine_losses(model, fine_criterion, fine_output, fine_labels, device,
             fine_output_sett = fine_output[:, 12:15]
             fine_output_unpaved = fine_output[:, 15:18]
         
-        fine_labels_mapped = torch.tensor([map_quality_to_continuous(label) for label in fine_labels], dtype=torch.long).to(device)
+        fine_labels_mapped = torch.tensor([map_flatten_to_ordinal(label) for label in fine_labels], dtype=torch.long).to(device)
         
         masks = [
         (coarse_filter == 0),
@@ -584,6 +599,101 @@ def compute_all_metrics(outputs, labels, head, model):
         total_mae = F.l1_loss(predictions.float(), labels.float(), reduction='sum').item()
 
     return correct, correct_1_off, total_mse, total_mae
+
+
+def compute_and_log_CC_metrics(df, trainloader, validloader, wandb):
+    epochs = df['epoch'].unique()
+    
+    for epoch in epochs:
+        epoch_df = df[df['epoch'] == epoch]
+        level = epoch_df['level'][epoch-1]
+
+        average_metrics = epoch_df.drop(columns=['epoch', 'level']).mean()
+
+        if level == 'surface':
+            coarse_epoch_loss = average_metrics['train_loss'] / len(trainloader.sampler)
+            val_coarse_epoch_loss = average_metrics['val_loss'] / len(validloader.sampler)
+            
+            epoch_coarse_accuracy = 100 * average_metrics['train_correct'] / len(trainloader.sampler)
+            val_epoch_coarse_accuracy = 100 * average_metrics['val_correct'] / len(validloader.sampler)
+            
+            if wandb: 
+                wandb.log(
+                    {
+                        "epoch": epoch,
+                        "train/coarse/loss": coarse_epoch_loss,
+                        "train/accuracy/coarse": epoch_coarse_accuracy,
+                        "eval/coarse/loss": val_coarse_epoch_loss,
+                        "eval/accuracy/coarse": val_epoch_coarse_accuracy,
+                    }
+                )
+            
+        else:
+            fine_epoch_loss = average_metrics['train_loss'] / len(trainloader.sampler)
+            val_fine_epoch_loss = average_metrics['val_loss'] / len(validloader.sampler)
+            
+            epoch_fine_accuracy = 100 * average_metrics['train_correct'] / len(trainloader.sampler)
+            epoch_fine_accuracy_one_off = 100 * average_metrics['train_correct_one_off'] / len(trainloader.sampler)
+            val_epoch_fine_accuracy = 100 * average_metrics['val_correct'] / len(validloader.sampler)
+            val_epoch_fine_accuracy_one_off = 100 * average_metrics['val_correct_one_off'] / len(validloader.sampler)
+            
+            epoch_fine_mse = average_metrics['train_mse'] / len(trainloader)
+            epoch_fine_mae = average_metrics['train_mae'] / len(trainloader)
+            val_epoch_fine_mse = average_metrics['val_mse'] / len(validloader)
+            val_epoch_fine_mae = average_metrics['val_mae'] / len(validloader)
+            
+            if wandb: 
+                wandb.log(
+                    {
+                        "epoch": epoch,
+                        "train/fine/loss": fine_epoch_loss,
+                        "train/accuracy/fine": epoch_fine_accuracy, 
+                        "train/accuracy/fine_1_off": epoch_fine_accuracy_one_off,
+                        "train/mse/fine": epoch_fine_mse,
+                        "train/mae/fine": epoch_fine_mae,
+                        "eval/fine/loss": val_fine_epoch_loss,
+                        "eval/accuracy/fine": val_epoch_fine_accuracy,
+                        "eval/accuracy/fine_1_off": val_epoch_fine_accuracy_one_off,
+                        "eval/mse/fine": val_epoch_fine_mse,
+                        "eval/mae/fine": val_epoch_fine_mae,
+                    }
+                )
+
+
+
+# def compute_all_metrics_CC(outputs, labels, head, model, type):
+    
+#     if head == 'regression': 
+#         predictions = outputs.round()
+#     elif head == 'clm':
+#         predictions = torch.argmax(outputs, dim=1)
+#     elif head == 'corn':
+#         predictions = corn_label_from_logits(outputs).long()
+#     else:  #classification
+#         probs = model.get_class_probabilities(outputs)
+#         predictions = torch.argmax(probs, dim=1)
+        
+#     predictions_mapped = map_predictions_to_quality(predictions, type)
+#     labels_mapped = map_ordinal_to_flatten(labels, type)
+
+#     # Calculate accuracy
+#     correct = (predictions_mapped == labels_mapped).sum().item()
+
+#     # Calculate 1-off accuracy
+#     correct_1_off = ((predictions == labels) |
+#                      (predictions == labels + 1) |
+#                      (predictions == labels - 1)).sum().item()
+
+#     # Calculate MSE and MAE
+#     if head == 'regression':
+#         total_mse = F.mse_loss(outputs, labels.float(), reduction='sum').item()
+#         total_mae = F.l1_loss(outputs, labels.float(), reduction='sum').item()
+#     else:
+#         # For classification and other head types, compare with predicted classes
+#         total_mse = F.mse_loss(predictions.float(), labels.float(), reduction='sum').item()
+#         total_mae = F.l1_loss(predictions.float(), labels.float(), reduction='sum').item()
+
+#     return correct, correct_1_off, total_mse, total_mae
 
 
 

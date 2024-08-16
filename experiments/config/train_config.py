@@ -3,7 +3,7 @@ from experiments.config  import global_config
 
 default_params = {
     "batch_size": 64, #16,  # 48
-    "epochs": 2,
+    "epochs": 5,
     "learning_rate": 0.01,
     "optimizer": const.OPTI_ADAM,
     "is_regression": False,
@@ -80,6 +80,7 @@ vgg16_surface_params = {
     "head": const.CLASSIFICATION,
     "eval_metric": const.EVAL_METRIC_ALL,
     "learning_rate": 0.00056,
+    "hierarchy_method": const.CC,
     #"dataset": "V1_0/train",
     #"metadata": "V1_0/metadata",
     #"train_valid_split_list": "train_valid_split.csv",

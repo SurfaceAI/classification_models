@@ -25,24 +25,23 @@ from sklearn.model_selection import StratifiedShuffleSplit
 from torch.optim.lr_scheduler import StepLR
 from coral_pytorch.dataset import corn_label_from_logits
 
+import pandas as pd
 
 
 
-def run_training(
-    config,
-    is_sweep=False,
-):
+
+def run_training(config, is_sweep=False):
     os.environ["WANDB_MODE"] = config.get("wandb_mode", const.WANDB_MODE_OFF)
 
     project = config.get("project")
     if os.environ["WANDB_MODE"] == const.WANDB_MODE_OFF:
         project = "OFF_" + project
     
-    # extract all levels that need training, only multi elements if smoothness is trained
-    # each surface has to be trained seperately
     to_train_list = extract_levels(
         level=config.get("level"), selected_classes=config.get("selected_classes")
     )
+    
+    all_cc_metrics = []
 
     for t in to_train_list:
         config = {
@@ -58,15 +57,37 @@ def run_training(
             wandb.agent(
                 sweep_id=sweep_id, function=_run_training, count=config.get("sweep_counts")
             )
+            
         else:
-            _run_training(
-            project=project,
-            name=config.get("name"),
-            config=helper.format_config(config),
-            wandb_on=config.get("wandb_on"),
-        )
+            if config.get("hierarchy_method") == const.CC:
+                _, all_epoch_metrics_df, trainloader, validloader = _run_training(
+                    project=project,
+                    name=config.get("name"),
+                    config=helper.format_config(config),
+                    wandb_on=config.get("wandb_on"),
+                )
+                
+                all_epoch_metrics_df['level'] = t['level']
+                all_cc_metrics.append(all_epoch_metrics_df)
+                
+            else:
+                _run_training(
+                project=project,
+                name=config.get("name"),
+                config=helper.format_config(config),
+                wandb_on=config.get("wandb_on"),
+            )               
             
         print(f"Level {t} trained.")
+        
+    if config.get("hierarchy_method") == const.CC:
+        # Combine all metrics from different levels into a single DataFrame
+        combined_cc_metrics_df = pd.concat(all_cc_metrics, ignore_index=True)
+        
+        helper.compute_and_log_CC_metrics(combined_cc_metrics_df, trainloader, validloader, config.get("wandb"))
+        
+        if config.get("wandb_on"):
+            wandb.finish()
 
     print("Done.")
 
@@ -147,25 +168,61 @@ def _run_training(project=None, name=None, config=None, wandb_on=True):
             config=config,
         )
         
+        if wandb_on:
+                wandb.finish()
+            
+        return trained_model
+        
     else:
-        trained_model = train(
-            model=model,
-            model_saving_path=config.get("root_model"),
-            model_saving_name=saving_name,
-            trainloader=trainloader,
-            validloader=validloader,
-            optimizer=optimizer,
-            eval_metric=config.get("eval_metric"),
-            head = config.get("head"), 
-            device=device,
-            epochs=config.get("epochs"),
-            wandb_on=wandb_on,
-            checkpoint_top_n=config.get("checkpoint_top_n", const.CHECKPOINT_DEFAULT_TOP_N),
-            early_stop_thresh=config.get("early_stop_thresh", const.EARLY_STOPPING_DEFAULT),
-            save_state=config.get("save_state", True),
-            config=config,
-            lr_scheduler=config.get("lr_scheduler"),
-        )
+        if config.get("hierarchy_method") == const.CC:
+            trained_model, all_epoch_metrics_df = train(
+                model=model,
+                model_saving_path=config.get("root_model"),
+                model_saving_name=saving_name,
+                trainloader=trainloader,
+                validloader=validloader,
+                optimizer=optimizer,
+                eval_metric=config.get("eval_metric"),
+                head = config.get("head"), 
+                hierarchy_method=config.get("hierarchy_method"),
+                device=device,
+                epochs=config.get("epochs"),
+                wandb_on=wandb_on,
+                checkpoint_top_n=config.get("checkpoint_top_n", const.CHECKPOINT_DEFAULT_TOP_N),
+                early_stop_thresh=config.get("early_stop_thresh", const.EARLY_STOPPING_DEFAULT),
+                save_state=config.get("save_state", True),
+                config=config,
+                lr_scheduler=config.get("lr_scheduler"),
+            )
+        
+            
+            return trained_model, all_epoch_metrics_df, trainloader, validloader
+            
+        else:
+            trained_model = train(
+                model=model,
+                model_saving_path=config.get("root_model"),
+                model_saving_name=saving_name,
+                trainloader=trainloader,
+                validloader=validloader,
+                optimizer=optimizer,
+                eval_metric=config.get("eval_metric"),
+                head = config.get("head"), 
+                hierarchy_method=config.get("hierarchy_method"),
+                device=device,
+                epochs=config.get("epochs"),
+                wandb_on=wandb_on,
+                checkpoint_top_n=config.get("checkpoint_top_n", const.CHECKPOINT_DEFAULT_TOP_N),
+                early_stop_thresh=config.get("early_stop_thresh", const.EARLY_STOPPING_DEFAULT),
+                save_state=config.get("save_state", True),
+                config=config,
+                lr_scheduler=config.get("lr_scheduler"),
+            )
+            
+            if wandb_on:
+                wandb.finish()
+            
+            return trained_model
     
 
     # TODO: save best instead of last model (if checkpoint used)
@@ -173,10 +230,7 @@ def _run_training(project=None, name=None, config=None, wandb_on=True):
     # model_path = save_model(trained_model, saving_name)
     # print(f'Model saved locally: {model_path}')
 
-    if wandb_on:
-        wandb.finish()
-
-    return trained_model  # , model_path
+     # , model_path
 
     # wandb.save(model_path)
 
@@ -380,6 +434,7 @@ def train(
     optimizer,
     eval_metric,
     head,
+    hierarchy_method,
     device,
     epochs,
     wandb_on,
@@ -408,8 +463,13 @@ def train(
     if lr_scheduler:
         scheduler = StepLR(optimizer, step_size=6, gamma=0.1) 
 
+    if hierarchy_method == const.CC:
+        all_epoch_metrics_df = pd.DataFrame(columns=['epoch', 'train_loss', 'train_correct', 'train_correct_one_off', 
+                                                    'train_mse', 'train_mae', 'val_loss', 'val_correct', 
+                                                    'val_correct_one_off', 'val_mse', 'val_mae'])
+
     for epoch in range(epochs):
-        if eval_metric == const.EVAL_METRIC_ALL:
+        if eval_metric == const.EVAL_METRIC_ALL and hierarchy_method == None:
             train_loss, accuracy, accuracy_one_off, mse, mae  = train_epoch(
                 model,
                 trainloader,
@@ -417,6 +477,7 @@ def train(
                 device,
                 eval_metric,
                 head,
+                hierarchy_method,
                 wandb_on=wandb_on,
             )
 
@@ -426,8 +487,49 @@ def train(
                 device,
                 eval_metric,
                 head,
+                hierarchy_method,
             )
             
+        elif eval_metric == const.EVAL_METRIC_ALL and hierarchy_method == const.CC:
+        
+            epoch_metrics_df  = train_epoch(
+                model,
+                trainloader,
+                optimizer,
+                device,
+                eval_metric,
+                head,
+                hierarchy_method,
+                wandb_on=wandb_on,
+            )
+
+            val_epoch_metrics_df  = validate_epoch(
+                model,
+                validloader,
+                device,
+                eval_metric,
+                head,
+                hierarchy_method,
+            )
+            
+            #TODO: something wrong with epoch_metrics_df['loss'] more than one value 
+            epoch_data = pd.DataFrame([{
+                'epoch': epoch + 1,
+                'train_loss': epoch_metrics_df['loss'].item(),  # Convert Series to scalar
+                'train_correct': epoch_metrics_df['correct'].item(),
+                'train_correct_one_off': epoch_metrics_df['correct_one_off'].item(),
+                'train_mse': epoch_metrics_df['mse'].item(),
+                'train_mae': epoch_metrics_df['mae'].item(),
+                'val_loss': val_epoch_metrics_df['loss'].item(),
+                'val_correct': val_epoch_metrics_df['correct'].item(),
+                'val_correct_one_off': val_epoch_metrics_df['correct_one_off'].item(),
+                'val_mse': val_epoch_metrics_df['mse'].item(),
+                'val_mae': val_epoch_metrics_df['mae'].item()
+            }])
+
+            # Use pd.concat to append the new row to the existing DataFrame
+            all_epoch_metrics_df = pd.concat([all_epoch_metrics_df, epoch_data], ignore_index=True)
+                        
         else:
             train_loss, train_metric_value = train_epoch(
                 model,
@@ -446,20 +548,19 @@ def train(
                 eval_metric,
                 head,
             )
-            
         
         if lr_scheduler:
             scheduler.step()
         
         #helper.save_gradient_plots(epoch, gradients, first_moments, second_moments)
 
-        # checkpoint saving with early stopping
-        early_stop = checkpointer(
-            model=model, epoch=epoch, metric_val=val_loss, optimizer=optimizer
-        )
+        # checkpoint saving with early stopping #TODO: update for CC training
+        # early_stop = checkpointer( 
+        #     model=model, epoch=epoch, metric_val=val_loss, optimizer=optimizer
+        # )
 
         if wandb_on:
-            if eval_metric == const.EVAL_METRIC_ALL:
+            if eval_metric == const.EVAL_METRIC_ALL and hierarchy_method == None:
                 wandb.log(
                     {
                         "epoch": epoch + 1,
@@ -489,7 +590,8 @@ def train(
                     f"Train MAE: {mae:.3f}.. ",
                     f"Test MAE: {mae:.3f}",
                     )
-                
+            elif hierarchy_method == const.CC:
+                pass
             else:
                 wandb.log(
                     {
@@ -509,16 +611,14 @@ def train(
                     f"Test {eval_metric}: {eval_metric_value:.3f}",
                     f"Learning Rate: {scheduler.get_last_lr()[0]}"
                     )
-            
-        
-            
-        if early_stop:
-            print(f"Early stopped training at epoch {epoch}")
-            break
+
+        # if early_stop:
+        #     print(f"Early stopped training at epoch {epoch}")
+        #     break
 
     print("Done.")
 
-    return model
+    return model, all_epoch_metrics_df
 
 def train_hierarchical(
     model,
@@ -709,7 +809,7 @@ def train_hierarchical(
 
 
 # train a single epoch
-def train_epoch(model, dataloader, optimizer, device, eval_metric, head, wandb_on):
+def train_epoch(model, dataloader, optimizer, device, eval_metric, head, hierarchy_method, wandb_on):
     model.train()
     
     if head == const.CORN:
@@ -719,6 +819,15 @@ def train_epoch(model, dataloader, optimizer, device, eval_metric, head, wandb_o
         criterion = model.criterion(reduction="sum")
         
     running_loss = 0.0
+    
+    # if eval_metric == const.EVAL_METRIC_ALL and hierarchy_method == const.CC:
+    #     epoch_metrics_df = {
+    #         'loss': 0.0,
+    #         'correct': 0,
+    #         'correct_one_off': 0,
+    #         'mse': 0.0,
+    #         'mae': 0.0
+    #     }
         
     if eval_metric == const.EVAL_METRIC_ALL:
         correct = 0
@@ -726,6 +835,9 @@ def train_epoch(model, dataloader, optimizer, device, eval_metric, head, wandb_o
         mse = 0
         mae = 0
         
+        if hierarchy_method == const.CC:
+            metrics_list = []
+            
     else:
         eval_metric_value = 0
     # gradients = []
@@ -759,14 +871,16 @@ def train_epoch(model, dataloader, optimizer, device, eval_metric, head, wandb_o
   
         running_loss += loss.item()
         
+        #I put these together as this is what I need to compare the results with the hierarchical models
         if eval_metric == const.EVAL_METRIC_ALL:
             correct_item, correct_one_off_item, mse_item, mae_item = helper.compute_all_metrics(outputs, labels, head, model)
             correct += correct_item
             correct_one_off += correct_one_off_item
             mse += mse_item
             mae += mae_item
-            
-            #break
+        
+            # if batch_idx == 1:
+            #     break
 
         # TODO: metric as function, metric_name as input argument
         else:
@@ -795,13 +909,26 @@ def train_epoch(model, dataloader, optimizer, device, eval_metric, head, wandb_o
             
             
     if eval_metric == const.EVAL_METRIC_ALL:
-        epoch_accuracy = 100 * correct / len(dataloader.sampler)
-        epoch_accuracy_one_off = 100 * correct_one_off / len(dataloader.sampler)
-        epoch_mse = mse / len(dataloader)
-        epoch_mae = mae / len(dataloader)
-        epoch_loss = running_loss / len(dataloader.sampler)
+        if hierarchy_method == const.CC:           
+            
+            epoch_metrics_df = pd.DataFrame({
+                'correct': [correct],
+                'correct_one_off': [correct_one_off],
+                'mse': [mse],  # Averaging over batches
+                'mae': [mae],  # Averaging over batches
+                'loss': [running_loss]  # Averaging over samples
+            }) 
+             
+            return epoch_metrics_df
+        
+        else:
+            epoch_accuracy = 100 * correct / len(dataloader.sampler)
+            epoch_accuracy_one_off = 100 * correct_one_off / len(dataloader.sampler)
+            epoch_mse = mse / len(dataloader)
+            epoch_mae = mae / len(dataloader)
+            epoch_loss = running_loss / len(dataloader.sampler)
 
-        return epoch_loss, epoch_accuracy, epoch_accuracy_one_off, epoch_mse, epoch_mae 
+            return epoch_loss, epoch_accuracy, epoch_accuracy_one_off, epoch_mse, epoch_mae 
     
     else:
         return running_loss / len(dataloader.sampler), eval_metric_value / len(
@@ -810,7 +937,7 @@ def train_epoch(model, dataloader, optimizer, device, eval_metric, head, wandb_o
 
 
 # validate a single epoch
-def validate_epoch(model, dataloader, device, eval_metric, head):
+def validate_epoch(model, dataloader, device, eval_metric, head, hierarchy_method):
     model.eval()
      
     if head == const.CORN:
@@ -819,17 +946,23 @@ def validate_epoch(model, dataloader, device, eval_metric, head):
     else:
         criterion = model.criterion(reduction="sum")
     
-    running_loss = 0.0
-    eval_metric_value = 0
+    eval_running_loss = 0.0
     
     if eval_metric == const.EVAL_METRIC_ALL:
         eval_correct = 0
         eval_correct_one_off = 0
         eval_mse = 0
         eval_mae = 0
+        
+        if hierarchy_method == const.CC:
+            eval_metrics_list = []
+            
+    else:
+        eval_metric_value = 0   
+        
 
     with torch.no_grad():
-        for inputs, labels in dataloader:
+        for batch_idx, (inputs, labels) in enumerate(dataloader):
             inputs, labels = inputs.to(device), labels.to(device)
 
             outputs = model.forward(inputs)
@@ -846,7 +979,7 @@ def validate_epoch(model, dataloader, device, eval_metric, head):
             else:
                 loss = criterion(outputs, labels)
 
-            running_loss += loss.item()
+            eval_running_loss += loss.item()
             
             if eval_metric == const.EVAL_METRIC_ALL:
                 eval_correct_item, eval_correct_one_off_item, eval_mse_item, eval_mae_item = helper.compute_all_metrics(outputs, labels, head, model)
@@ -854,6 +987,11 @@ def validate_epoch(model, dataloader, device, eval_metric, head):
                 eval_correct_one_off += eval_correct_one_off_item
                 eval_mse += eval_mse_item
                 eval_mae += eval_mae_item
+                
+                # if batch_idx == 1:
+                #     break
+                
+                #break
                 
             else:
                 if eval_metric == const.EVAL_METRIC_ACCURACY:
@@ -873,22 +1011,35 @@ def validate_epoch(model, dataloader, device, eval_metric, head):
                         raise ValueError(
                             f"Criterion must be nn.MSELoss for eval_metric {eval_metric}"
                         )
-                    eval_metric_value = running_loss
+                    eval_metric_value = eval_running_loss
                 else:
                     raise ValueError(f"Unknown eval_metric: {eval_metric}")
             
             #break
         if eval_metric == const.EVAL_METRIC_ALL:
-            epoch_eval_accuracy = 100 * eval_correct / len(dataloader.sampler)
-            epoch_eval_accuracy_one_off = 100 * eval_correct_one_off / len(dataloader.sampler)
-            epoch_eval_mse = eval_mse / len(dataloader.sampler)
-            epoch_eval_mae = eval_mae / len(dataloader.sampler)
-            val_epoch_loss = running_loss / len(dataloader.sampler)
-
-            return val_epoch_loss, epoch_eval_accuracy, epoch_eval_accuracy_one_off, epoch_eval_mse, epoch_eval_mae 
-        
+            
+            if hierarchy_method == const.CC:
+                
+                epoch_metrics_df = pd.DataFrame({
+                    'correct': [eval_correct],
+                    'correct_one_off': [eval_correct_one_off],
+                    'mse': [eval_mse],  # Averaging over batches
+                    'mae': [eval_mae],  # Averaging over batches
+                    'loss': [eval_running_loss]  # Averaging over samples
+                }) 
+             
+                return epoch_metrics_df
+                
+            else:
+                val_epoch_loss = eval_running_loss / len(dataloader.sampler)
+                epoch_eval_accuracy = 100 * eval_correct / len(dataloader.sampler)
+                epoch_eval_accuracy_one_off = 100 * eval_correct_one_off / len(dataloader.sampler)
+                epoch_eval_mse = eval_mse / len(dataloader.sampler)
+                epoch_eval_mae = eval_mae / len(dataloader.sampler)
+                return val_epoch_loss, epoch_eval_accuracy, epoch_eval_accuracy_one_off, epoch_eval_mse, epoch_eval_mae 
+            
         else:
-            return running_loss / len(dataloader.sampler), eval_metric_value / len(
+            return eval_running_loss / len(dataloader.sampler), eval_metric_value / len(
                 dataloader.sampler
 )
 
