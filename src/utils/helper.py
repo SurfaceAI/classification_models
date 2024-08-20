@@ -1,4 +1,6 @@
 import sys
+
+from Archive.architectures import Rateke_CNN
 sys.path.append('.')
 
 import numpy as np
@@ -7,7 +9,7 @@ import matplotlib.pyplot as plt
 import torch
 from torch import optim
 from src import constants as const
-from src.architecture import Rateke_CNN, efficientnet, vgg16, vgg16_B_CNN, vgg16_CLM, vgg16_Condition_CNN_CLM_pretrained, vgg16_B_CNN_pretrained, vgg16_HierarchyNet_pretrained, vgg16_GH_CNN_pretrained
+from src.architecture import efficientnet, vgg16, vgg16_C_CNN_pretrained, vgg16_B_CNN_pretrained, vgg16_GH_CNN_pretrained, vgg16_HierarchyNet_pretrained
 import json
 import argparse
 from matplotlib.lines import Line2D
@@ -29,9 +31,7 @@ def string_to_object(string):
         const.EFFICIENTNET: efficientnet.CustomEfficientNetV2SLogsoftmax,
         const.EFFNET_LINEAR: efficientnet.CustomEfficientNetV2SLinear,
         const.OPTI_ADAM: optim.Adam,
-        const.BCNN: vgg16_B_CNN.B_CNN,
-        const.VGG16_CLM: vgg16_CLM.CustomVGG16_CLM,
-        const.CCNNCLMPRE: vgg16_Condition_CNN_CLM_pretrained.Condition_CNN_CLM_PRE,
+        const.CCNNCLMPRE: vgg16_C_CNN_pretrained.Condition_CNN_CLM_PRE,
         const.BCNN_PRE: vgg16_B_CNN_pretrained.VGG16_B_CNN_PRE,
         const.HNET_PRE: vgg16_HierarchyNet_pretrained.HierarchyNet_Pre,
         const.GHCNN_PRE: vgg16_GH_CNN_pretrained.GH_CNN_PRE,
@@ -602,7 +602,7 @@ def compute_all_metrics(outputs, labels, head, model):
     return correct, correct_1_off, total_mse, total_mae
 
 
-def compute_and_log_CC_metrics(df, trainloader, validloader, wandb_on):
+def compute_and_log_CC_metrics(df, trainloaders, validloaders, wandb_on):
     
     def calculate_accuracy(correct_sum, total_samples):
         return 100 * correct_sum / total_samples
@@ -616,11 +616,11 @@ def compute_and_log_CC_metrics(df, trainloader, validloader, wandb_on):
         average_metrics = epoch_df.drop(columns=['epoch', 'level']).mean()
 
         if level == 'surface':
-            coarse_epoch_loss = average_metrics['train_loss'] / len(trainloader.sampler)
-            val_coarse_epoch_loss = average_metrics['val_loss'] / len(validloader.sampler)
+            coarse_epoch_loss = average_metrics['train_loss'] / sum(len(loader.sampler) for loader in trainloaders)
+            val_coarse_epoch_loss = average_metrics['val_loss'] / sum(len(loader.sampler) for loader in validloaders)
             
-            epoch_coarse_accuracy = 100 * average_metrics['train_correct'] / len(trainloader.sampler)
-            val_epoch_coarse_accuracy = 100 * average_metrics['val_correct'] / len(validloader.sampler)
+            epoch_coarse_accuracy = 100 * average_metrics['train_correct'] / sum(len(loader.sampler) for loader in trainloaders)
+            val_epoch_coarse_accuracy = 100 * average_metrics['val_correct'] / sum(len(loader.sampler) for loader in validloaders)
             
             if wandb_on: 
                 wandb.log(
@@ -634,16 +634,16 @@ def compute_and_log_CC_metrics(df, trainloader, validloader, wandb_on):
                 )
             
         else:
-            fine_epoch_loss = average_metrics['train_loss'] / len(trainloader.sampler)
-            val_fine_epoch_loss = average_metrics['val_loss'] / len(validloader.sampler)
+            fine_epoch_loss = average_metrics['train_loss'] / sum(len(loader.sampler) for loader in trainloaders)
+            val_fine_epoch_loss = average_metrics['val_loss'] / sum(len(loader.sampler) for loader in validloaders)
             
             surface_types = ['asphalt', 'concrete', 'paving_stones', 'sett', 'unpaved']
 
             # Accumulate correct predictions and total sample counts
             total_train_correct = 0
-            total_train_samples = 0
             total_val_correct = 0
-            total_val_samples = 0
+            total_train_samples = sum(len(loader.sampler) for loader in trainloaders)
+            total_val_samples = sum(len(loader.sampler) for loader in validloaders)
 
             for surface in surface_types:
                 train_correct_sum = epoch_df.loc[epoch_df['level'] == f'smoothness/{surface}', 'train_correct'].sum()
@@ -654,9 +654,6 @@ def compute_and_log_CC_metrics(df, trainloader, validloader, wandb_on):
                 
                 total_train_correct += train_correct_sum
                 total_val_correct += val_correct_sum
-                
-                total_train_samples += len(trainloader.sampler)
-                total_val_samples += len(validloader.sampler)
 
             # Calculate overall accuracy
             epoch_fine_accuracy = calculate_accuracy(total_train_correct, total_train_samples)
@@ -677,6 +674,7 @@ def compute_and_log_CC_metrics(df, trainloader, validloader, wandb_on):
                         "eval/accuracy/fine_1_off": val_epoch_fine_accuracy_one_off,
                     }
                 )
+
 
 
 # def compute_all_metrics_CC(outputs, labels, head, model, type):

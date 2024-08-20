@@ -42,6 +42,8 @@ def run_training(config, is_sweep=False):
     )
     
     all_cc_metrics = []  
+    all_trainloaders = []
+    all_validloaders = []
     
     for t in to_train_list:
         inner_config = {
@@ -69,6 +71,10 @@ def run_training(config, is_sweep=False):
                 
                 all_epoch_metrics_df['level'] = t['level']
                 all_cc_metrics.append(all_epoch_metrics_df)
+                
+                all_trainloaders.append(trainloader)
+                all_validloaders.append(validloader)
+
                         
             else:
                 _run_training(
@@ -84,7 +90,7 @@ def run_training(config, is_sweep=False):
         # Combine all metrics from different levels into a single DataFrame
         combined_cc_metrics_df = pd.concat(all_cc_metrics, ignore_index=True)
         
-        helper.compute_and_log_CC_metrics(combined_cc_metrics_df, trainloader, validloader, config.get("wandb_on"))
+        helper.compute_and_log_CC_metrics(combined_cc_metrics_df, all_trainloaders, all_validloaders, config.get("wandb_on"))
         
         if config.get("wandb_on"):
             wandb.finish()
@@ -321,7 +327,9 @@ def prepare_train(
     if head == const.REGRESSION:
         num_classes = 1
     else:
-        num_classes = len(selected_classes)
+        num_classes = 18
+        #num_classes = sum(len(selected_class) for selected_class in selected_classes.values())
+        
 
     # instanciate model with number of classes
     if level == 'hierarchical':
@@ -876,8 +884,8 @@ def train_epoch(model, dataloader, optimizer, device, eval_metric, head, hierarc
             mse += mse_item
             mae += mae_item
         
-            # if batch_idx == 1:
-            #     break
+            if batch_idx == 2:
+                break
 
         # TODO: metric as function, metric_name as input argument
         else:
@@ -982,8 +990,8 @@ def validate_epoch(model, dataloader, device, eval_metric, head, hierarchy_metho
                 eval_mse += eval_mse_item
                 eval_mae += eval_mae_item
                 
-                # if batch_idx == 1:
-                #     break
+                if batch_idx == 2:
+                    break
                 
                 #break
                 
@@ -1067,7 +1075,7 @@ def train_epoch_hierarchical(model, dataloader, optimizer, device, head, hierarc
         coarse_labels = helper.parent[fine_labels]
         coarse_one_hot = helper.to_one_hot_tensor(coarse_labels, model.num_c).to(device)
         
-        model_inputs = (inputs, coarse_one_hot, hierarchy_method)
+        model_inputs = (inputs, coarse_one_hot)
 
         coarse_output, fine_output = model.forward(model_inputs)
             
@@ -1145,7 +1153,7 @@ def validate_epoch_hierarchical(model, dataloader, device, head, hierarchy_metho
         coarse_labels = helper.parent[fine_labels]
         coarse_one_hot = helper.to_one_hot_tensor(coarse_labels, model.num_c).to(device)
         
-        model_inputs = (inputs, coarse_one_hot, hierarchy_method)
+        model_inputs = (inputs, coarse_one_hot)
         coarse_output, fine_output = model.forward(model_inputs)
         
         coarse_loss = coarse_criterion(coarse_output, coarse_labels)
