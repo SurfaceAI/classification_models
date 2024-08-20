@@ -604,18 +604,14 @@ def compute_all_metrics(outputs, labels, head, model):
 
 def compute_and_log_CC_metrics(df, trainloader, validloader, wandb_on):
     
-    def calculate_accuracy(df, metric, surface_types, sampler_length):
-        accuracies = []
-        for surface in surface_types:
-            accuracy = 100 * df.loc[df['level'] == f'smoothness/{surface}', metric].sum() / sampler_length
-            accuracies.append(accuracy)
-        return sum(accuracies) / len(accuracies)
+    def calculate_accuracy(correct_sum, total_samples):
+        return 100 * correct_sum / total_samples
         
     epochs = df['epoch'].unique()
     
     for epoch in epochs:
         epoch_df = df[df['epoch'] == epoch]
-        level = epoch_df['level'][epoch-1]
+        level = epoch_df['level'].iloc[0]  # Use `.iloc[0]` to get the first value
 
         average_metrics = epoch_df.drop(columns=['epoch', 'level']).mean()
 
@@ -643,18 +639,32 @@ def compute_and_log_CC_metrics(df, trainloader, validloader, wandb_on):
             
             surface_types = ['asphalt', 'concrete', 'paving_stones', 'sett', 'unpaved']
 
-            epoch_fine_accuracy = calculate_accuracy(epoch_df, 'train_correct', surface_types, len(trainloader.sampler))
-            epoch_fine_accuracy_one_off = calculate_accuracy(epoch_df, 'train_correct_one_off', surface_types, len(trainloader.sampler))
-            
-            val_epoch_fine_accuracy = calculate_accuracy(epoch_df, 'val_correct', surface_types, len(validloader.sampler))
-            val_epoch_fine_accuracy_one_off = calculate_accuracy(epoch_df, 'val_correct_one_off', surface_types, len(validloader.sampler))
+            # Accumulate correct predictions and total sample counts
+            total_train_correct = 0
+            total_train_samples = 0
+            total_val_correct = 0
+            total_val_samples = 0
 
-                        
-            epoch_fine_mse = average_metrics['train_mse'] / len(trainloader)
-            epoch_fine_mae = average_metrics['train_mae'] / len(trainloader)
-            val_epoch_fine_mse = average_metrics['val_mse'] / len(validloader)
-            val_epoch_fine_mae = average_metrics['val_mae'] / len(validloader)
-            
+            for surface in surface_types:
+                train_correct_sum = epoch_df.loc[epoch_df['level'] == f'smoothness/{surface}', 'train_correct'].sum()
+                val_correct_sum = epoch_df.loc[epoch_df['level'] == f'smoothness/{surface}', 'val_correct'].sum()
+                
+                train_correct_one_off_sum = epoch_df.loc[epoch_df['level'] == f'smoothness/{surface}', 'train_correct_one_off'].sum()
+                val_correct_one_off_sum = epoch_df.loc[epoch_df['level'] == f'smoothness/{surface}', 'val_correct_one_off'].sum()
+                
+                total_train_correct += train_correct_sum
+                total_val_correct += val_correct_sum
+                
+                total_train_samples += len(trainloader.sampler)
+                total_val_samples += len(validloader.sampler)
+
+            # Calculate overall accuracy
+            epoch_fine_accuracy = calculate_accuracy(total_train_correct, total_train_samples)
+            epoch_fine_accuracy_one_off = calculate_accuracy(train_correct_one_off_sum, total_train_samples)
+            val_epoch_fine_accuracy = calculate_accuracy(total_val_correct, total_val_samples)
+            val_epoch_fine_accuracy_one_off = calculate_accuracy(val_correct_one_off_sum, total_val_samples)
+
+            # Logging the results
             if wandb_on: 
                 wandb.log(
                     {
@@ -662,13 +672,9 @@ def compute_and_log_CC_metrics(df, trainloader, validloader, wandb_on):
                         "train/fine/loss": fine_epoch_loss,
                         "train/accuracy/fine": epoch_fine_accuracy, 
                         "train/accuracy/fine_1_off": epoch_fine_accuracy_one_off,
-                        "train/mse/fine": epoch_fine_mse,
-                        "train/mae/fine": epoch_fine_mae,
                         "eval/fine/loss": val_fine_epoch_loss,
                         "eval/accuracy/fine": val_epoch_fine_accuracy,
                         "eval/accuracy/fine_1_off": val_epoch_fine_accuracy_one_off,
-                        "eval/mse/fine": val_epoch_fine_mse,
-                        "eval/mae/fine": val_epoch_fine_mae,
                     }
                 )
 
