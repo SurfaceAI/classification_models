@@ -3,7 +3,7 @@ from experiments.config  import global_config
 
 default_params = {
     "batch_size": 64, #16,  # 48
-    "epochs": 5,
+    "epochs": 7,
     "learning_rate": 0.01,
     "optimizer": const.OPTI_ADAM,
     "is_regression": False,
@@ -91,14 +91,14 @@ vgg16_quality_params = {
     **global_config.global_config,
     **default_params,
     "project": const.PROJECT_MULTI_LABEL_FIXED,
-    "name": "CC_fine",
+    "name": "CC_fine_clm",
     "level": const.SMOOTHNESS,
     "model": const.VGG16,
     "learning_rate": 0.0006,
     #"dataset": "V1_0/train",
     #"metadata": "V1_0/metadata",
     #"train_valid_split_list": "train_valid_split.csv",
-    "head": const.REGRESSION,
+    "head": const.CLM,
     "hierarchy_method": const.CC,
     "eval_metric": const.EVAL_METRIC_ALL,
     # "gpu_kernel": 0,
