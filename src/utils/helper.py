@@ -603,6 +603,14 @@ def compute_all_metrics(outputs, labels, head, model):
 
 
 def compute_and_log_CC_metrics(df, trainloader, validloader, wandb_on):
+    
+    def calculate_accuracy(df, metric, surface_types, sampler_length):
+        accuracies = []
+        for surface in surface_types:
+            accuracy = 100 * df.loc[df['level'] == f'smoothness/{surface}', metric].sum() / sampler_length
+            accuracies.append(accuracy)
+        return sum(accuracies) / len(accuracies)
+        
     epochs = df['epoch'].unique()
     
     for epoch in epochs:
@@ -633,11 +641,15 @@ def compute_and_log_CC_metrics(df, trainloader, validloader, wandb_on):
             fine_epoch_loss = average_metrics['train_loss'] / len(trainloader.sampler)
             val_fine_epoch_loss = average_metrics['val_loss'] / len(validloader.sampler)
             
-            epoch_fine_accuracy = 100 * average_metrics['train_correct'] / len(trainloader.sampler)
-            epoch_fine_accuracy_one_off = 100 * average_metrics['train_correct_one_off'] / len(trainloader.sampler)
-            val_epoch_fine_accuracy = 100 * average_metrics['val_correct'] / len(validloader.sampler)
-            val_epoch_fine_accuracy_one_off = 100 * average_metrics['val_correct_one_off'] / len(validloader.sampler)
+            surface_types = ['asphalt', 'concrete', 'paving_stones', 'sett', 'unpaved']
+
+            epoch_fine_accuracy = calculate_accuracy(epoch_df, 'train_correct', surface_types, len(trainloader.sampler))
+            epoch_fine_accuracy_one_off = calculate_accuracy(epoch_df, 'train_correct_one_off', surface_types, len(trainloader.sampler))
             
+            val_epoch_fine_accuracy = calculate_accuracy(epoch_df, 'val_correct', surface_types, len(validloader.sampler))
+            val_epoch_fine_accuracy_one_off = calculate_accuracy(epoch_df, 'val_correct_one_off', surface_types, len(validloader.sampler))
+
+                        
             epoch_fine_mse = average_metrics['train_mse'] / len(trainloader)
             epoch_fine_mae = average_metrics['train_mae'] / len(trainloader)
             val_epoch_fine_mse = average_metrics['val_mse'] / len(validloader)
@@ -659,7 +671,6 @@ def compute_and_log_CC_metrics(df, trainloader, validloader, wandb_on):
                         "eval/mae/fine": val_epoch_fine_mae,
                     }
                 )
-
 
 
 # def compute_all_metrics_CC(outputs, labels, head, model, type):
