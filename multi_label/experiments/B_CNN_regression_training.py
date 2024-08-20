@@ -9,8 +9,8 @@ from src.models import training
 from src import constants as const
 from src.architecture.vgg16_B_CNN_pretrained import VGG16_B_CNN_PRE
 from src.architecture.vgg16_B_CNN import B_CNN
-from src.architecture.vgg16_B_CNN_Regression import B_CNN_Regression
-from src.architecture.vgg16_B_CNN_CLM import B_CNN_CLM
+from Archive.architectures.vgg16_B_CNN_Regression import B_CNN_Regression
+from Archive.architectures.vgg16_B_CNN_CLM import B_CNN_CLM
 
 
 from datetime import datetime

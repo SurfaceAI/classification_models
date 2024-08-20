@@ -18,8 +18,8 @@ import wandb
 import numpy as np
 import os
 
-from src.architecture.vgg16_Condition_CNN import Condition_CNN
-from src.architecture.vgg16_Condition_CNN_pretrained import Condition_CNN_PRE
+from Archive.architectures.vgg16_Condition_CNN import Condition_CNN
+from src.architecture.vgg16_C_CNN_pretrained import Condition_CNN_PRE
 
 
 config = train_config.C_CNN

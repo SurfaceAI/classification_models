@@ -26,41 +26,9 @@ class HierarchyNet_Pre(nn.Module):
         # Unfreeze training for all layers in features
         for param in model.features.parameters():
             param.requires_grad = True
-            
               
-        ### Block 1
+        ### Features
         self.features = model.features
-        # self.block1 = model.features[:5]
-        # self.block2 = model.features[5:10]
-        # self.block3 = model.features[10:17]
-        # self.block4 = model.features[17:24]
-        # self.block5 = model.features[24:]
-        
-        #Here comes the flatten layer and then the dense ones for the coarse classes
-        # self.coarse_classifier = nn.Sequential(
-        #     nn.Linear(256 * 8 * 8, 1024),
-        #     nn.ReLU(),
-        #     nn.Dropout(0.5),
-        #     nn.Linear(1024, 1024),
-        #     nn.ReLU(),
-        #     nn.Dropout(0.5),
-        #     nn.Linear(1024, num_c)
-        # )
-        
-        
-        #model.classifier[0] = nn.Linear(in_features=32768, out_features=4096, bias=True)
-        #features = list(model.classifier.children())[:-1]  # select features in our last layer
-        #features.extend([nn.Linear(num_features, num_classes)])  # add layer with output size num_classes
-        #model.classifier = nn.Sequential(*features)  # Replace the model classifier
-
-
-        #num_features = model.classifier[6].in_features
-        # Modify the first fully connected layer to accept the correct input size
-        # model.classifier[0] = nn.Linear(in_features=512*8*8, out_features=1024, bias=True)
-
-        # # Save the modified classifier layers as member variables
-        #self.fc = nn.Sequential(*list(model.classifier.children())[0:3])
-        #self.fc_1 = nn.Sequential(*list(model.classifier.children())[3:6])
         
         self.coarse_classifier = nn.Sequential(
             nn.Linear(32768, 1024),
@@ -155,14 +123,6 @@ class HierarchyNet_Pre(nn.Module):
         )
         return layers
     
-    
-        # self.coarse_criterion = nn.CrossEntropyLoss()
-        
-        # if num_classes == 1:
-        #     self.fine_criterion = nn.MSELoss()
-        # else:
-        #     self.fine_criterion = nn.CrossEntropyLoss()
-    
     @ staticmethod
     def get_class_probabilies(x):
          return nn.functional.softmax(x, dim=1)
@@ -175,19 +135,11 @@ class HierarchyNet_Pre(nn.Module):
     
     def forward(self, inputs):
         
-        images, true_coarse, hierarchy_method = inputs
+        images, true_coarse = inputs
         
         x = self.features(images)
-        # x = self.block1(x)   #128, 64, 128, 128    
-        # x = self.block2(x)
-        # x = self.block3(x)
-        # x = self.block4(x)
-        # x = self.block5(x) #128, 512, 8, 8]
         
-        flat = x.reshape(x.size(0), -1) #torch.Size([16, 131072])
-        
-        # branch_output = self.fc(flat)
-        # branch_output = self.fc_1(branch_output)
+        flat = x.reshape(x.size(0), -1) 
         
         coarse_output = self.coarse_classifier(flat)
         coarse_probs = self.get_class_probabilies(coarse_output)
@@ -249,6 +201,5 @@ class HierarchyNet_Pre(nn.Module):
     def get_optimizer_layers(self):
         if self.head == 'classification':
             return self.features, self.coarse_classifier, self.fine_classifier
-        #return self.features, self.classifier, self.coarse_condition
         else:
             return self.features, self.coarse_classifier, self.classifier_asphalt, self.classifier_concrete, self.classifier_paving_stones, self.classifier_sett, self.classifier_unpaved, 

@@ -17,7 +17,7 @@ class CustomVGG16(nn.Module):
         
         # Freeze training for all layers in features
         for param in model.features.parameters():
-            param.requires_grad = False
+            param.requires_grad = True
 
         self.head = head
         self.num_classes = num_classes #this should always be the number of quality classes for each level
@@ -58,18 +58,9 @@ class CustomVGG16(nn.Module):
             top_layer
         )
 
-
-        # Modify the classifier layer
-        # num_features = model.classifier[6].in_features
-        # features = list(model.classifier.children())[:-1]  # select features in our last layer
-        # features.extend([nn.Linear(num_features, num_classes)])  # add layer with output size num_classes
-        # model.classifier = nn.Sequential(*features)  # Replace the model classifier
-
         # Save the modified model as a member variable
         self.features = model.features
         self.avgpool = model.avgpool
-        #self.classifier = model.classifier
-
 
     @ staticmethod
     def get_class_probabilities(x):
@@ -77,12 +68,9 @@ class CustomVGG16(nn.Module):
 
     def forward(self, x):
         x = self.features(x)
-
         #x = self.avgpool(x) #TODO: decide whether to keep it in or not
         x = torch.flatten(x, 1)
-
         x = self.classifier(x)
-
         return x
     
     def get_optimizer_layers(self):

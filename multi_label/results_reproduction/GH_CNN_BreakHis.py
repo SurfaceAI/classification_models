@@ -17,7 +17,7 @@ from torch.utils.data import DataLoader, Dataset
 import torch.nn.functional as F
 from torch.optim import lr_scheduler
 
-from src.architecture.vgg16_GH_CNN import GH_CNN
+from Archive.architectures.vgg16_GH_CNN import GH_CNN
 
 from datetime import datetime
 import time

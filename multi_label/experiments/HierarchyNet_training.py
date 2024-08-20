@@ -16,7 +16,7 @@ from torch.utils.data import DataLoader
 import torch.nn.functional as F
 from torch.optim import lr_scheduler
 
-from src.architecture.vgg16_HierarchyNet import HierarchyNet
+from Archive.architectures.vgg16_HierarchyNet import HierarchyNet
 from src.architecture.vgg16_HierarchyNet_pretrained import HierarchyNet_Pre
 
 

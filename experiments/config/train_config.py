@@ -2,8 +2,8 @@ from src import constants as const
 from experiments.config  import global_config
 
 default_params = {
-    "batch_size": 64, #16,  # 48
-    "epochs": 7,
+    "batch_size": 128, #16,  # 48
+    "epochs": 2,
     "learning_rate": 0.01,
     "optimizer": const.OPTI_ADAM,
     "is_regression": False,
@@ -91,14 +91,14 @@ vgg16_quality_params = {
     **global_config.global_config,
     **default_params,
     "project": const.PROJECT_MULTI_LABEL_FIXED,
-    "name": "CC_fine_clm",
+    "name": "CC_fine_classification",
     "level": const.SMOOTHNESS,
     "model": const.VGG16,
     "learning_rate": 0.0006,
     #"dataset": "V1_0/train",
     #"metadata": "V1_0/metadata",
     #"train_valid_split_list": "train_valid_split.csv",
-    "head": const.CORN,
+    "head": const.CLASSIFICATION,
     "hierarchy_method": const.CC,
     "eval_metric": const.EVAL_METRIC_ALL,
     # "gpu_kernel": 0,
@@ -388,8 +388,8 @@ H_NET = {
 H_NET_PRE = {
     **global_config.global_config,
     **default_params,
-    "batch_size": 64,
-    "epochs": 10,
+    "batch_size": 128,
+    "epochs": 1,
     "learning_rate": 0.0001,
     "optimizer": const.OPTI_ADAM,
     "coarse_eval_metric": const.EVAL_METRIC_ACCURACY,
@@ -451,8 +451,8 @@ B_CNN_regression = {
 C_CNN_CLM = {
     **global_config.global_config,
     **default_params,
-    "batch_size": 16,
-    "epochs": 5,
+    "batch_size": 128,
+    "epochs": 1,
     "learning_rate": 0.0001,
     "optimizer": const.OPTI_ADAM,
     "coarse_eval_metric": const.EVAL_METRIC_ACCURACY,

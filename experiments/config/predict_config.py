@@ -54,7 +54,7 @@ B_CNN = {
 
 B_CNN_PRE = {
     **global_config.global_config,
-    "name": "multi_label_prediction",
+    "name": "B_CNN_prediction",
     "model_dict": {"trained_model": "multilabel-BCNN_pretrained-20240505_133427-c549if0b_epoch39.pt"}, 
     "dataset": "V11/annotated", #V5_c5/unsorted_images",
     "transform": {
@@ -64,4 +64,22 @@ B_CNN_PRE = {
     },
     "batch_size": 96,
     "save_features": True
+}
+
+
+C_CNN_PRE = {
+    **global_config.global_config,
+    "name": "C_CNN_prediction",
+    "model_dict": {"trained_model": "hierarchical-Condition_CNN_CLM_PRE-20240820_163509_epoch0.pt"}, 
+    "dataset": "V12/annotated", #V5_c5/unsorted_images",
+    "transform": {
+        "resize": const.H256_W256,
+        "crop": const.CROP_LOWER_MIDDLE_THIRD,
+        "normalize": (const.V6_ANNOTATED_MEAN, const.V6_ANNOTATED_SD),
+    },
+    "level": const.HIERARCHICAL,
+    "head": 'regression', #'regression', 'classification', 'obd', 'clm'
+    "hierarchy_method": const.GROUNDTRUTH, #'use_ground_truth', 'use_condition_layer', 'top_coarse_prob'
+    "batch_size": 96,
+    "save_features": False
 }

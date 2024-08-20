@@ -12,20 +12,6 @@ class CustomBayesLayer(nn.Module):
     def forward(self, parent_prob, subclass_probs):
         y_subclass = torch.mul(parent_prob, subclass_probs) / torch.sum(subclass_probs, dim=1, keepdim=True)
         return y_subclass
-        
-        #iterate through all subclasses of one parent class
-        # y_subclass = []
-        # for i in range(subclass_probs.shape[1]):
-        #     y_i_subclass = torch.mul(parent_prob, subclass_probs[:, i]) / torch.sum(subclass_probs, dim=1, keepdim=True)
-        #     y_subclass.append(y_i_subclass.unsqueeze(1))  # Keep the dimension for concatenation
-        # return torch.cat(y_subclass, dim=1)
-    
-# class CustomMultLayer(nn.Module):
-#     def __init__(self):
-#         super(CustomMultLayer, self).__init__()
-        
-#     def forward(self, tensor_1, tensor_2):
-#         return torch.mul(tensor_1, tensor_2)   
     
 class GH_CNN_PRE(nn.Module):
     def __init__(self, num_c, num_classes, head):
@@ -45,11 +31,6 @@ class GH_CNN_PRE(nn.Module):
               
         ### Block 1
         self.features = model.features
-        # self.block1 = model.features[:5]
-        # self.block2 = model.features[5:10]
-        # self.block3 = model.features[10:17]
-        # self.block4 = model.features[17:24]
-        # self.block5 = model.features[24:]
         
         num_features = model.classifier[6].in_features
         # Modify the first fully connected layer to accept the correct input size
@@ -62,7 +43,6 @@ class GH_CNN_PRE(nn.Module):
         self.fc_2_coarse = nn.Linear(num_features, num_c)
         self.fc_2_fine = nn.Linear(num_features, num_classes) 
 
-        
         self.coarse_criterion = nn.CrossEntropyLoss
         
         if num_classes == 1:
@@ -146,4 +126,4 @@ class GH_CNN_PRE(nn.Module):
         return coarse_output, fine_output 
     
     def get_optimizer_layers(self):
-        return self.features, self.fc, self.fc_1, self.fc_2_coarse, self.fc_2_fine
+        return self.features, self.fc, self.fc_1, self.fc_2_coarse, self.fc_2_fine #TODO anpassen an andere Modellarchitekturen

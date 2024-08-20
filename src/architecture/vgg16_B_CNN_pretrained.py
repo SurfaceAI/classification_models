@@ -19,14 +19,8 @@ class VGG16_B_CNN_PRE(nn.Module):
         
         # Unfreeze training for all layers in features
         for param in model.features.parameters():
-            param.requires_grad = False
+            param.requires_grad = True
             
-        ### Block 1
-        # self.block1 = model.features[:5]
-        # self.block2 = model.features[5:10]
-        # self.block3 = model.features[10:17]
-        # self.block4 = model.features[17:24]
-        # self.block5 = model.features[24:]
         self.features = model.features
         
         #Coarse prediction branch
@@ -40,12 +34,6 @@ class VGG16_B_CNN_PRE(nn.Module):
             nn.Linear(512, num_c)
         )
         
-        ### Fine prediction branch
-        # num_features = model.classifier[6].in_features
-        # model.classifier[0] = nn.Linear(in_features=32768, out_features=4096, bias=True)
-        # features = list(model.classifier.children())[:-1]  # select features in our last layer
-        # features.extend([nn.Linear(num_features, num_classes)])  # add layer with output size num_classes
-        # model.classifier = nn.Sequential(*features)  # Replace the model classifier
         self.coarse_criterion = nn.CrossEntropyLoss
         
         if head == 'clm':      
@@ -113,16 +101,6 @@ class VGG16_B_CNN_PRE(nn.Module):
             nn.Linear(256, num_classes - 1),
         )
         return layers
-        
-        # Save the modified model as a member variable
-        #self.avgpool = model.avgpool #brauch ich nicht, da ich die Input feature für den Classifier angepasst habe.
-        
-        # self.coarse_criterion = nn.CrossEntropyLoss()
-        
-        # if num_classes == 1:
-        #     self.fine_criterion = nn.MSELoss()
-        # else:
-        #     self.fine_criterion = nn.CrossEntropyLoss()
     
     @ staticmethod
     def get_class_probabilies(x):
@@ -130,7 +108,7 @@ class VGG16_B_CNN_PRE(nn.Module):
     
     def forward(self, inputs):
         
-        images, true_coarse, hierarchy_method = inputs
+        images, true_coarse = inputs
         
         x = self.features[:17](images) #[128, 64, 128, 128]
         
@@ -160,6 +138,7 @@ class VGG16_B_CNN_PRE(nn.Module):
         return coarse_output, fine_output_combined
     
     def get_optimizer_layers(self):
-        #return self.features, self.classifier, self.coarse_condition
-        return self.features, self.coarse_classifier, self.classifier_asphalt, self.classifier_concrete, self.classifier_paving_stones, self.classifier_sett, self.classifier_unpaved
-    
+        if self.head == 'classification' or self.head == 'single':
+            return self.features, self.coarse_classifier, self.fine_classifier, self.coarse_condition
+        else:
+            return self.features, self.coarse_classifier, self.classifier_asphalt, self.classifier_concrete, self.classifier_paving_stones, self.classifier_sett, self.classifier_unpaved, self.coarse_condition
