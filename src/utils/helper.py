@@ -17,6 +17,7 @@ import tensorflow as tf
 from coral_pytorch.dataset import corn_label_from_logits
 import torch.nn as nn
 import torch.nn.functional as F
+import wandb
 
 
 def string_to_object(string):
@@ -601,7 +602,7 @@ def compute_all_metrics(outputs, labels, head, model):
     return correct, correct_1_off, total_mse, total_mae
 
 
-def compute_and_log_CC_metrics(df, trainloader, validloader, wandb):
+def compute_and_log_CC_metrics(df, trainloader, validloader, wandb_on):
     epochs = df['epoch'].unique()
     
     for epoch in epochs:
@@ -617,7 +618,7 @@ def compute_and_log_CC_metrics(df, trainloader, validloader, wandb):
             epoch_coarse_accuracy = 100 * average_metrics['train_correct'] / len(trainloader.sampler)
             val_epoch_coarse_accuracy = 100 * average_metrics['val_correct'] / len(validloader.sampler)
             
-            if wandb: 
+            if wandb_on: 
                 wandb.log(
                     {
                         "epoch": epoch,
@@ -642,7 +643,7 @@ def compute_and_log_CC_metrics(df, trainloader, validloader, wandb):
             val_epoch_fine_mse = average_metrics['val_mse'] / len(validloader)
             val_epoch_fine_mae = average_metrics['val_mae'] / len(validloader)
             
-            if wandb: 
+            if wandb_on: 
                 wandb.log(
                     {
                         "epoch": epoch,

@@ -41,54 +41,54 @@ def run_training(config, is_sweep=False):
         level=config.get("level"), selected_classes=config.get("selected_classes")
     )
     
-    all_cc_metrics = []
-
+    all_cc_metrics = []  
+    
     for t in to_train_list:
-        config = {
+        inner_config = {
             **config,
             **t,
         }
-
+        
         if is_sweep:
             sweep_id = wandb.sweep(
-                sweep=helper.format_sweep_config(config), project=config.get("project")
+                sweep=helper.format_sweep_config(inner_config), project=inner_config.get("project")
             )
-
+    
             wandb.agent(
-                sweep_id=sweep_id, function=_run_training, count=config.get("sweep_counts")
+                sweep_id=sweep_id, function=_run_training, count=inner_config.get("sweep_counts")
             )
             
         else:
-            if config.get("hierarchy_method") == const.CC:
+            if inner_config.get("hierarchy_method") == const.CC:
                 _, all_epoch_metrics_df, trainloader, validloader = _run_training(
                     project=project,
-                    name=config.get("name"),
-                    config=helper.format_config(config),
-                    wandb_on=config.get("wandb_on"),
+                    name=inner_config.get("name"),
+                    config=helper.format_config(inner_config),
+                    wandb_on=inner_config.get("wandb_on"),
                 )
                 
                 all_epoch_metrics_df['level'] = t['level']
                 all_cc_metrics.append(all_epoch_metrics_df)
-                
+                        
             else:
                 _run_training(
                 project=project,
-                name=config.get("name"),
-                config=helper.format_config(config),
-                wandb_on=config.get("wandb_on"),
+                name=inner_config.get("name"),
+                config=helper.format_config(inner_config),
+                wandb_on=inner_config.get("wandb_on"),
             )               
             
-        print(f"Level {t} trained.")
-        
+            print(f"Level {t} trained.")
+    
     if config.get("hierarchy_method") == const.CC:
         # Combine all metrics from different levels into a single DataFrame
         combined_cc_metrics_df = pd.concat(all_cc_metrics, ignore_index=True)
         
-        helper.compute_and_log_CC_metrics(combined_cc_metrics_df, trainloader, validloader, config.get("wandb"))
+        helper.compute_and_log_CC_metrics(combined_cc_metrics_df, trainloader, validloader, config.get("wandb_on"))
         
         if config.get("wandb_on"):
             wandb.finish()
-
+    
     print("Done.")
 
 
@@ -97,7 +97,7 @@ def _run_training(project=None, name=None, config=None, wandb_on=True):
     # TODO: config sweep ...
     if wandb_on:
         run = wandb.init(project=project, name=name, config=config)
-        config = wandb.config
+        #config = wandb.config #TODO: why do we need this and why does it overwrite my loop of t loop
         # TODO: wandb best instead of last value for metric
         summary = "max" if config.get("eval_metric")==const.EVAL_METRIC_ACCURACY else "min"
         wandb.define_metric(f'eval/{config.get("eval_metric")}', summary=summary)
