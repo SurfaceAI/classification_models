@@ -813,7 +813,7 @@ def train_epoch(model, dataloader, optimizer, device, eval_metric, head, hierarc
     model.train()
     
     if head == const.CORN:
-        pass 
+        criterion = model.criterion
     #corn_loss has no reduction parameter
     else:
         criterion = model.criterion(reduction="sum")
@@ -834,9 +834,6 @@ def train_epoch(model, dataloader, optimizer, device, eval_metric, head, hierarc
         correct_one_off = 0
         mse = 0
         mae = 0
-        
-        if hierarchy_method == const.CC:
-            metrics_list = []
             
     else:
         eval_metric_value = 0
@@ -941,7 +938,7 @@ def validate_epoch(model, dataloader, device, eval_metric, head, hierarchy_metho
     model.eval()
      
     if head == const.CORN:
-        pass 
+        criterion = model.criterion
     #corn_loss has no reduction parameter
     else:
         criterion = model.criterion(reduction="sum")
@@ -953,9 +950,6 @@ def validate_epoch(model, dataloader, device, eval_metric, head, hierarchy_metho
         eval_correct_one_off = 0
         eval_mse = 0
         eval_mae = 0
-        
-        if hierarchy_method == const.CC:
-            eval_metrics_list = []
             
     else:
         eval_metric_value = 0   
@@ -1048,7 +1042,7 @@ def train_epoch_hierarchical(model, dataloader, optimizer, device, head, hierarc
     
     coarse_criterion = model.coarse_criterion(reduction="sum")
     if head == 'corn':
-        pass
+        fine_criterion = model.fine_criterion
     else:
         fine_criterion = model.fine_criterion(reduction="sum")
         
@@ -1128,7 +1122,7 @@ def validate_epoch_hierarchical(model, dataloader, device, head, hierarchy_metho
     
     coarse_criterion = model.coarse_criterion(reduction="sum")
     if head == 'corn':
-        pass
+        fine_criterion = model.fine_criterion
     else:
         fine_criterion = model.fine_criterion(reduction="sum")
     

@@ -98,7 +98,7 @@ vgg16_quality_params = {
     #"dataset": "V1_0/train",
     #"metadata": "V1_0/metadata",
     #"train_valid_split_list": "train_valid_split.csv",
-    "head": const.CLM,
+    "head": const.CORN,
     "hierarchy_method": const.CC,
     "eval_metric": const.EVAL_METRIC_ALL,
     # "gpu_kernel": 0,
