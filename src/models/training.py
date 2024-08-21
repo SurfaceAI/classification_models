@@ -884,8 +884,8 @@ def train_epoch(model, dataloader, optimizer, device, eval_metric, head, hierarc
             mse += mse_item
             mae += mae_item
         
-            if batch_idx == 2:
-                break
+            # if batch_idx == 2:
+            #     break
 
         # TODO: metric as function, metric_name as input argument
         else:
@@ -990,8 +990,8 @@ def validate_epoch(model, dataloader, device, eval_metric, head, hierarchy_metho
                 eval_mse += eval_mse_item
                 eval_mae += eval_mae_item
                 
-                if batch_idx == 2:
-                    break
+                # if batch_idx == 2:
+                #     break
                 
                 #break
                 

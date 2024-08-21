@@ -1,6 +1,6 @@
 import sys
 
-from Archive.architectures import Rateke_CNN
+
 sys.path.append('.')
 
 import numpy as np
@@ -25,7 +25,6 @@ import wandb
 def string_to_object(string):
 
     string_dict = {
-        const.RATEKE: Rateke_CNN.ConvNet,
         const.VGG16: vgg16.CustomVGG16,
         const.VGG16REGRESSION: vgg16.CustomVGG16,
         const.EFFICIENTNET: efficientnet.CustomEfficientNetV2SLogsoftmax,
