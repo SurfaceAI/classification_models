@@ -563,7 +563,7 @@ def compute_fine_metrics_hierarchical(fine_output, fine_labels, coarse_filter, h
             predictions = fine_output.round().long()
             total_mse = F.mse_loss(fine_output, fine_labels.float(), reduction='sum').item()
             total_mae = F.l1_loss(fine_output, fine_labels.float(), reduction='sum').item()
-
+            
         all_predictions.extend(predictions.cpu().numpy())
         all_labels.extend(fine_labels.cpu().numpy())
 
@@ -576,9 +576,11 @@ def compute_fine_metrics_hierarchical(fine_output, fine_labels, coarse_filter, h
 
     # Calculate QWK across all predictions and labels
     qwk = cohen_kappa_score(all_labels, all_predictions, weights='quadratic')
-
+    
+    hierarchy_violations = sum(is_hierarchy_violation(fine_labels, predictions, parent) for true, pred in zip(labels.cpu().numpy(), predictions.cpu().numpy()))
+    
     # Return the sum of MSE, MAE, and QWK
-    return correct, correct_1_off, total_mse, total_mae, qwk
+    return correct, correct_1_off, total_mse, total_mae, qwk, hierarchy_violations
 
 
 def compute_all_metrics(outputs, labels, head, model):
@@ -610,7 +612,8 @@ def compute_all_metrics(outputs, labels, head, model):
         total_mse = F.mse_loss(predictions.float(), labels.float(), reduction='sum').item()
         total_mae = F.l1_loss(predictions.float(), labels.float(), reduction='sum').item()
         
-    qwk = cohen_kappa_score(labels.cpu().numpy(), predictions.cpu().numpy(), weights='quadratic')
+    qwk = cohen_kappa_score(labels.cpu().detach().numpy(), predictions.cpu().detach().numpy(), weights='quadratic')
+
 
     return correct, correct_1_off, total_mse, total_mae, qwk
 
@@ -693,126 +696,20 @@ def compute_and_log_CC_metrics(df, trainloaders, validloaders, wandb_on):
 
 
 
-# def compute_all_metrics_CC(outputs, labels, head, model, type):
-    
-#     if head == 'regression': 
-#         predictions = outputs.round()
-#     elif head == 'clm':
-#         predictions = torch.argmax(outputs, dim=1)
-#     elif head == 'corn':
-#         predictions = corn_label_from_logits(outputs).long()
-#     else:  #classification
-#         probs = model.get_class_probabilities(outputs)
-#         predictions = torch.argmax(probs, dim=1)
-        
-#     predictions_mapped = map_predictions_to_quality(predictions, type)
-#     labels_mapped = map_ordinal_to_flatten(labels, type)
+def is_hierarchy_violation(true_label, predicted_label, parent):
+    """
+    Check if the predicted label violates the hierarchy given the true label.
 
-#     # Calculate accuracy
-#     correct = (predictions_mapped == labels_mapped).sum().item()
+    Parameters:
+    - true_label: The ground truth label (scalar value).
+    - predicted_label: The model's prediction (scalar value).
+    - parent: A tensor where each index represents a class and its value represents the parent class.
 
-#     # Calculate 1-off accuracy
-#     correct_1_off = ((predictions == labels) |
-#                      (predictions == labels + 1) |
-#                      (predictions == labels - 1)).sum().item()
-
-#     # Calculate MSE and MAE
-#     if head == 'regression':
-#         total_mse = F.mse_loss(outputs, labels.float(), reduction='sum').item()
-#         total_mae = F.l1_loss(outputs, labels.float(), reduction='sum').item()
-#     else:
-#         # For classification and other head types, compare with predicted classes
-#         total_mse = F.mse_loss(predictions.float(), labels.float(), reduction='sum').item()
-#         total_mae = F.l1_loss(predictions.float(), labels.float(), reduction='sum').item()
-
-#     return correct, correct_1_off, total_mse, total_mae
-
-
-
-# def compute_fine_metrics(coarse_probs, fine_output, fine_labels, masks, head):
-#     # Separate the fine outputs
-#     if head == 'regression':
-#         fine_output_asphalt = fine_output[:, 0:1].float()
-#         fine_output_concrete = fine_output[:, 1:2].float()
-#         fine_output_paving_stones = fine_output[:, 2:3].float()
-#         fine_output_sett = fine_output[:, 3:4].float()
-#         fine_output_unpaved = fine_output[:, 4:5].float()
-    
-#     elif head == 'corn':
-#         fine_output_asphalt = fine_output[:, 0:3]
-#         fine_output_concrete = fine_output[:, 3:6]
-#         fine_output_paving_stones = fine_output[:, 6:9]
-#         fine_output_sett = fine_output[:, 9:11]
-#         fine_output_unpaved = fine_output[:, 11:13]
-        
-#     else:
-#         fine_output_asphalt = fine_output[:, 0:4]
-#         fine_output_concrete = fine_output[:, 4:8]
-#         fine_output_paving_stones = fine_output[:, 8:12]
-#         fine_output_sett = fine_output[:, 12:15]
-#         fine_output_unpaved = fine_output[:, 15:18]
-    
-#     # Extract the masks
-#     asphalt_mask, concrete_mask, paving_stones_mask, sett_mask, unpaved_mask = masks
-    
-#  # Initialize prediction tensor
-#     predictions = torch.zeros_like(fine_labels)
-
-#     if asphalt_mask.sum().item() > 0:
-#         if head == 'clm' or head == 'classification':
-#             asphalt_preds = torch.argmax(fine_output_asphalt[asphalt_mask], dim=1)
-#         elif head == 'regression':
-#             asphalt_preds = fine_output_asphalt[asphalt_mask].round().long()
-#             print(asphalt_preds)
-#         elif head == 'corn':
-#             asphalt_preds = corn_label_from_logits(fine_output_asphalt[asphalt_mask]).long()
-#         predictions[asphalt_mask] = map_predictions_to_quality(asphalt_preds, "asphalt")
-
-#     if concrete_mask.sum().item() > 0:
-#         if head == 'clm' or head == 'classification':
-#             concrete_preds = torch.argmax(fine_output_concrete[concrete_mask], dim=1)
-#         elif head == 'regression':
-#             concrete_preds = fine_output_concrete[concrete_mask].round().long()
-#         elif head == 'corn':
-#             concrete_preds = corn_label_from_logits(fine_output_concrete[concrete_mask]).long()
-#         predictions[concrete_mask] = map_predictions_to_quality(concrete_preds, "concrete")
-
-#     if paving_stones_mask.sum().item() > 0:
-#         if head == 'clm' or head == 'classification':
-#             paving_stones_preds = torch.argmax(fine_output_paving_stones[paving_stones_mask], dim=1)
-#         elif head == 'regression':
-#             paving_stones_preds = fine_output_paving_stones[paving_stones_mask].round().long()
-#         elif head == 'corn':
-#             paving_stones_preds = corn_label_from_logits(fine_output_paving_stones[paving_stones_mask]).long()
-#         predictions[paving_stones_mask] = map_predictions_to_quality(paving_stones_preds, "paving_stones")
-
-#     if sett_mask.sum().item() > 0:
-#         if head == 'clm' or head == 'classification':
-#             sett_preds = torch.argmax(fine_output_sett[sett_mask], dim=1)
-#         elif head == 'regression':
-#             sett_preds = fine_output_sett[sett_mask].round().long()
-#         elif head == 'corn':
-#             sett_preds = corn_label_from_logits(fine_output_sett[sett_mask]).long()
-#         predictions[sett_mask] = map_predictions_to_quality(sett_preds, "sett")
-
-#     if unpaved_mask.sum().item() > 0:
-#         if head == 'clm' or head == 'classification':
-#             unpaved_preds = torch.argmax(fine_output_unpaved[unpaved_mask], dim=1)
-#         elif head == 'regression':
-#             unpaved_preds = fine_output_unpaved[unpaved_mask].round().long()
-#         elif head == 'corn':
-#             unpaved_preds = corn_label_from_logits(fine_output_unpaved[unpaved_mask]).long()
-#         predictions[unpaved_mask] = map_predictions_to_quality(unpaved_preds, "unpaved")
-
-
-#     # Calculate accuracy
-#     correct = (predictions == fine_labels).sum().item()
-    
-#     correct_1_off = ((predictions == fine_labels) | 
-#                (predictions == fine_labels + 1) | 
-#                (predictions == fine_labels - 1)).sum().item()
-    
-#     return correct, correct_1_off
+    Returns:
+    - Boolean indicating whether the prediction violates the hierarchy.
+    """
+    # Check if the parent classes of the true and predicted labels are the same
+    return parent[true_label] != parent[predicted_label]
 
 
 parent = torch.tensor([0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 4, 4, 4])
