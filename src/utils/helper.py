@@ -577,7 +577,7 @@ def compute_fine_metrics_hierarchical(fine_output, fine_labels, coarse_filter, h
     # Calculate QWK across all predictions and labels
     qwk = cohen_kappa_score(all_labels, all_predictions, weights='quadratic')
     
-    hierarchy_violations = sum(is_hierarchy_violation(fine_labels, predictions, parent) for true, pred in zip(labels.cpu().numpy(), predictions.cpu().numpy()))
+    hierarchy_violations = sum(is_hierarchy_violation(fine_labels, predictions, parent) for true, pred in zip(fine_labels.cpu().numpy(), predictions.cpu().numpy()))
     
     # Return the sum of MSE, MAE, and QWK
     return correct, correct_1_off, total_mse, total_mae, qwk, hierarchy_violations
@@ -658,6 +658,8 @@ def compute_and_log_CC_metrics(df, trainloaders, validloaders, wandb_on):
             # Accumulate correct predictions and total sample counts
             total_train_correct = 0
             total_val_correct = 0
+            total_train_correct_one_off = 0
+            total_val_correct_one_off = 0
             total_train_samples = sum(len(loader.sampler) for loader in trainloaders)
             total_val_samples = sum(len(loader.sampler) for loader in validloaders)
 

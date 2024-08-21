@@ -3,7 +3,7 @@ from experiments.config  import global_config
 
 default_params = {
     "batch_size": 64, #16,  # 48
-    "epochs": 7,
+    "epochs": 1,
     "learning_rate": 0.01,
     "optimizer": const.OPTI_ADAM,
     "is_regression": False,
@@ -461,8 +461,8 @@ C_CNN_CLM = {
     "name": "C_CNN_classification",
     "level": const.HIERARCHICAL,
     "model": const.CCNNCLMPRE,
-    "head": 'classification', #'regression', 'classification', 'obd', 'clm'
-    "hierarchy_method": 'use_model_structure', #'use_ground_truth', 'None'
+    "head": const.CLASSIFICATION, #'regression', 'classification', 'obd', 'clm'
+    "hierarchy_method": const.MODELSTRUCTURE, #'use_ground_truth', 'None'
 }
 
 B_CNN_CLM = {

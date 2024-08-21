@@ -7,6 +7,7 @@ from torchvision import models
 #from src.utils.helper import *
 from multi_label.CLM import CLM
 from coral_pytorch.losses import corn_loss
+from src import constants as const
 
 
 class NonNegUnitNorm:
@@ -22,12 +23,13 @@ class NonNegUnitNorm:
 
 
 class Condition_CNN_CLM_PRE(nn.Module):
-    def __init__(self, num_c, num_classes, head):
+    def __init__(self, num_c, num_classes, head, hierarchy_method):
         super(Condition_CNN_CLM_PRE, self).__init__()
         
         self.num_c = num_c
         self.num_classes = num_classes
         self.head = head
+        self.hierarchy_method = hierarchy_method
         
         #Load pretrained weights
         model = models.vgg16(weights='VGG16_Weights.IMAGENET1K_V1')
@@ -160,7 +162,7 @@ class Condition_CNN_CLM_PRE(nn.Module):
     
     def forward(self, inputs):
         
-        images, true_coarse, hierarchy_method = inputs
+        images, true_coarse = inputs
         
         x = self.features(images) 
         #x = self.avgpool(x)
@@ -191,7 +193,7 @@ class Condition_CNN_CLM_PRE(nn.Module):
             fine_output = self.fine_classifier(flat)
                 
             
-        if hierarchy_method == 'use_model_structure':
+        if self.hierarchy_method == const.MODELSTRUCTURE:
     
             if self.training:
                 coarse_condition = self.coarse_condition(true_coarse)  
