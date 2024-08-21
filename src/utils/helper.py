@@ -20,6 +20,7 @@ from coral_pytorch.dataset import corn_label_from_logits
 import torch.nn as nn
 import torch.nn.functional as F
 import wandb
+from sklearn.metrics import cohen_kappa_score
 
 
 def string_to_object(string):
@@ -476,8 +477,15 @@ def compute_fine_losses(model, fine_criterion, fine_output, fine_labels, device,
 
 
 
-def compute_fine_metrics(fine_output, fine_labels, coarse_filter, hierarchy_method, head):
+def compute_fine_metrics_hierarchical(fine_output, fine_labels, coarse_filter, hierarchy_method, head):
     
+    # Initialize overall prediction tensor and metrics
+    predictions = torch.zeros_like(fine_labels)
+    total_mse = 0
+    total_mae = 0
+    all_predictions = []
+    all_labels = []
+
     if hierarchy_method == 'use_ground_truth':
         masks = [
             (coarse_filter == 0),
@@ -487,7 +495,7 @@ def compute_fine_metrics(fine_output, fine_labels, coarse_filter, hierarchy_meth
             (coarse_filter == 4)  
             ]
         
-        # Separate the fine outputs
+        # Separate the fine outputs based on the head
         if head == 'regression':
             fine_output_asphalt = fine_output[:, 0:1].float()
             fine_output_concrete = fine_output[:, 1:2].float()
@@ -511,11 +519,6 @@ def compute_fine_metrics(fine_output, fine_labels, coarse_filter, hierarchy_meth
         
         # Extract the masks
         asphalt_mask, concrete_mask, paving_stones_mask, sett_mask, unpaved_mask = masks
-        
-        # Initialize prediction tensor and metrics
-        predictions = torch.zeros_like(fine_labels)
-        total_mse = 0
-        total_mae = 0
 
         def compute_metrics(output, labels, mask, category):
             nonlocal total_mse, total_mae
@@ -530,12 +533,15 @@ def compute_fine_metrics(fine_output, fine_labels, coarse_filter, hierarchy_meth
                     
                 predictions[mask] = map_predictions_to_quality(preds, category)
                 
+                # Collect predictions and labels for QWK
+                all_predictions.extend(predictions[mask].cpu().numpy())
+                all_labels.extend(labels[mask].cpu().numpy())
+
                 # Calculate MSE and MAE
                 if head == 'regression':
                     mse = F.mse_loss(output[mask], labels[mask].float(), reduction='sum').item()
                     mae = F.l1_loss(output[mask], labels[mask].float(), reduction='sum').item()
                 else:
-                    # Convert predicted classes to their corresponding numerical values
                     mse = F.mse_loss(preds.float(), labels[mask].float(), reduction='sum').item()
                     mae = F.l1_loss(preds.float(), labels[mask].float(), reduction='sum').item()
 
@@ -553,10 +559,13 @@ def compute_fine_metrics(fine_output, fine_labels, coarse_filter, hierarchy_meth
             predictions = torch.argmax(fine_output, dim=1)
             total_mse = F.mse_loss(predictions.float(), fine_labels.float(), reduction='sum').item()
             total_mae = F.l1_loss(predictions.float(), fine_labels.float(), reduction='sum').item()
-        elif head == 'regression': #TODO: macht das überhaupt Sinn?
+        elif head == 'regression':
             predictions = fine_output.round().long()
             total_mse = F.mse_loss(fine_output, fine_labels.float(), reduction='sum').item()
             total_mae = F.l1_loss(fine_output, fine_labels.float(), reduction='sum').item()
+
+        all_predictions.extend(predictions.cpu().numpy())
+        all_labels.extend(fine_labels.cpu().numpy())
 
     # Calculate accuracy
     correct = (predictions == fine_labels).sum().item()
@@ -565,8 +574,11 @@ def compute_fine_metrics(fine_output, fine_labels, coarse_filter, hierarchy_meth
                (predictions == fine_labels + 1) | 
                (predictions == fine_labels - 1)).sum().item()
 
-    # Return the sum of MSE and MAE
-    return correct, correct_1_off, total_mse, total_mae
+    # Calculate QWK across all predictions and labels
+    qwk = cohen_kappa_score(all_labels, all_predictions, weights='quadratic')
+
+    # Return the sum of MSE, MAE, and QWK
+    return correct, correct_1_off, total_mse, total_mae, qwk
 
 
 def compute_all_metrics(outputs, labels, head, model):
@@ -597,8 +609,10 @@ def compute_all_metrics(outputs, labels, head, model):
         # For classification and other head types, compare with predicted classes
         total_mse = F.mse_loss(predictions.float(), labels.float(), reduction='sum').item()
         total_mae = F.l1_loss(predictions.float(), labels.float(), reduction='sum').item()
+        
+    qwk = cohen_kappa_score(labels.cpu().numpy(), predictions.cpu().numpy(), weights='quadratic')
 
-    return correct, correct_1_off, total_mse, total_mae
+    return correct, correct_1_off, total_mse, total_mae, qwk
 
 
 def compute_and_log_CC_metrics(df, trainloaders, validloaders, wandb_on):
@@ -653,12 +667,15 @@ def compute_and_log_CC_metrics(df, trainloaders, validloaders, wandb_on):
                 
                 total_train_correct += train_correct_sum
                 total_val_correct += val_correct_sum
+                
+                total_train_correct_one_off += train_correct_one_off_sum 
+                total_val_correct_one_off += val_correct_one_off_sum    
 
             # Calculate overall accuracy
             epoch_fine_accuracy = calculate_accuracy(total_train_correct, total_train_samples)
-            epoch_fine_accuracy_one_off = calculate_accuracy(train_correct_one_off_sum, total_train_samples)
+            epoch_fine_accuracy_one_off = calculate_accuracy(total_train_correct_one_off, total_train_samples)
             val_epoch_fine_accuracy = calculate_accuracy(total_val_correct, total_val_samples)
-            val_epoch_fine_accuracy_one_off = calculate_accuracy(val_correct_one_off_sum, total_val_samples)
+            val_epoch_fine_accuracy_one_off = calculate_accuracy(total_val_correct_one_off, total_val_samples)
 
             # Logging the results
             if wandb_on: 

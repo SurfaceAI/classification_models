@@ -26,6 +26,7 @@ from torch.optim.lr_scheduler import StepLR
 from coral_pytorch.dataset import corn_label_from_logits
 
 import pandas as pd
+from sklearn.metrics import cohen_kappa_score
 
 
 
@@ -842,6 +843,7 @@ def train_epoch(model, dataloader, optimizer, device, eval_metric, head, hierarc
         correct_one_off = 0
         mse = 0
         mae = 0
+        qwk = 0
             
     else:
         eval_metric_value = 0
@@ -878,11 +880,12 @@ def train_epoch(model, dataloader, optimizer, device, eval_metric, head, hierarc
         
         #I put these together as this is what I need to compare the results with the hierarchical models
         if eval_metric == const.EVAL_METRIC_ALL:
-            correct_item, correct_one_off_item, mse_item, mae_item = helper.compute_all_metrics(outputs, labels, head, model)
+            correct_item, correct_one_off_item, mse_item, mae_item, qwk_item = helper.compute_all_metrics(outputs, labels, head, model)
             correct += correct_item
             correct_one_off += correct_one_off_item
             mse += mse_item
             mae += mae_item
+            qwk += qwk_item
         
             # if batch_idx == 2:
             #     break
@@ -958,6 +961,7 @@ def validate_epoch(model, dataloader, device, eval_metric, head, hierarchy_metho
         eval_correct_one_off = 0
         eval_mse = 0
         eval_mae = 0
+        eval_qwk = 0
             
     else:
         eval_metric_value = 0   
@@ -984,11 +988,12 @@ def validate_epoch(model, dataloader, device, eval_metric, head, hierarchy_metho
             eval_running_loss += loss.item()
             
             if eval_metric == const.EVAL_METRIC_ALL:
-                eval_correct_item, eval_correct_one_off_item, eval_mse_item, eval_mae_item = helper.compute_all_metrics(outputs, labels, head, model)
+                eval_correct_item, eval_correct_one_off_item, eval_mse_item, eval_mae_item, qwk_item = helper.compute_all_metrics(outputs, labels, head, model)
                 eval_correct += eval_correct_item
                 eval_correct_one_off += eval_correct_one_off_item
                 eval_mse += eval_mse_item
                 eval_mae += eval_mae_item
+                eval_qwk += eval_qwk_item
                 
                 # if batch_idx == 2:
                 #     break
@@ -1064,6 +1069,7 @@ def train_epoch_hierarchical(model, dataloader, optimizer, device, head, hierarc
     
     fine_mse = 0
     fine_mae = 0
+    fine_qwk = 0
 
     for batch_idx, (inputs, fine_labels) in enumerate(dataloader):
         # helper.multi_imshow(inputs, labels)
@@ -1104,11 +1110,12 @@ def train_epoch_hierarchical(model, dataloader, optimizer, device, head, hierarc
         if head == 'classification':
             fine_output = model.get_class_probabilies(fine_output)
             
-        fine_correct_item, fine_correct_one_off_item, fine_mse_item, fine_mae_item = helper.compute_fine_metrics(fine_output, fine_labels, coarse_labels, hierarchy_method, head)
+        fine_correct_item, fine_correct_one_off_item, fine_mse_item, fine_mae_item, fine_qwk_item = helper.compute_fine_metrics_hierarchical(fine_output, fine_labels, coarse_labels, hierarchy_method, head)
         fine_correct += fine_correct_item
         fine_correct_one_off += fine_correct_one_off_item
         fine_mse += fine_mse_item
         fine_mae += fine_mae_item
+        fine_qwk += fine_qwk_item
         
         #break
         
@@ -1144,6 +1151,7 @@ def validate_epoch_hierarchical(model, dataloader, device, head, hierarchy_metho
     
     val_fine_mse = 0
     val_fine_mae = 0
+    val_fine_qwk = 0
 
     for batch_idx, (inputs, fine_labels) in enumerate(dataloader):
         # helper.multi_imshow(inputs, labels)
@@ -1175,11 +1183,12 @@ def validate_epoch_hierarchical(model, dataloader, device, head, hierarchy_metho
         if head == 'classification':
             fine_output = model.get_class_probabilies(fine_output)
             
-        val_fine_correct_item, val_fine_correct_one_off_item, val_fine_mse_item, val_fine_mae_item= helper.compute_fine_metrics(fine_output, fine_labels, val_coarse_predictions, hierarchy_method, head)
+        val_fine_correct_item, val_fine_correct_one_off_item, val_fine_mse_item, val_fine_mae_item, val_fine_qwk_item= helper.compute_fine_metrics_hierarchical(fine_output, fine_labels, val_coarse_predictions, hierarchy_method, head)
         val_fine_correct += val_fine_correct_item
         val_fine_correct_one_off += val_fine_correct_one_off_item
         val_fine_mse += val_fine_mse_item
         val_fine_mae += val_fine_mae_item
+        val_fine_qwk += val_fine_qwk_item
 
     val_epoch_loss = val_running_loss /  len(dataloader.sampler)
     val_epoch_coarse_accuracy = 100 * val_coarse_correct / len(dataloader.sampler)
