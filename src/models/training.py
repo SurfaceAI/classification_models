@@ -667,7 +667,7 @@ def train_hierarchical(
     # if wandb_on:
     #     wandb.watch(model, log_freq=27)
     if lr_scheduler:
-        scheduler = StepLR(optimizer, step_size=5, gamma=0.1) 
+        scheduler = StepLR(optimizer, step_size=4, gamma=0.1) 
     
     if lw_modifier:
         alpha = torch.tensor(0.98)
@@ -895,8 +895,8 @@ def train_epoch(model, dataloader, optimizer, device, eval_metric, head, hierarc
             mae += mae_item
             qwk += qwk_item
         
-            if batch_idx == 0:
-                break
+            # if batch_idx == 0:
+            #     break
 
         # TODO: metric as function, metric_name as input argument
         else:
@@ -1003,8 +1003,8 @@ def validate_epoch(model, dataloader, device, eval_metric, head, hierarchy_metho
                 eval_mae += eval_mae_item
                 eval_qwk += eval_qwk_item
                 
-                if batch_idx == 0:
-                    break
+                # if batch_idx == 0:
+                #     break
                 
                 #break
                 
