@@ -94,7 +94,7 @@ vgg16_quality_params = {
     "name": "CC_fine_regression",
     "level": const.SMOOTHNESS,
     "model": const.VGG16,
-    "learning_rate": 0.0006,
+    "learning_rate": 0.01,
     #"dataset": "V1_0/train",
     #"metadata": "V1_0/metadata",
     #"train_valid_split_list": "train_valid_split.csv",

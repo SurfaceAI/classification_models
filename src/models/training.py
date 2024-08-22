@@ -472,7 +472,7 @@ def train(
     # if wandb_on:
     #     wandb.watch(model, log_freq=27)
     if lr_scheduler:
-        scheduler = StepLR(optimizer, step_size=6, gamma=0.1) 
+        scheduler = StepLR(optimizer, step_size=4, gamma=0.1) 
 
     if hierarchy_method == const.CC:
         all_epoch_metrics_df = pd.DataFrame(columns=['epoch', 'train_loss', 'train_correct', 'train_correct_one_off', 
@@ -667,7 +667,7 @@ def train_hierarchical(
     # if wandb_on:
     #     wandb.watch(model, log_freq=27)
     if lr_scheduler:
-        scheduler = StepLR(optimizer, step_size=6, gamma=0.1) 
+        scheduler = StepLR(optimizer, step_size=5, gamma=0.1) 
     
     if lw_modifier:
         alpha = torch.tensor(0.98)
