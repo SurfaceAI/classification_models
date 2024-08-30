@@ -38,11 +38,13 @@ class CheckpointSaver:
         if save: 
             # logging.info(f"Current metric value better than {metric_val} better than best {self.best_metric_val}, saving model at {model_path}")
             self.best_metric_val = metric_val
+            dataset_keys_to_include = ['class_to_idx', 'classes', 'samples']
+            dataset_dict = {key: getattr(self.dataset, key) for key in dataset_keys_to_include}
             data = {
                 'epoch': epoch,
                 'metric_val': metric_val,
                 'config': self.config,
-                'dataset': self.dataset,
+                'dataset': dataset_dict,
             }
             if self.save_state:
                 data['model_state_dict'] = model.state_dict()

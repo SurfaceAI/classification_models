@@ -86,7 +86,7 @@ def recursive_predict_csv(model_dict, model_root, data, batch_size, device, df, 
 
         # compare valid dataset 
         # [image_id in valid_dataset ]
-        valid_dataset_ids = [os.path.splitext(os.path.split(id[0])[-1])[0] for id in valid_dataset.samples]
+        valid_dataset_ids = [os.path.splitext(os.path.split(id[0])[-1])[0] for id in helper.get_attribute(valid_dataset, "samples")]
         is_valid_data = [1 if image_id in valid_dataset_ids else 0 for image_id in image_ids]
         
         columns = ['Image', 'Prediction', 'Level', 'is_in_validation', f'Level_{level}'] # is_in_valid_dataset / join
@@ -243,11 +243,11 @@ def load_model(model_path, device):
     valid_dataset = model_state['dataset']
 
     if is_regression:
-        class_to_idx = valid_dataset.class_to_idx
+        class_to_idx = helper.get_attribute(valid_dataset, "class_to_idx")
         classes = {str(i): cls for cls, i in class_to_idx.items()}
         num_classes = 1
     else:
-        classes = valid_dataset.classes
+        classes = helper.get_attribute(valid_dataset, "classes")
         num_classes = len(classes)
     model = model_cls(num_classes, avg_pool)
     model.load_state_dict(model_state['model_state_dict'])

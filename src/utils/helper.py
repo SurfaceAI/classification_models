@@ -92,6 +92,16 @@ def format_config(config):
                 if key not in ["wandb_mode", "wandb_on", "project", "name"]
             }
 
+def get_attribute(obj, attribute_name):
+    # check for dict
+    if isinstance(obj, dict):
+        return obj.get(attribute_name)
+    # check for class instance
+    elif hasattr(obj, attribute_name):
+        return getattr(obj, attribute_name)
+    else:
+        raise TypeError("Object is not a dictionary or a class instance.")
+
 def dict_type(arg):
     try:
         return json.loads(arg)
