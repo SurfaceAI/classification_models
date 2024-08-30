@@ -1,6 +1,7 @@
 from src import constants as const
 from experiments.config import global_config
 
+# TODO: insert trained model files
 model_dict = {
     "trained_model": "surface-efficientNetV2SLinear-20240805_142047-5bvhwua5_epoch6.pt",
     "level": const.TYPE,
@@ -28,73 +29,16 @@ model_dict = {
     },
 }
 
-model_dict_rtk = {
-    # crop rtk
-    # "trained_model": "surface-efficientNetV2SLinear-20240809_095944-39el2iwq_epoch7.pt",
-    # crop lower middle half
-    "trained_model": "surface-efficientNetV2SLinear-20240809_104410-5c2khyzs_epoch7.pt",
-    "level": const.TYPE,
-    "submodels": {
-        const.ASPHALT: {
-            # crop rtk
-            # "trained_model": "smoothness-asphalt-efficientNetV2SLinear-20240809_101420-3eqgebdx_epoch18.pt",
-            # crop lower middle half
-            "trained_model": "smoothness-asphalt-efficientNetV2SLinear-20240809_105919-duc7cpjh_epoch16.pt",
-            "level": const.QUALITY,
-        },
-        const.PAVED: {
-            # crop rtk
-            # "trained_model": "smoothness-paved-efficientNetV2SLinear-20240809_102727-jvs8ddbd_epoch16.pt",
-            # crop lower middle half
-            "trained_model": "smoothness-paved-efficientNetV2SLinear-20240809_111940-2tly9cul_epoch16.pt",
-            "level": const.QUALITY,
-        },
-        const.UNPAVED: {
-            # crop rtk
-            # "trained_model": "smoothness-unpaved-efficientNetV2SLinear-20240809_102934-mvzaondi_epoch15.pt",
-            # crop lower middle half
-            "trained_model": "smoothness-unpaved-efficientNetV2SLinear-20240809_112402-hux89no4_epoch18.pt",
-            "level": const.QUALITY,
-        },
-    },
-}
-
-default_params = {
-    "transform": {
-        **global_config.global_config.get("transform"),
-        "normalize": (const.V1_0_ANNOTATED_MEAN, const.V1_0_ANNOTATED_SD),
-    },
-}
-
 CC_V1_0_train = {
     **global_config.global_config,
-    **default_params,
-    # "name": "efficientnet_CC_prediction",
-    # "model_dict": model_dict,
-    "name": "RTK_lmh-crop_trained_prediction",
-    "model_dict": model_dict_rtk,
-    "dataset": "V1_0/annotated",
+    "name": "train_CC_prediction",
+    "model_dict": model_dict,
+    "dataset": "V1_0/train",
 }
 
 CC_V1_0_test = {
     **global_config.global_config,
-    **default_params,
-    "name": "efficientnet_CC_prediction",
+    "name": "test_CC_prediction",
     "model_dict": model_dict,
     "dataset": "V1_0/test",
-}
-
-CC_RTK = {
-    **global_config.global_config,
-    **default_params,
-    # "name": "efficientnet_CC_prediction",
-    # "model_dict": model_dict,
-    "name": "RTK_lmh-crop_trained_prediction",
-    "model_dict": model_dict_rtk,
-    "dataset": "RTK/GT",
-    # "transform": {
-    #     **default_params.get("transform"),
-    #     "crop": "lower_half_rtk",
-    #     # "crop": None,
-    # },
 }
