@@ -11,8 +11,8 @@ from experiments.config import global_config
 
 def create_annotated_image_folders(input_path, output_path, df):
     
-    train_path = os.path.join(output_path, "train")
-    os.makedirs(train_path, exist_ok=True)
+    # train_path = os.path.join(output_path, "train")
+    # os.makedirs(train_path, exist_ok=True)
     test_path = os.path.join(output_path, "test")
     os.makedirs(test_path, exist_ok=True)
     
@@ -21,7 +21,8 @@ def create_annotated_image_folders(input_path, output_path, df):
         df.surface_type.notna() & df.surface_quality.notna()
     ].iterrows():
         if row.train:
-            output_path = train_path
+            # output_path = train_path
+            continue
         else:
             output_path = test_path
 

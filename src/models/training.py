@@ -245,9 +245,13 @@ def prepare_train(
         # TODO: loader in preprocessing?
         # TODO: weighted sampling on/off?
         class_counts = Counter(train_data.targets)
-        sample_weights = [1.0 / class_counts[label] for label in train_data.targets]
+        print(class_counts)
+        max_count = max(class_counts.values())
+        print(max_count)
+        sample_weights = [max_count / class_counts[label] for label in train_data.targets]
 
-    sampler = WeightedRandomSampler(weights=sample_weights, num_samples=len(train_data))        
+    sampler = WeightedRandomSampler(weights=sample_weights, num_samples=max_count * len(class_counts.items()))
+    print(max_count * len(class_counts.items()))
 
     trainloader = DataLoader(
         train_data, batch_size=batch_size, sampler=sampler
