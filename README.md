@@ -25,10 +25,11 @@ Note: Set `save_state = True` in the global config [experiments/config/global_co
 
 ## Evaluation
 
-1. Use the notebook [evaluations/analyze_prediction_V1_0.ipynb] to evaluate the predictions. Insert the prediction csv-file from your prediction.
+1. Use the notebook [evaluations/analyze_prediction_V1_0.ipynb](evaluations/analyze_prediction_V1_0.ipynb) to evaluate the predictions. Insert the prediction csv-file from your prediction.
 
 ## Folder structure
 
+```plaintext
 .
 ├── data/
 │   └── V1_0/
