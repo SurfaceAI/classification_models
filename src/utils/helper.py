@@ -577,7 +577,7 @@ def compute_fine_metrics_hierarchical(fine_output, fine_labels, coarse_filter, h
     # Calculate QWK across all predictions and labels
     qwk = cohen_kappa_score(all_labels, all_predictions, weights='quadratic')
     
-    hierarchy_violations = sum(is_hierarchy_violation(fine_labels, predictions, parent) for true, pred in zip(fine_labels.cpu().numpy(), predictions.cpu().numpy()))
+    hierarchy_violations = sum(is_hierarchy_violation(fine_labels, predictions, parent))
     
     # Return the sum of MSE, MAE, and QWK
     return correct, correct_1_off, total_mse, total_mae, qwk, hierarchy_violations
