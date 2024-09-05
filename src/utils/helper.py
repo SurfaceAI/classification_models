@@ -459,7 +459,7 @@ def compute_fine_losses(model, fine_criterion, fine_output, fine_labels, device,
 
     elif hierarchy_method == 'use_model_structure':
         
-        if head == 'classification':
+        if head == const.CLASSIFICATION or head == const.CLASSIFICATION_QWK:
             fine_loss = fine_criterion(fine_output, fine_labels)
         
         elif head == 'clm':
@@ -524,7 +524,7 @@ def compute_fine_metrics_hierarchical(fine_output, fine_labels, coarse_filter, h
             nonlocal total_mse, total_mae
             
             if mask.sum().item() > 0:
-                if head == 'clm' or head == 'classification':
+                if head == 'clm' or head == const.CLASSIFICATION or head == const.CLASSIFICATION_QWK:
                     preds = torch.argmax(output[mask], dim=1)
                 elif head == 'regression':
                     preds = output[mask].round().long()
@@ -555,7 +555,7 @@ def compute_fine_metrics_hierarchical(fine_output, fine_labels, coarse_filter, h
         compute_metrics(fine_output_unpaved, fine_labels, unpaved_mask, "unpaved")
         
     else:
-        if head == 'clm' or head == 'classification':
+        if head == 'clm' or head == const.CLASSIFICATION or head == const.CLASSIFICATION_QWK:
             predictions = torch.argmax(fine_output, dim=1)
             total_mse = F.mse_loss(predictions.float(), fine_labels.float(), reduction='sum').item()
             total_mae = F.l1_loss(predictions.float(), fine_labels.float(), reduction='sum').item()

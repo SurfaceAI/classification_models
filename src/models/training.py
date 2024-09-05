@@ -1128,7 +1128,7 @@ def train_epoch_hierarchical(model, dataloader, optimizer, device, head, hierarc
 
         # TODO: metric as function, metric_name as input argument
 
-        if head == 'classification':
+        if head == const.CLASSIFICATION or head == const.CLASSIFICATION_QWK:
             fine_output = model.get_class_probabilies(fine_output)
             
         (fine_correct_item, 
@@ -1214,7 +1214,7 @@ def validate_epoch_hierarchical(model, dataloader, device, head, hierarchy_metho
         else:
             val_fine_loss_total += fine_loss.item()
 
-        if head == 'classification':
+        if head == const.CLASSIFICATION or head == const.CLASSIFICATION_QWK:
             fine_output = model.get_class_probabilies(fine_output)
             
         (val_fine_correct_item, 
