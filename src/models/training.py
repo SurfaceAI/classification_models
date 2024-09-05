@@ -1231,7 +1231,7 @@ def validate_epoch_hierarchical(model, dataloader, device, head, hierarchy_metho
         val_fine_qwk += val_fine_qwk_item
         val_fine_hv += val_fine_hv_item
         
-        break
+        #break
 
     val_epoch_loss = val_running_loss /  len(dataloader.sampler)
     val_epoch_coarse_accuracy = 100 * val_coarse_correct / len(dataloader.sampler)
