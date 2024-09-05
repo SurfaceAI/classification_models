@@ -13,9 +13,9 @@ class CustomMultLayer(nn.Module):
     def forward(self, tensor_1, tensor_2):
         return torch.mul(tensor_1, tensor_2)
 
-class HierarchyNet_Pre(nn.Module):
-    def __init__(self, num_c, num_classes, head):
-        super(HierarchyNet_Pre, self).__init__()
+class H_NET(nn.Module):
+    def __init__(self, num_c, num_classes, head, hierarchy_method):
+        super(H_NET, self).__init__()
         
         self.custom_layer = CustomMultLayer()
         self.head = head

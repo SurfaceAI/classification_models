@@ -40,6 +40,7 @@ class CustomVGG16(nn.Module):
         elif self.head == const.CLM:
             top_layer = nn.Sequential(
                 nn.Linear(512, 1),
+                nn.BatchNorm1d(1),
                 CLM(classes=num_classes, link_function="logit", min_distance=0.0, use_slope=False, fixed_thresholds=False)
             )
             self.criterion = nn.NLLLoss

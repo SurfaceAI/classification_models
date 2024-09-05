@@ -111,6 +111,7 @@ PROJECT_FLATTEN_FIXED = "road-surface-classification-flatten"
 PROJECT_FLATTEN_SWEEP = "sweep-road-surface-classification-flatten"
 PROJECT_MULTI_LABEL_FIXED = "road-surface-classification-multi-label"
 PROJECT_ORDINAL_REGRESSION_FIXED = "road-surface-classification-ordinal-regression"
+PROJECT_MULTI_LABEL_SWEEP = "sweep-road-surface-classification-multi-label"
 
 
 
@@ -122,17 +123,10 @@ RATEKE = "rateke"
 VGG16_CLM = "vgg16_CLM"
 # temporay onla
 VGG16REGRESSION = "vgg16Regression"
-BCNN = "BCNN"
-BCNN_PRE = "VGG16_B_CNN_PRE"
-BCNNREGRESSION = "BCNNRegression"
-CCNN = "ConditionCNN"
-CCNN_PRE = "ConditionCNN_pretrained"
-CCNNREGRESSION = "CCNNRegression"
-CCNNCLMPRE = "Condition_CNN_CLM_PRE"
+BCNN = "B_CNN"
+CCNN = "Condition_CNN"
 HNET = "HiearchyNet"
-HNET_PRE = "HiearchyNet_pretrained"
-GHCNN = "GHCNN"
-GHCNN_PRE = "GHCNN_pretrained"
+GHCNN = "GH_CNN"
 
 # sweep names
 

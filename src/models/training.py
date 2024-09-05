@@ -53,6 +53,7 @@ def run_training(config, is_sweep=False):
         }
         
         if is_sweep:
+            print("Sweep config:", inner_config)
             sweep_id = wandb.sweep(
                 sweep=helper.format_sweep_config(inner_config), project=inner_config.get("project")
             )
@@ -104,7 +105,7 @@ def _run_training(project=None, name=None, config=None, wandb_on=True):
     # TODO: config sweep ...
     if wandb_on:
         run = wandb.init(project=project, name=name, config=config)
-        #config = wandb.config #TODO: why do we need this and why does it overwrite my loop of t loop
+        config = wandb.config #TODO: why do we need this and why does it overwrite my loop of t loop
         # TODO: wandb best instead of last value for metric
         summary = "max" if config.get("eval_metric")==const.EVAL_METRIC_ACCURACY else "min"
         wandb.define_metric(f'eval/{config.get("eval_metric")}', summary=summary)
@@ -151,6 +152,7 @@ def _run_training(project=None, name=None, config=None, wandb_on=True):
         random_seed=config.get("seed"),
         head=config.get("head"),
         hierarchy_method=config.get("hierarchy_method"),
+        fc_neurons=config.get("fc_neurons"),
         max_class_size=config.get("max_class_size"),
         freeze_convs=config.get("freeze_convs"),
     )
@@ -260,6 +262,7 @@ def prepare_train(
     random_seed,
     head,
     hierarchy_method,
+    fc_neurons,
     max_class_size,
     freeze_convs,
 ):
@@ -336,7 +339,7 @@ def prepare_train(
 
     # instanciate model with number of classes
     if level == 'hierarchical':
-        model = model_cls(num_coarse_classes, num_classes, head, hierarchy_method)
+        model = model_cls(num_coarse_classes, num_classes, head, hierarchy_method, fc_neurons)
     else:
         model = model_cls(num_classes, head)
 
@@ -566,9 +569,9 @@ def train(
         #helper.save_gradient_plots(epoch, gradients, first_moments, second_moments)
 
         # checkpoint saving with early stopping #TODO: update for CC training
-        # early_stop = checkpointer( 
-        #     model=model, epoch=epoch, metric_val=val_loss, optimizer=optimizer
-        # )
+        early_stop = checkpointer( 
+            model=model, epoch=epoch, metric_val=val_loss, optimizer=optimizer
+        )
 
         if wandb_on:
             if eval_metric == const.EVAL_METRIC_ALL and hierarchy_method == None:
@@ -1125,7 +1128,7 @@ def train_epoch_hierarchical(model, dataloader, optimizer, device, head, hierarc
         fine_mae_item, 
         fine_qwk_item, 
         fine_hv_item, 
-        fine_hv_item) = helper.compute_fine_metrics_hierarchical(fine_output, fine_labels, coarse_labels, hierarchy_method, head)
+        ) = helper.compute_fine_metrics_hierarchical(fine_output, fine_labels, coarse_labels, hierarchy_method, head)
         
         fine_correct += fine_correct_item
         fine_correct_one_off += fine_correct_one_off_item
@@ -1133,8 +1136,6 @@ def train_epoch_hierarchical(model, dataloader, optimizer, device, head, hierarc
         fine_mae += fine_mae_item
         fine_qwk += fine_qwk_item
         fine_hv += fine_hv_item
-        
-        break
         
     epoch_loss = running_loss /  len(dataloader.sampler)
     epoch_coarse_accuracy = 100 * coarse_correct / len(dataloader.sampler)

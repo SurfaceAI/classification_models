@@ -31,10 +31,10 @@ def string_to_object(string):
         const.EFFICIENTNET: efficientnet.CustomEfficientNetV2SLogsoftmax,
         const.EFFNET_LINEAR: efficientnet.CustomEfficientNetV2SLinear,
         const.OPTI_ADAM: optim.Adam,
-        const.CCNNCLMPRE: vgg16_C_CNN_pretrained.Condition_CNN_CLM_PRE,
-        const.BCNN_PRE: vgg16_B_CNN_pretrained.VGG16_B_CNN_PRE,
-        const.HNET_PRE: vgg16_HierarchyNet_pretrained.HierarchyNet_Pre,
-        const.GHCNN_PRE: vgg16_GH_CNN_pretrained.GH_CNN_PRE,
+        const.CCNN: vgg16_C_CNN_pretrained.C_CNN,
+        const.BCNN: vgg16_B_CNN_pretrained.B_CNN,
+        const.HNET: vgg16_HierarchyNet_pretrained.H_NET,
+        const.GHCNN: vgg16_GH_CNN_pretrained.GH_CNN,
 
     }
 

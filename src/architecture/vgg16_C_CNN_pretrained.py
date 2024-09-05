@@ -8,6 +8,7 @@ from torchvision import models
 from multi_label.CLM import CLM
 from coral_pytorch.losses import corn_loss
 from src import constants as const
+import copy
 
 
 class NonNegUnitNorm:
@@ -22,9 +23,9 @@ class NonNegUnitNorm:
         return w
 
 
-class Condition_CNN_CLM_PRE(nn.Module):
+class C_CNN(nn.Module):
     def __init__(self, num_c, num_classes, head, hierarchy_method):
-        super(Condition_CNN_CLM_PRE, self).__init__()
+        super(C_CNN, self).__init__()
         
         self.num_c = num_c
         self.num_classes = num_classes
@@ -37,9 +38,28 @@ class Condition_CNN_CLM_PRE(nn.Module):
         # Unfreeze training for all layers in features
         for param in model.features.parameters():
             param.requires_grad = True
+                
+        self.block1_to_4 = model.features[:24]
+        self.block5_coarse = nn.Sequential(
+            copy.deepcopy(model.features[24]),
+            nn.BatchNorm2d(512),
+            copy.deepcopy(model.features[25]),
+            nn.BatchNorm2d(512),
+            copy.deepcopy(model.features[26]),
+            nn.BatchNorm2d(512)
+        )
         
-        self.features = model.features
-        
+        # Adding BatchNorm layers to block5_fine
+        self.block5_fine = nn.Sequential(
+            copy.deepcopy(model.features[24]),
+            nn.BatchNorm2d(512),
+            copy.deepcopy(model.features[25]),
+            nn.BatchNorm2d(512),
+            copy.deepcopy(model.features[26]),
+            nn.BatchNorm2d(512)
+        )
+
+
         #Coarse prediction branch
         self.coarse_classifier = nn.Sequential(
             nn.Linear(512 * 8 * 8, 256),
@@ -164,19 +184,22 @@ class Condition_CNN_CLM_PRE(nn.Module):
         
         images, true_coarse = inputs
         
-        x = self.features(images) 
+        x = self.block1_to_4(images) 
         #x = self.avgpool(x)
-        flat = x.reshape(x.size(0), -1) #([128, 32768])
         
-        coarse_output = self.coarse_classifier(flat)
+        x_coarse = self.block5_coarse(x)
+        coarse_flat = x_coarse.reshape(x_coarse.size(0), -1) #([128, 32768])
+        coarse_output = self.coarse_classifier(coarse_flat)
         coarse_probs = self.get_class_probabilies(coarse_output)
-            
+        
+        x_fine = self.block5_fine(x)
+        fine_flat = x_fine.reshape(x_fine.size(0), -1)  
         if self.head == 'clm' or self.head == 'regression' or self.head == 'corn':
-            fine_output_asphalt = self.classifier_asphalt(flat) #([batch_size, 1024])  
-            fine_output_concrete = self.classifier_concrete(flat)
-            fine_output_paving_stones = self.classifier_paving_stones(flat)      
-            fine_output_sett = self.classifier_sett(flat)
-            fine_output_unpaved = self.classifier_unpaved(flat)
+            fine_output_asphalt = self.classifier_asphalt(fine_flat) #([batch_size, 1024])  
+            fine_output_concrete = self.classifier_concrete(fine_flat)
+            fine_output_paving_stones = self.classifier_paving_stones(fine_flat)      
+            fine_output_sett = self.classifier_sett(fine_flat)
+            fine_output_unpaved = self.classifier_unpaved(fine_flat)
                 
             fine_output = torch.cat([fine_output_asphalt, 
                                             fine_output_concrete, 
@@ -187,10 +210,10 @@ class Condition_CNN_CLM_PRE(nn.Module):
                     
                 
         elif self.head == 'single':
-            fine_output = self.fine_classifier(flat)
+            fine_output = self.fine_classifier(fine_flat)
         
         elif self.head == 'classification':
-            fine_output = self.fine_classifier(flat)
+            fine_output = self.fine_classifier(fine_flat)
                 
             
         if self.hierarchy_method == const.MODELSTRUCTURE:
@@ -210,6 +233,6 @@ class Condition_CNN_CLM_PRE(nn.Module):
     
     def get_optimizer_layers(self):
         if self.head == 'classification' or self.head == 'single':
-            return self.features, self.coarse_classifier, self.fine_classifier, self.coarse_condition
+            return self.block1_to_4, self.block5_coarse, self.block5_fine, self.coarse_classifier, self.fine_classifier, self.coarse_condition
         else:
-            return self.features, self.coarse_classifier, self.classifier_asphalt, self.classifier_concrete, self.classifier_paving_stones, self.classifier_sett, self.classifier_unpaved, self.coarse_condition
+            return self.block1_to_4, self.block5_coarse, self.block5_fine, self.coarse_classifier, self.classifier_asphalt, self.classifier_concrete, self.classifier_paving_stones, self.classifier_sett, self.classifier_unpaved, self.coarse_condition

@@ -1,8 +1,7 @@
 import torch
 import torch.nn as nn
-from experiments.config import train_config#
+from experiments.config import train_config
 from torchvision import models
-config = train_config.GH_CNN_PRE
 
 
 class CustomBayesLayer(nn.Module):
@@ -13,9 +12,9 @@ class CustomBayesLayer(nn.Module):
         y_subclass = torch.mul(parent_prob, subclass_probs) / torch.sum(subclass_probs, dim=1, keepdim=True)
         return y_subclass
     
-class GH_CNN_PRE(nn.Module):
-    def __init__(self, num_c, num_classes, head):
-        super(GH_CNN_PRE, self).__init__()
+class GH_CNN(nn.Module):
+    def __init__(self, num_c, num_classes, head, hierarchy_method):
+        super(GH_CNN, self).__init__()
         
         #Custom layer
         self.custom_bayes_layer = CustomBayesLayer()
