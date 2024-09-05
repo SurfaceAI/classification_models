@@ -24,13 +24,14 @@ class NonNegUnitNorm:
 
 
 class C_CNN(nn.Module):
-    def __init__(self, num_c, num_classes, head, hierarchy_method):
+    def __init__(self, num_c, num_classes, head, hierarchy_method, fc_neurons):
         super(C_CNN, self).__init__()
         
         self.num_c = num_c
         self.num_classes = num_classes
         self.head = head
         self.hierarchy_method = hierarchy_method
+        self.fc_neurons = fc_neurons
         
         #Load pretrained weights
         model = models.vgg16(weights='VGG16_Weights.IMAGENET1K_V1')
@@ -62,13 +63,13 @@ class C_CNN(nn.Module):
 
         #Coarse prediction branch
         self.coarse_classifier = nn.Sequential(
-            nn.Linear(512 * 8 * 8, 256),
+            nn.Linear(512 * 8 * 8, self.fc_neurons),
             nn.ReLU(),
             nn.Dropout(0.5),
-            nn.Linear(256, 256),
+            nn.Linear(self.fc_neurons, self.fc_neurons),
             nn.ReLU(),
             nn.Dropout(0.5),
-            nn.Linear(256, num_c)
+            nn.Linear(self.fc_neurons, num_c)
         )
         
         #Individual fine prediction branches  
@@ -95,24 +96,24 @@ class C_CNN(nn.Module):
             
         elif head == 'single':
             self.fine_classifier = nn.Sequential(
-            nn.Linear(512 * 8 * 8, 512),
+            nn.Linear(512 * 8 * 8, self.fc_neurons),
             nn.ReLU(),
             nn.Dropout(0.5),
-            nn.Linear(512, 256),
+            nn.Linear(self.fc_neurons, self.fc_neurons),
             nn.ReLU(),
             nn.Dropout(0.5),
-            nn.Linear(256, 1)
+            nn.Linear(self.fc_neurons, 1)
         )
                 
         elif head == 'classification':
             self.fine_classifier = nn.Sequential(
-                nn.Linear(512 * 8 * 8, 1024),
+                nn.Linear(512 * 8 * 8, self.fc_neurons),
                 nn.ReLU(),
                 nn.Dropout(0.5),
-                nn.Linear(1024, 1024),
+                nn.Linear(self.fc_neurons, self.fc_neurons),
                 nn.ReLU(),
                 nn.Dropout(0.5),
-                nn.Linear(1024, num_classes) 
+                nn.Linear(self.fc_neurons, num_classes) 
             )
             
         ### Condition part
@@ -139,13 +140,13 @@ class C_CNN(nn.Module):
                      
     def _create_quality_fc_clm(self, num_classes=4):
         layers = nn.Sequential(
-            nn.Linear(512 * 8 * 8, 1024),
+            nn.Linear(512 * 8 * 8, self.fc_neurons),
             nn.ReLU(),
             nn.Dropout(0.5),
-            nn.Linear(1024, 1024),
+            nn.Linear(self.fc_neurons, self.fc_neurons),
             nn.ReLU(),
             nn.Dropout(0.5),
-            nn.Linear(1024, 1),
+            nn.Linear(self.fc_neurons, 1),
             nn.BatchNorm1d(1),
             CLM(classes=num_classes, link_function="logit", min_distance=0.0, use_slope=False, fixed_thresholds=False)
         )
@@ -153,25 +154,25 @@ class C_CNN(nn.Module):
     
     def _create_quality_fc_regression(self):
         layers = nn.Sequential(
-            nn.Linear(512 * 8 * 8, 512),
+            nn.Linear(512 * 8 * 8, self.fc_neurons),
             nn.ReLU(),
             nn.Dropout(0.5),
-            nn.Linear(512, 256),
+            nn.Linear(self.fc_neurons, self.fc_neurons),
             nn.ReLU(),
             nn.Dropout(0.5),
-            nn.Linear(256, 1),
+            nn.Linear(self.fc_neurons, 1),
         )
         return layers
     
     def _create_quality_fc_corn(self, num_classes=4):
         layers = nn.Sequential(
-            nn.Linear(512 * 8 * 8, 512),
+            nn.Linear(512 * 8 * 8, self.fc_neurons),
             nn.ReLU(),
             nn.Dropout(0.5),
-            nn.Linear(512, 512),
+            nn.Linear(self.fc_neurons, self.fc_neurons),
             nn.ReLU(),
             nn.Dropout(0.5),
-            nn.Linear(512, num_classes - 1),
+            nn.Linear(self.fc_neurons, num_classes - 1),
         )
         return layers
 
@@ -212,7 +213,7 @@ class C_CNN(nn.Module):
         elif self.head == 'single':
             fine_output = self.fine_classifier(fine_flat)
         
-        elif self.head == 'classification':
+        elif self.head == const.CLASSIFICATION or self.head == const.CLASSIFICATION_QWK:
             fine_output = self.fine_classifier(fine_flat)
                 
             
@@ -232,7 +233,7 @@ class C_CNN(nn.Module):
                
     
     def get_optimizer_layers(self):
-        if self.head == 'classification' or self.head == 'single':
+        if self.head == const.CLASSIFICATION or self.head == const.CLASSIFICATION_QWK or self.head == 'single':
             return self.block1_to_4, self.block5_coarse, self.block5_fine, self.coarse_classifier, self.fine_classifier, self.coarse_condition
         else:
             return self.block1_to_4, self.block5_coarse, self.block5_fine, self.coarse_classifier, self.classifier_asphalt, self.classifier_concrete, self.classifier_paving_stones, self.classifier_sett, self.classifier_unpaved, self.coarse_condition

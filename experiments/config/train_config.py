@@ -354,7 +354,7 @@ B_CNN = {
     "coarse_eval_metric": const.EVAL_METRIC_ACCURACY,
     "fine_eval_metric": const.EVAL_METRIC_ACCURACY,
     "project": const.PROJECT_MULTI_LABEL_FIXED,
-    "name": "B_CNN_CLM",
+    "name": "B_CNN_CLASSIFICATION_QWK",
     "level": const.HIERARCHICAL,
     "model": const.BCNN,
     "head": const.CLASSIFICATION_QWK, #'regression', 'classification', 'corn', 'clm'
@@ -429,6 +429,23 @@ B_CNN_sweep_params = {
                      },
     "project": const.PROJECT_MULTI_LABEL_SWEEP,
     "name": "B_CNN",
+    "level": const.HIERARCHICAL,
+    "head": const.CLASSIFICATION,
+    "hierarchy_method": const.MODELSTRUCTURE,  
+    "lw_modifier": True,
+    "sweep_counts": 10,
+}
+
+C_CNN_sweep_params = {
+    **global_config.global_config,
+    **default_params,
+    'model': const.CCNN,
+    "method": "grid",
+    "metric": {"name": "eval/accuracy/fine", "goal": "maximize"},
+    "search_params": {**default_search_params,                 
+                     },
+    "project": const.PROJECT_MULTI_LABEL_SWEEP,
+    "name": "C_CNN_CLASSIFICATION",
     "level": const.HIERARCHICAL,
     "head": const.CLASSIFICATION,
     "hierarchy_method": const.MODELSTRUCTURE,  
