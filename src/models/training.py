@@ -835,6 +835,8 @@ def train_epoch(model, dataloader, optimizer, device, eval_metric, head, hierarc
     if head == const.CORN:
         criterion = model.criterion
     #corn_loss has no reduction parameter
+    elif head == const.CLASSIFICATION_QWK or head == const.CLM_QWK:
+        criterion = model.criterion(num_classes=model.num_classes, mode='quadratic')
     else:
         criterion = model.criterion(reduction="sum")
         
@@ -961,6 +963,8 @@ def validate_epoch(model, dataloader, device, eval_metric, head, hierarchy_metho
      
     if head == const.CORN:
         criterion = model.criterion
+    elif head == const.CLASSIFICATION_QWK or head == const.CLM_QWK:
+        criterion = model.criterion(num_classes=model.num_classes, mode='quadratic')
     #corn_loss has no reduction parameter
     else:
         criterion = model.criterion(reduction="sum")
@@ -1067,6 +1071,8 @@ def train_epoch_hierarchical(model, dataloader, optimizer, device, head, hierarc
     coarse_criterion = model.coarse_criterion(reduction="sum")
     if head == 'corn':
         fine_criterion = model.fine_criterion
+    elif head == const.CLASSIFICATION_QWK or head == const.CLM_QWK:
+        fine_criterion = model.fine_criterion(num_classes=model.num_classes, mode='quadratic')
     else:
         fine_criterion = model.fine_criterion(reduction="sum")
         
@@ -1111,7 +1117,10 @@ def train_epoch_hierarchical(model, dataloader, optimizer, device, head, hierarc
         
         running_loss += loss.item()
         coarse_loss_total += coarse_loss.item()
-        fine_loss_total += fine_loss.item()
+        if head == const.CLASSIFICATION_QWK or head == const.CLM_QWK:
+            fine_loss_total += fine_loss
+        else:
+            fine_loss_total += fine_loss.item()
     
         coarse_probs = model.get_class_probabilies(coarse_output)
         coarse_predictions = torch.argmax(coarse_probs, dim=1)
@@ -1157,6 +1166,8 @@ def validate_epoch_hierarchical(model, dataloader, device, head, hierarchy_metho
     coarse_criterion = model.coarse_criterion(reduction="sum")
     if head == 'corn':
         fine_criterion = model.fine_criterion
+    elif head == const.CLASSIFICATION_QWK or head == const.CLM_QWK:
+        fine_criterion = model.fine_criterion(num_classes=model.num_classes, mode='quadratic')
     else:
         fine_criterion = model.fine_criterion(reduction="sum")
     
@@ -1198,7 +1209,10 @@ def validate_epoch_hierarchical(model, dataloader, device, head, hierarchy_metho
         
         val_running_loss += loss.item()
         val_coarse_loss_total += coarse_loss.item()
-        val_fine_loss_total += fine_loss.item()
+        if head == const.CLASSIFICATION_QWK or head == const.CLM_QWK:
+            val_fine_loss_total += fine_loss
+        else:
+            val_fine_loss_total += fine_loss.item()
 
         if head == 'classification':
             fine_output = model.get_class_probabilies(fine_output)

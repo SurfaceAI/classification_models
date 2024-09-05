@@ -4,6 +4,7 @@ from torchvision import models
 from collections import OrderedDict
 from multi_label.CLM import CLM
 from coral_pytorch.losses import corn_loss
+from multi_label.QWK import QWK_Loss
 
 
 class B_CNN(nn.Module):
@@ -37,14 +38,17 @@ class B_CNN(nn.Module):
         
         self.coarse_criterion = nn.CrossEntropyLoss
         
-        if head == 'clm':      
+        if head == 'clm' or head == 'clm_qwk':      
             self.classifier_asphalt = self._create_quality_fc_clm(num_classes=4)
             self.classifier_concrete = self._create_quality_fc_clm(num_classes=4)
             self.classifier_paving_stones = self._create_quality_fc_clm(num_classes=4)
             self.classifier_sett = self._create_quality_fc_clm(num_classes=3)
             self.classifier_unpaved = self._create_quality_fc_clm(num_classes=3)
             
-            self.fine_criterion = nn.NLLLoss
+            if head == 'clm':
+                self.fine_criterion = nn.NLLLoss
+            elif head == 'clm_qwk':
+                self.fine_criterion = QWK_Loss
             
         elif head == 'regression':
             self.classifier_asphalt = self._create_quality_fc_regression()
@@ -64,7 +68,7 @@ class B_CNN(nn.Module):
             
             self.fine_criterion = corn_loss
             
-        elif head == 'classification':
+        elif head == 'classification' or head == 'classification_qwk':
             self.fine_classifier = nn.Sequential(
                 nn.Linear(512 * 8 * 8, fc_neurons),
                 nn.ReLU(),
@@ -74,7 +78,11 @@ class B_CNN(nn.Module):
                 nn.Dropout(0.5),
                 nn.Linear(fc_neurons, num_classes) 
             )
-            self.fine_criterion = nn.CrossEntropyLoss
+            
+            if head == 'classification':
+                self.fine_criterion = nn.CrossEntropyLoss
+            elif head == 'classification_qwk':
+                self.fine_criterion = QWK_Loss
             
             
     def _create_quality_fc_clm(self, num_classes=4):
@@ -134,7 +142,7 @@ class B_CNN(nn.Module):
        # x = self.avgpool(x)
         flat = x.reshape(x.size(0), -1) #([128, 131072])
         
-        if self.head == 'classification':
+        if self.head == 'classification' or self.head == 'classification_qwk':
             fine_output = self.fine_classifier(flat)
             return coarse_output, fine_output
         
@@ -156,7 +164,7 @@ class B_CNN(nn.Module):
             return coarse_output, fine_output_combined
     
     def get_optimizer_layers(self):
-        if self.head == 'classification' or self.head == 'single':
+        if self.head == 'classification' or self.head == 'single' or self.head == 'classification_qwk':
             return self.features, self.coarse_classifier, self.fine_classifier
         else:
             return self.features, self.coarse_classifier, self.classifier_asphalt, self.classifier_concrete, self.classifier_paving_stones, self.classifier_sett, self.classifier_unpaved

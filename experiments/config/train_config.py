@@ -357,9 +357,10 @@ B_CNN = {
     "name": "B_CNN_CLM",
     "level": const.HIERARCHICAL,
     "model": const.BCNN,
-    "head": const.CLASSIFICATION, #'regression', 'classification', 'corn', 'clm'
+    "head": const.CLASSIFICATION_QWK, #'regression', 'classification', 'corn', 'clm'
     "hierarchy_method": const.MODELSTRUCTURE, #'use_ground_truth', 'use_condition_layer', 'b_cnn'
     "lw_modifier": True,
+    "fc_neurons": 512,
 }
 
 
@@ -413,7 +414,7 @@ GH_CNN = {
     "name": "GH_CNN_CLM",
     "level": const.HIERARCHICAL,
     "model": const.GHCNN,
-    "head": const.CLASSIFICATION, #'regression', 'classification', 'corn', 'clm'
+    "head": const.CLASSIFICATION_QWK, #'regression', 'classification', 'corn', 'clm', 'clm_kappa', 'classification_kappa',
     "hierarchy_method": const.MODELSTRUCTURE, #'use_ground_truth', 'use_condition_layer', 'b_cnn'
     "lw_modifier": True,
 }
