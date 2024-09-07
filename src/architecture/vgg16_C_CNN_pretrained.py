@@ -32,9 +32,10 @@ class C_CNN(nn.Module):
         self.head = head
         self.hierarchy_method = hierarchy_method
         self.fc_neurons = fc_neurons
-        
+               
         #Load pretrained weights
         model = models.vgg16(weights='VGG16_Weights.IMAGENET1K_V1')
+        self.features = model.features
         
         # Unfreeze training for all layers in features
         for param in model.features.parameters():

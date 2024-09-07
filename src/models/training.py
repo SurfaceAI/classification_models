@@ -1146,6 +1146,8 @@ def train_epoch_hierarchical(model, dataloader, optimizer, device, head, hierarc
         fine_qwk += fine_qwk_item
         fine_hv += fine_hv_item
         
+        #break
+        
     epoch_loss = running_loss /  len(dataloader.sampler)
     epoch_coarse_accuracy = 100 * coarse_correct / len(dataloader.sampler)
     epoch_fine_accuracy = 100 * fine_correct / len(dataloader.sampler)
