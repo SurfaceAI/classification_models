@@ -606,6 +606,23 @@ def train(
                     )
             elif hierarchy_method == const.CC:
                 pass
+            
+            elif hierarchy_method == const.FLATTEN:
+                wandb.log(
+                    {
+                        "epoch": epoch + 1,
+                        "train/fine/loss": train_loss,
+                        "train/accuracy/fine": accuracy,
+                        "train/accuracy_one_off/fine": accuracy_one_off,
+                        "train/mse/fine": mse,
+                        "train/mae/fine": mae, 
+                        "eval/fine/loss": val_loss,
+                        "eval/accuracy/fine": val_accuracy,
+                        "eval/accuracy_one_off/fine":val_accuracy_one_off,
+                        "eval/mse/fine": val_mse,
+                        "eval/mae/fine": val_mae,
+                    }
+                )
             else:
                 wandb.log(
                     {
