@@ -483,8 +483,8 @@ def train(
                                                     'val_correct_one_off', 'val_mse', 'val_mae'])
 
     for epoch in range(epochs):
-        if eval_metric == const.EVAL_METRIC_ALL and hierarchy_method == None:
-            train_loss, accuracy, accuracy_one_off, mse, mae  = train_epoch(
+        if eval_metric == const.EVAL_METRIC_ALL and hierarchy_method == const.FLATTEN:
+            train_loss, accuracy, accuracy_one_off, mse, mae, qwk  = train_epoch(
                 model,
                 trainloader,
                 optimizer,
@@ -495,7 +495,7 @@ def train(
                 wandb_on=wandb_on,
             )
 
-            val_loss, val_accuracy, val_accuracy_one_off, val_mse, val_mae  = validate_epoch(
+            val_loss, val_accuracy, val_accuracy_one_off, val_mse, val_mae, val_qwk  = validate_epoch(
                 model,
                 validloader,
                 device,
@@ -574,20 +574,23 @@ def train(
         )
 
         if wandb_on:
-            if eval_metric == const.EVAL_METRIC_ALL and hierarchy_method == None:
+            if eval_metric == const.EVAL_METRIC_ALL and hierarchy_method == const.FLATTEN:
+                
                 wandb.log(
                     {
                         "epoch": epoch + 1,
-                        "train/loss": train_loss,
-                        "train/accuracy": accuracy,
-                        "train/accuracy_one_off": accuracy_one_off,
-                        "train/mse": mse,
-                        "train/mae": mae, 
-                        "eval/loss": val_loss,
-                        "eval/accuracy": val_accuracy,
-                        "eval/accuracy_one_off":val_accuracy_one_off,
-                        "eval/mse": val_mse,
-                        "eval/mae": val_mae,
+                        "train/fine/loss": train_loss,
+                        "train/accuracy/fine": accuracy,
+                        "train/accuracy_one_off/fine": accuracy_one_off,
+                        "train/mse/fine": mse,
+                        "train/mae/fine": mae, #
+                        "train/qwk/fine": qwk,
+                        "eval/fine/loss": val_loss,
+                        "eval/accuracy/fine": val_accuracy,
+                        "eval/accuracy_one_off/fine":val_accuracy_one_off,
+                        "eval/mse/fine": val_mse,
+                        "eval/mae/fine": val_mae,
+                        "eval/qwk/fine": val_qwk,
                     }
                 )
                 
@@ -604,25 +607,10 @@ def train(
                     f"Train MAE: {mae:.3f}.. ",
                     f"Test MAE: {mae:.3f}",
                     )
+                
             elif hierarchy_method == const.CC:
                 pass
             
-            elif hierarchy_method == const.FLATTEN:
-                wandb.log(
-                    {
-                        "epoch": epoch + 1,
-                        "train/fine/loss": train_loss,
-                        "train/accuracy/fine": accuracy,
-                        "train/accuracy_one_off/fine": accuracy_one_off,
-                        "train/mse/fine": mse,
-                        "train/mae/fine": mae, 
-                        "eval/fine/loss": val_loss,
-                        "eval/accuracy/fine": val_accuracy,
-                        "eval/accuracy_one_off/fine":val_accuracy_one_off,
-                        "eval/mse/fine": val_mse,
-                        "eval/mae/fine": val_mae,
-                    }
-                )
             else:
                 wandb.log(
                     {
@@ -952,21 +940,22 @@ def train_epoch(model, dataloader, optimizer, device, eval_metric, head, hierarc
             epoch_metrics_df = pd.DataFrame({
                 'correct': [correct],
                 'correct_one_off': [correct_one_off],
-                'mse': [mse],  # Averaging over batches
-                'mae': [mae],  # Averaging over batches
-                'loss': [running_loss]  # Averaging over samples
+                'mse': [mse],  #
+                'mae': [mae],  
+                'loss': [running_loss], 
+                'qwk': [qwk], #TODO: I added this but have to continue adding qwk in the other parts
             }) 
-             
             return epoch_metrics_df
         
         else:
             epoch_accuracy = 100 * correct / len(dataloader.sampler)
             epoch_accuracy_one_off = 100 * correct_one_off / len(dataloader.sampler)
-            epoch_mse = mse / len(dataloader)
-            epoch_mae = mae / len(dataloader)
+            epoch_mse = mse / len(dataloader.sampler)
+            epoch_mae = mae / len(dataloader.sampler)
             epoch_loss = running_loss / len(dataloader.sampler)
+            epoch_qwk = qwk / len(dataloader.sampler)
 
-            return epoch_loss, epoch_accuracy, epoch_accuracy_one_off, epoch_mse, epoch_mae 
+            return epoch_loss, epoch_accuracy, epoch_accuracy_one_off, epoch_mse, epoch_mae, epoch_qwk
     
     else:
         return running_loss / len(dataloader.sampler), eval_metric_value / len(
@@ -1062,9 +1051,10 @@ def validate_epoch(model, dataloader, device, eval_metric, head, hierarchy_metho
                 epoch_metrics_df = pd.DataFrame({
                     'correct': [eval_correct],
                     'correct_one_off': [eval_correct_one_off],
-                    'mse': [eval_mse],  # Averaging over batches
-                    'mae': [eval_mae],  # Averaging over batches
-                    'loss': [eval_running_loss]  # Averaging over samples
+                    'mse': [eval_mse],  
+                    'mae': [eval_mae],  
+                    'loss': [eval_running_loss],  
+                    'qwk': [eval_qwk],
                 }) 
              
                 return epoch_metrics_df
@@ -1075,7 +1065,8 @@ def validate_epoch(model, dataloader, device, eval_metric, head, hierarchy_metho
                 epoch_eval_accuracy_one_off = 100 * eval_correct_one_off / len(dataloader.sampler)
                 epoch_eval_mse = eval_mse / len(dataloader.sampler)
                 epoch_eval_mae = eval_mae / len(dataloader.sampler)
-                return val_epoch_loss, epoch_eval_accuracy, epoch_eval_accuracy_one_off, epoch_eval_mse, epoch_eval_mae 
+                epoch_eval_qwk = eval_qwk / len(dataloader.sampler)
+                return val_epoch_loss, epoch_eval_accuracy, epoch_eval_accuracy_one_off, epoch_eval_mse, epoch_eval_mae, epoch_eval_qwk,
             
         else:
             return eval_running_loss / len(dataloader.sampler), eval_metric_value / len(
