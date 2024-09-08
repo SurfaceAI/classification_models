@@ -344,6 +344,20 @@ vgg16_sweep_params = {
 # }
 
 
+vgg16_flatten = {
+    **global_config.global_config,
+    **default_params,
+    "project": const.PROJECT_MULTI_LABEL_FIXED,
+    "name": "flatten_model",
+    "level": const.FLATTEN,
+    "model": const.VGG16,
+    "head": const.CLASSIFICATION,
+    "eval_metric": const.EVAL_METRIC_ALL,
+    "learning_rate": 0.00056,
+    "hierarchy_method": None,
+    #"fc_neurons": 512,
+}
+
 B_CNN = {
     **global_config.global_config,
     **default_params,

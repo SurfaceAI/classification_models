@@ -176,10 +176,10 @@ class LossWeightsModifier():
         if epoch >= 3:
             self.alpha = torch.tensor(0.6)
             self.beta = torch.tensor(0.4)
-        if epoch >= 6:
+        if epoch >= 5:
             self.alpha = torch.tensor(0.2)
             self.beta = torch.tensor(0.8)
-        if epoch >= 9:
+        if epoch >= 8:
             self.alpha = torch.tensor(0.0)
             self.beta = torch.tensor(1.0)
             
