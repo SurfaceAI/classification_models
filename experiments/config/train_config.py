@@ -15,9 +15,9 @@ default_params = {
 }
 
 default_search_params = {
-    "batch_size": {"values": [16, 32, 64]},
-    "epochs": {"value": 2},
-    "learning_rate": {"values": [1e-05, 1e-04, 1e-03, 1e-02]},
+    "batch_size": {"values": [16, 48, 128]},
+    "epochs": {"value": 10},
+    "learning_rate": {"values": [1e-05, 1e-04, 1e-03]},
     #"learning_rate": {"distribution": "log_uniform_values", "min": 1e-05, "max": 0.001},
     "optimizer": {"value": const.OPTI_ADAM},
     "fc_neurons": {"values": [512, 1024]},
