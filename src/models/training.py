@@ -691,6 +691,7 @@ def train_hierarchical(
          epoch_fine_accuracy_one_off,
          epoch_fine_mse,
          epoch_fine_mae,
+         epoch_fine_qwk,
          epoch_fine_hv,
          coarse_epoch_loss, 
          fine_epoch_loss) = train_epoch_hierarchical(
@@ -712,6 +713,7 @@ def train_hierarchical(
          val_epoch_fine_accuracy_one_off, 
          val_epoch_fine_mse,
          val_epoch_fine_mae,
+         val_epoch_fine_qwk,
          val_epoch_fine_hv,
          val_coarse_epoch_loss, 
          val_fine_epoch_loss) = validate_epoch_hierarchical(
@@ -749,6 +751,7 @@ def train_hierarchical(
                         "train/accuracy/fine_1_off": epoch_fine_accuracy_one_off,
                         "train/mse/fine":epoch_fine_mse,
                         "train/mae/fine":epoch_fine_mae,
+                        "train/qwk/fine":epoch_fine_qwk,
                         "train/hv/fine":epoch_fine_hv,
                         "eval/loss": val_epoch_loss,
                         "eval/coarse/loss": val_coarse_epoch_loss,
@@ -758,6 +761,7 @@ def train_hierarchical(
                         "eval/accuracy/fine_1_off": val_epoch_fine_accuracy_one_off,
                         "eval/mse/fine":val_epoch_fine_mse,
                         "eval/mae/fine":val_epoch_fine_mae,
+                        "eval/qwk/fine":val_epoch_fine_qwk,
                         "eval/hv/fine":val_epoch_fine_hv,
                         "trainable_params": trainable_params,
                         "learning_rate": scheduler.get_last_lr()[0],
@@ -791,6 +795,7 @@ def train_hierarchical(
                         "train/accuracy/fine_1_off": epoch_fine_accuracy_one_off,
                         "train/mse/fine":epoch_fine_mse,
                         "train/mae/fine":epoch_fine_mae,
+                        "train/qwk/fine":epoch_fine_qwk,
                         "train/hv/fine":epoch_fine_hv,
                         "eval/loss": val_epoch_loss,
                         "eval/coarse/loss": val_coarse_epoch_loss,
@@ -800,6 +805,7 @@ def train_hierarchical(
                         "eval/accuracy/fine_1_off": val_epoch_fine_accuracy_one_off,
                         "eval/mse/fine":val_epoch_fine_mse,
                         "eval/mae/fine":val_epoch_fine_mae,
+                        "eval/qwk/fine":val_epoch_fine_qwk,
                         "eval/hv/fine":val_epoch_fine_hv,
                         "trainable_params": trainable_params,
                     }
@@ -1154,7 +1160,7 @@ def train_epoch_hierarchical(model, dataloader, optimizer, device, head, hierarc
         fine_qwk += fine_qwk_item
         fine_hv += fine_hv_item
         
-        #break
+        break
         
     epoch_loss = running_loss /  len(dataloader.sampler)
     epoch_coarse_accuracy = 100 * coarse_correct / len(dataloader.sampler)
@@ -1162,13 +1168,14 @@ def train_epoch_hierarchical(model, dataloader, optimizer, device, head, hierarc
     epoch_fine_accuracy_one_off = 100 * fine_correct_one_off / len(dataloader.sampler)
     epoch_mse = fine_mse / len(dataloader.sampler)
     epoch_mae = fine_mae / len(dataloader.sampler)
+    epoch_qwk = fine_qwk / len(dataloader.sampler)
     epoch_hv = fine_hv / len(dataloader.sampler)
     
     coarse_epoch_loss = coarse_loss_total / len(dataloader.sampler)
     fine_epoch_loss = fine_loss_total / len(dataloader.sampler)
         
         
-    return epoch_loss, epoch_coarse_accuracy, epoch_fine_accuracy, epoch_fine_accuracy_one_off, epoch_mse, epoch_mae, epoch_hv, coarse_epoch_loss, fine_epoch_loss
+    return epoch_loss, epoch_coarse_accuracy, epoch_fine_accuracy, epoch_fine_accuracy_one_off, epoch_mse, epoch_mae, epoch_qwk, epoch_hv, coarse_epoch_loss, fine_epoch_loss
 
 def validate_epoch_hierarchical(model, dataloader, device, head, hierarchy_method, lw_modifier, alpha, beta):
     model.eval()
@@ -1241,7 +1248,7 @@ def validate_epoch_hierarchical(model, dataloader, device, head, hierarchy_metho
         val_fine_qwk += val_fine_qwk_item
         val_fine_hv += val_fine_hv_item
         
-        #break
+        break
 
     val_epoch_loss = val_running_loss /  len(dataloader.sampler)
     val_epoch_coarse_accuracy = 100 * val_coarse_correct / len(dataloader.sampler)
@@ -1249,12 +1256,13 @@ def validate_epoch_hierarchical(model, dataloader, device, head, hierarchy_metho
     val_epoch_fine_accuracy_one_off = 100 * val_fine_correct_one_off / len(dataloader.sampler)
     val_epoch_fine_mse = val_fine_mse /  len(dataloader.sampler)
     val_epoch_fine_mae = val_fine_mae /  len(dataloader.sampler)
+    val_epoch_fine_qwk = val_fine_qwk /  len(dataloader.sampler)
     val_epoch_fine_hv = val_fine_hv /  len(dataloader.sampler)
     
     val_coarse_epoch_loss = val_coarse_loss_total / len(dataloader.sampler)
     val_fine_epoch_loss = val_fine_loss_total / len(dataloader.sampler)
 
-    return val_epoch_loss, val_epoch_coarse_accuracy, val_epoch_fine_accuracy, val_epoch_fine_accuracy_one_off, val_epoch_fine_mse, val_epoch_fine_mae, val_epoch_fine_hv, val_coarse_epoch_loss, val_fine_epoch_loss
+    return val_epoch_loss, val_epoch_coarse_accuracy, val_epoch_fine_accuracy, val_epoch_fine_accuracy_one_off, val_epoch_fine_mse, val_epoch_fine_mae, val_epoch_fine_qwk, val_epoch_fine_hv, val_coarse_epoch_loss, val_fine_epoch_loss
 
 # save model locally
 def save_model(model, saving_path, saving_name):
