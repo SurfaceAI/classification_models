@@ -3,7 +3,7 @@ from experiments.config  import global_config
 
 default_params = {
     "batch_size": 64, #16,  # 48
-    "epochs": 2,
+    "epochs": 10,
     "learning_rate": 0.01,
     "optimizer": const.OPTI_ADAM,
     "is_regression": False,
@@ -16,11 +16,11 @@ default_params = {
 
 default_search_params = {
     "batch_size": {"values": [16, 32, 64]},
-    "epochs": {"value": 15},
+    "epochs": {"value": 10},
     "learning_rate": {"values": [1e-05, 1e-04, 1e-03, 1e-02]},
     #"learning_rate": {"distribution": "log_uniform_values", "min": 1e-05, "max": 0.001},
     "optimizer": {"value": const.OPTI_ADAM},
-    "fc_neurons": {"values": [512, 1024, 2048]},
+    "fc_neurons": {"values": [512, 1024]},
     "freeze_convs": {"values": [True, False]}
 }
 
@@ -354,7 +354,7 @@ vgg16_flatten = {
     "head": const.CLASSIFICATION,
     "eval_metric": const.EVAL_METRIC_ALL,
     "learning_rate": 0.00056,
-    "hierarchy_method": None,
+    "hierarchy_method": const.FLATTEN,
     #"fc_neurons": 512,
 }
 
@@ -363,7 +363,7 @@ B_CNN = {
     **default_params,
     "batch_size": 64,
     "epochs": 10,
-    "learning_rate": 0.01,
+    "learning_rate": 0.0001,
     "optimizer": const.OPTI_ADAM,
     "coarse_eval_metric": const.EVAL_METRIC_ACCURACY,
     "fine_eval_metric": const.EVAL_METRIC_ACCURACY,
@@ -437,7 +437,7 @@ B_CNN_sweep_params = {
     **global_config.global_config,
     **default_params,
     'model': const.BCNN,
-    "method": "grid",
+    "method": "bayes",
     "metric": {"name": "eval/accuracy/fine", "goal": "maximize"},
     "search_params": {**default_search_params,                 
                      },
