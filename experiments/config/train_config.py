@@ -395,6 +395,7 @@ C_CNN = {
     "head": const.CLASSIFICATION, #'regression', 'classification', 'obd', 'clm'
     "hierarchy_method": const.MODELSTRUCTURE, #'use_ground_truth', 'None',
     "lw_modifier": False,
+    "fc_neurons": 512,
 }
 
 H_NET = {
@@ -413,6 +414,7 @@ H_NET = {
     "head": const.CLASSIFICATION, #'regression', 'classification', 'obd', 'clm'
     "hierarchy_method": const.MODELSTRUCTURE, #'use_ground_truth', 'None',
     "lw_modifier": False,
+    "fc_neurons": 512,
 }
 
 GH_CNN = {
@@ -425,12 +427,13 @@ GH_CNN = {
     "coarse_eval_metric": const.EVAL_METRIC_ACCURACY,
     "fine_eval_metric": const.EVAL_METRIC_ACCURACY,
     "project": const.PROJECT_MULTI_LABEL_FIXED,
-    "name": "GH_CNN_CLM",
+    "name": "GH_CNN_CLASSIFICATION",
     "level": const.HIERARCHICAL,
     "model": const.GHCNN,
-    "head": const.CLASSIFICATION_QWK, #'regression', 'classification', 'corn', 'clm', 'clm_kappa', 'classification_kappa',
+    "head": const.CLASSIFICATION, #'regression', 'classification', 'corn', 'clm', 'clm_kappa', 'classification_kappa',
     "hierarchy_method": const.MODELSTRUCTURE, #'use_ground_truth', 'use_condition_layer', 'b_cnn'
     "lw_modifier": True,
+    "fc_neurons": 512,
 }
 
 B_CNN_sweep_params = {
@@ -442,7 +445,7 @@ B_CNN_sweep_params = {
     "search_params": {**default_search_params,                 
                      },
     "project": const.PROJECT_MULTI_LABEL_SWEEP_BCNN,
-    "name": "B_CNN",
+    "name": "B_CNN_CLASSIFICATION",
     "level": const.HIERARCHICAL,
     "head": const.CLASSIFICATION,
     "hierarchy_method": const.MODELSTRUCTURE,  

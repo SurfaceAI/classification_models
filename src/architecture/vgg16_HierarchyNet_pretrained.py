@@ -14,11 +14,15 @@ class CustomMultLayer(nn.Module):
         return torch.mul(tensor_1, tensor_2)
 
 class H_NET(nn.Module):
-    def __init__(self, num_c, num_classes, head, hierarchy_method):
+    def __init__(self, num_c, num_classes, head, hierarchy_method, fc_neurons):
         super(H_NET, self).__init__()
         
         self.custom_layer = CustomMultLayer()
         self.head = head
+        self.hierarchy_method = hierarchy_method
+        self.fc_neurons = fc_neurons
+        self.num_c = num_c
+        self.num_classes = num_classes
         
         #Load pretrained weights
         model = models.vgg16(weights='VGG16_Weights.IMAGENET1K_V1')
@@ -31,15 +35,15 @@ class H_NET(nn.Module):
         self.features = model.features
         
         self.coarse_classifier = nn.Sequential(
-            nn.Linear(32768, 1024),
+            nn.Linear(32768, 512),
             nn.ReLU(),
-            nn.BatchNorm1d(1024),
+            nn.BatchNorm1d(512),
             nn.Dropout(0.5),
-            nn.Linear(1024, 1024),
+            nn.Linear(512, 512),
             nn.ReLU(),
-            nn.BatchNorm1d(1024),
+            nn.BatchNorm1d(512),
             nn.Dropout(0.5),
-            nn.Linear(1024, num_c)
+            nn.Linear(512, num_c)
         )
         
         if head == 'clm':      
@@ -65,13 +69,13 @@ class H_NET(nn.Module):
             
         elif head == 'classification':
             self.fine_classifier = nn.Sequential(
-                nn.Linear(512 * 8 * 8, 1024),
+                nn.Linear(512 * 8 * 8, self.fc_neurons),
                 nn.ReLU(),
                 nn.Dropout(0.5),
-                nn.Linear(1024, 1024),
+                nn.Linear(self.fc_neurons, self.fc_neurons),
                 nn.ReLU(),
                 nn.Dropout(0.5),
-                nn.Linear(1024, num_classes) 
+                nn.Linear(self.fc_neurons, num_classes) 
             )
             
         self.coarse_criterion = nn.CrossEntropyLoss
@@ -87,13 +91,13 @@ class H_NET(nn.Module):
 
     def _create_quality_fc_clm(self, num_classes=4):
         layers = nn.Sequential(
-            nn.Linear(512 * 8 * 8, 1024),
+            nn.Linear(512 * 8 * 8, self.fc_neurons),
             nn.ReLU(),
             nn.Dropout(0.5),
-            nn.Linear(1024, 1024),
+            nn.Linear(self.fc_neurons, self.fc_neurons),
             nn.ReLU(),
             nn.Dropout(0.5),
-            nn.Linear(1024, 1),
+            nn.Linear(self.fc_neurons, 1),
             nn.BatchNorm1d(1),
             CLM(classes=num_classes, link_function="logit", min_distance=0.0, use_slope=False, fixed_thresholds=False)
         )    
@@ -101,25 +105,25 @@ class H_NET(nn.Module):
     
     def _create_quality_fc_regression(self):
         layers = nn.Sequential(
-            nn.Linear(512 * 8 * 8, 512),
+            nn.Linear(512 * 8 * 8, self.fc_neurons),
             nn.ReLU(),
             nn.Dropout(0.5),
-            nn.Linear(512, 256),
+            nn.Linear(self.fc_neurons, self.fc_neurons),
             nn.ReLU(),
             nn.Dropout(0.5),
-            nn.Linear(256, 1),
+            nn.Linear(self.fc_neurons, 1),
         )
         return layers
     
     def _create_quality_fc_corn(self, num_classes=4):
         layers = nn.Sequential(
-            nn.Linear(512 * 8 * 8, 512),
+            nn.Linear(512 * 8 * 8, self.fc_neurons),
             nn.ReLU(),
             nn.Dropout(0.5),
-            nn.Linear(512, 512),
+            nn.Linear(self.fc_neurons, self.fc_neurons),
             nn.ReLU(),
             nn.Dropout(0.5),
-            nn.Linear(512, num_classes - 1),
+            nn.Linear(self.fc_neurons, num_classes - 1),
         )
         return layers
     
@@ -174,7 +178,7 @@ class H_NET(nn.Module):
             fine_4 = self.custom_layer(coarse_4, fine_4)
             fine_5 = self.custom_layer(coarse_5, fine_5)
            
-        if self.head == 'regression' or self.head == 'corn':
+        elif self.head == 'regression' or self.head == 'corn':
             fine_1 = self.classifier_asphalt(flat) #([batch_size, 1024])
             fine_2 = self.classifier_concrete(flat)
             fine_3 = self.classifier_paving_stones(flat)           

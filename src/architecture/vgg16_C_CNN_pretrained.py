@@ -64,13 +64,13 @@ class C_CNN(nn.Module):
 
         #Coarse prediction branch
         self.coarse_classifier = nn.Sequential(
-            nn.Linear(512 * 8 * 8, self.fc_neurons),
+            nn.Linear(512 * 16 * 16, 512),
             nn.ReLU(),
             nn.Dropout(0.5),
-            nn.Linear(self.fc_neurons, self.fc_neurons),
+            nn.Linear(512, 512),
             nn.ReLU(),
             nn.Dropout(0.5),
-            nn.Linear(self.fc_neurons, num_c)
+            nn.Linear(512, num_c)
         )
         
         #Individual fine prediction branches  
@@ -97,7 +97,7 @@ class C_CNN(nn.Module):
             
         elif head == 'single':
             self.fine_classifier = nn.Sequential(
-            nn.Linear(512 * 8 * 8, self.fc_neurons),
+            nn.Linear(512 * 16 * 16, self.fc_neurons),
             nn.ReLU(),
             nn.Dropout(0.5),
             nn.Linear(self.fc_neurons, self.fc_neurons),
@@ -108,7 +108,7 @@ class C_CNN(nn.Module):
                 
         elif head == 'classification':
             self.fine_classifier = nn.Sequential(
-                nn.Linear(512 * 8 * 8, self.fc_neurons),
+                nn.Linear(512 * 16 * 16, self.fc_neurons),
                 nn.ReLU(),
                 nn.Dropout(0.5),
                 nn.Linear(self.fc_neurons, self.fc_neurons),
@@ -141,7 +141,7 @@ class C_CNN(nn.Module):
                      
     def _create_quality_fc_clm(self, num_classes=4):
         layers = nn.Sequential(
-            nn.Linear(512 * 8 * 8, self.fc_neurons),
+            nn.Linear(512 * 16 * 16, self.fc_neurons),
             nn.ReLU(),
             nn.Dropout(0.5),
             nn.Linear(self.fc_neurons, self.fc_neurons),
@@ -155,7 +155,7 @@ class C_CNN(nn.Module):
     
     def _create_quality_fc_regression(self):
         layers = nn.Sequential(
-            nn.Linear(512 * 8 * 8, self.fc_neurons),
+            nn.Linear(512 * 16 * 16, self.fc_neurons),
             nn.ReLU(),
             nn.Dropout(0.5),
             nn.Linear(self.fc_neurons, self.fc_neurons),
@@ -167,7 +167,7 @@ class C_CNN(nn.Module):
     
     def _create_quality_fc_corn(self, num_classes=4):
         layers = nn.Sequential(
-            nn.Linear(512 * 8 * 8, self.fc_neurons),
+            nn.Linear(512 * 16 * 16, self.fc_neurons),
             nn.ReLU(),
             nn.Dropout(0.5),
             nn.Linear(self.fc_neurons, self.fc_neurons),

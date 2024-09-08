@@ -2,6 +2,9 @@ import torch
 import torch.nn as nn
 from experiments.config import train_config
 from torchvision import models
+from multi_label.QWK import QWK_Loss
+from multi_label.CLM import CLM
+from coral_pytorch.losses import corn_loss
 
 
 class CustomBayesLayer(nn.Module):
@@ -13,11 +16,16 @@ class CustomBayesLayer(nn.Module):
         return y_subclass
     
 class GH_CNN(nn.Module):
-    def __init__(self, num_c, num_classes, head, hierarchy_method):
+    def __init__(self, num_c, num_classes, head, hierarchy_method, fc_neurons):
         super(GH_CNN, self).__init__()
         
         #Custom layer
         self.custom_bayes_layer = CustomBayesLayer()
+        self.fc_neurons = fc_neurons
+        self.hierarchy_method = hierarchy_method
+        self.head = head
+        self.num_c = num_c
+        self.num_classes = num_classes
         #self.custom_mult_layer = CustomMultLayer()
         
         #Load pretrained weights
@@ -31,23 +39,120 @@ class GH_CNN(nn.Module):
         ### Block 1
         self.features = model.features
         
-        num_features = model.classifier[6].in_features
-        # Modify the first fully connected layer to accept the correct input size
-        model.classifier[0] = nn.Linear(in_features=512*8*8, out_features=4096, bias=True)
-
-        # Save the modified classifier layers as member variables
-        self.fc = nn.Sequential(*list(model.classifier.children())[0:3])
-        self.fc_1 = nn.Sequential(*list(model.classifier.children())[3:6])
+        self.coarse_classifier = nn.Sequential(
+            nn.Linear(512 * 8 * 8, self.fc_neurons),
+            nn.ReLU(),
+            nn.Dropout(0.5),
+            nn.Linear(self.fc_neurons, self.fc_neurons),
+            nn.ReLU(),
+            nn.Dropout(0.5),
+            nn.Linear(self.fc_neurons, num_c)
+        )
         
-        self.fc_2_coarse = nn.Linear(num_features, num_c)
-        self.fc_2_fine = nn.Linear(num_features, num_classes) 
-
         self.coarse_criterion = nn.CrossEntropyLoss
         
-        if num_classes == 1:
+        if head == 'clm' or head == 'clm_qwk':
+            self._create_fine_classifiers_clm()
+            if head == 'clm':
+                self.fine_criterion = nn.NLLLoss
+            elif head == 'clm_qwk':
+                self.fine_criterion = QWK_Loss
+            
+        elif head == 'regression':
+            self._create_fine_classifiers_regression()
             self.fine_criterion = nn.MSELoss
-        else:
-            self.fine_criterion = nn.CrossEntropyLoss   
+            
+        elif head == 'corn':
+            self._create_fine_classifiers_corn()
+            self.fine_criterion = corn_loss
+            
+        elif head == 'classification' or head == 'classification_qwk':
+            self.fine_classifier = nn.Sequential(
+                nn.Linear(512 * 8 * 8, self.fc_neurons),
+                nn.ReLU(),
+                nn.Dropout(0.5),
+                nn.Linear(self.fc_neurons, self.fc_neurons),
+                nn.ReLU(),
+                nn.Dropout(0.5),
+                nn.Linear(self.fc_neurons, num_classes)
+            )
+            if head == 'classification':
+                self.fine_criterion = nn.CrossEntropyLoss
+            elif head == 'classification_qwk':
+                self.fine_criterion = QWK_Loss
+        
+        #num_features = model.classifier[6].in_features
+        # Modify the first fully connected layer to accept the correct input size
+        # model.classifier[0] = nn.Linear(in_features=512*8*8, out_features=self.fc_neurons, bias=True)
+
+        # # Modify other parts of the classifier if needed
+        # classifier_layers = list(model.classifier.children())
+
+        # # Save different parts of the classifier
+        # self.fc = nn.Sequential(*classifier_layers[0:3])
+        # self.fc_1 = nn.Sequential(*classifier_layers[3:6])
+
+        # # Output layers for coarse and fine classification
+        # self.fc_2_coarse = nn.Linear(self.fc_neurons, num_c)
+        # self.fc_2_fine = nn.Linear(self.fc_neurons, num_classes)
+
+        
+        
+    def _create_fine_classifiers_clm(self):
+        self.classifier_asphalt = self._create_quality_fc_clm(4)
+        self.classifier_concrete = self._create_quality_fc_clm(4)
+        self.classifier_paving_stones = self._create_quality_fc_clm(4)
+        self.classifier_sett = self._create_quality_fc_clm(3)
+        self.classifier_unpaved = self._create_quality_fc_clm(3)
+    
+    def _create_fine_classifiers_regression(self):
+        self.classifier_asphalt = self._create_quality_fc_regression()
+        self.classifier_concrete = self._create_quality_fc_regression()
+        self.classifier_paving_stones = self._create_quality_fc_regression()
+        self.classifier_sett = self._create_quality_fc_regression()
+        self.classifier_unpaved = self._create_quality_fc_regression()
+
+    def _create_fine_classifiers_corn(self):
+        self.classifier_asphalt = self._create_quality_fc_corn(4)
+        self.classifier_concrete = self._create_quality_fc_corn(4)
+        self.classifier_paving_stones = self._create_quality_fc_corn(4)
+        self.classifier_sett = self._create_quality_fc_corn(3)
+        self.classifier_unpaved = self._create_quality_fc_corn(3)
+
+    def _create_quality_fc_clm(self, num_classes=4):
+        return nn.Sequential(
+            nn.Linear(512 * 8 * 8, self.fc_neurons),
+            nn.ReLU(),
+            nn.Dropout(0.5),
+            nn.Linear(self.fc_neurons, self.fc_neurons),
+            nn.ReLU(),
+            nn.Dropout(0.5),
+            nn.Linear(self.fc_neurons, 1),
+            nn.BatchNorm1d(1),
+            CLM(classes=num_classes, link_function="logit", min_distance=0.0, use_slope=False, fixed_thresholds=False)
+        )
+
+    def _create_quality_fc_regression(self):
+        return nn.Sequential(
+            nn.Linear(512 * 8 * 8, self.fc_neurons),
+            nn.ReLU(),
+            nn.Dropout(0.5),
+            nn.Linear(self.fc_neurons, self.fc_neurons),
+            nn.ReLU(),
+            nn.Dropout(0.5),
+            nn.Linear(self.fc_neurons, 1)
+        )
+
+    def _create_quality_fc_corn(self, num_classes):
+        return nn.Sequential(
+            nn.Linear(512 * 8 * 8, self.fc_neurons),
+            nn.ReLU(),
+            nn.Dropout(0.5),
+            nn.Linear(self.fc_neurons, self.fc_neurons),
+            nn.ReLU(),
+            nn.Dropout(0.5),
+            nn.Linear(self.fc_neurons, num_classes - 1)
+        )
                 
     @ staticmethod
     def get_class_probabilies(x):
@@ -60,19 +165,33 @@ class GH_CNN(nn.Module):
 
     
     def forward(self, inputs):
+        
+        images, true_coarse = inputs
 
-        x = self.features(inputs) #128, 512, 8, 8]
+        x = self.features(images) #128, 512, 8, 8]
         
         flat = x.reshape(x.size(0), -1)#torch.Size([16, 32.768])
         
-        branch_output = self.fc(flat)
-        branch_output = self.fc_1(branch_output)
+        # branch_output = self.fc(flat)
+        # branch_output = self.fc_1(branch_output)
         
-        z_1 = self.fc_2_coarse(branch_output) #[16,5]
+        z_1 = self.coarse_classifier(flat) #[16,5]
         
-        z_2 = self.fc_2_fine(branch_output) #[16,18]
+        if self.head == 'classification' or self.head == 'classification_qwk':
+            z_2 = self.fine_classifier(flat)
+        else:
+            fine_output_asphalt = self.classifier_asphalt(flat)
+            fine_output_concrete = self.classifier_concrete(flat)
+            fine_output_paving_stones = self.classifier_paving_stones(flat)
+            fine_output_sett = self.classifier_sett(flat)
+            fine_output_unpaved = self.classifier_unpaved(flat)
+            z_2 = torch.cat([fine_output_asphalt, fine_output_concrete, fine_output_paving_stones, 
+                            fine_output_sett, fine_output_unpaved], dim=1)
+
+        z_1, z_2 = self.teacher_forcing(z_1, z_2, true_coarse)
+        coarse_output, fine_output = self.bayesian_adjustment(z_1, z_2)
         
-        return z_1, z_2
+        return coarse_output, fine_output
         
     def teacher_forcing(self, z_1, z_2, true_coarse):
         
@@ -125,4 +244,9 @@ class GH_CNN(nn.Module):
         return coarse_output, fine_output 
     
     def get_optimizer_layers(self):
-        return self.features, self.fc, self.fc_1, self.fc_2_coarse, self.fc_2_fine #TODO anpassen an andere Modellarchitekturen
+        if self.head in ['classification', 'classification_qwk']:
+            return self.features, self.coarse_classifier, self.fine_classifier
+        else:
+            return (self.features, self.coarse_classifier, self.classifier_asphalt, 
+                    self.classifier_concrete, self.classifier_paving_stones, 
+                    self.classifier_sett, self.classifier_unpaved)

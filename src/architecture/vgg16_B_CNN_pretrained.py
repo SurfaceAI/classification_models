@@ -14,6 +14,7 @@ class B_CNN(nn.Module):
         self.num_c = num_c
         self.num_classes = num_classes
         self.head = head     
+        self.hierarchy_method = hierarchy_method
         self.fc_neurons = fc_neurons
            
         #Load pretrained weights
@@ -70,13 +71,13 @@ class B_CNN(nn.Module):
             
         elif head == 'classification' or head == 'classification_qwk':
             self.fine_classifier = nn.Sequential(
-                nn.Linear(512 * 8 * 8, fc_neurons),
+                nn.Linear(512 * 8 * 8, self.fc_neurons),
                 nn.ReLU(),
                 nn.Dropout(0.5),
-                nn.Linear(fc_neurons, fc_neurons),
+                nn.Linear(self.fc_neurons, self.fc_neurons),
                 nn.ReLU(),
                 nn.Dropout(0.5),
-                nn.Linear(fc_neurons, num_classes) 
+                nn.Linear(self.fc_neurons, num_classes) 
             )
             
             if head == 'classification':

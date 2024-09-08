@@ -111,7 +111,10 @@ PROJECT_FLATTEN_FIXED = "road-surface-classification-flatten"
 PROJECT_FLATTEN_SWEEP = "sweep-road-surface-classification-flatten"
 PROJECT_MULTI_LABEL_FIXED = "road-surface-classification-multi-label"
 PROJECT_ORDINAL_REGRESSION_FIXED = "road-surface-classification-ordinal-regression"
-PROJECT_MULTI_LABEL_SWEEP = "sweep-road-surface-classification-multi-label"
+PROJECT_MULTI_LABEL_SWEEP_BCNN = "sweep-road-surface-classification-multi-label-B-CNN"
+PROJECT_MULTI_LABEL_SWEEP_CCNN = "sweep-road-surface-classification-multi-label-C-CNN"
+PROJECT_MULTI_LABEL_SWEEP_HNET = "sweep-road-surface-classification-multi-label-H-NET"
+PROJECT_MULTI_LABEL_SWEEP_GHCNN = "sweep-road-surface-classification-multi-label-GH-CNN"
 
 
 
