@@ -185,6 +185,21 @@ class LossWeightsModifier():
             
         return self.alpha, self.beta
     
+class LossWeightsModifier_GH():
+    def __init__(self, alpha, beta):
+        self.alpha = alpha
+        self.beta = beta
+
+    def on_epoch_end(self, epoch):
+        if 0.15 * 15 <= epoch < 0.25 * 15:
+            self.alpha = torch.tensor(0.5)
+            self.beta = torch.tensor(0.5)
+        elif epoch >= 0.25 * 15:
+            self.alpha = torch.tensor(0.0)
+            self.beta = torch.tensor(1.0)
+            
+        return self.alpha, self.beta
+    
 #this helps us adopt a regression on the second level for multi-label models  
 def map_flatten_to_ordinal(quality_label):
     quality_mapping = {
