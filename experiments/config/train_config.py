@@ -420,9 +420,9 @@ H_NET = {
 GH_CNN = {
     **global_config.global_config,
     **default_params,
-    "batch_size": 64,
+    "batch_size": 16,
     "epochs": 10,
-    "learning_rate": 0.01,
+    "learning_rate": 0.0001,
     "optimizer": const.OPTI_ADAM,
     "coarse_eval_metric": const.EVAL_METRIC_ACCURACY,
     "fine_eval_metric": const.EVAL_METRIC_ACCURACY,
@@ -502,4 +502,20 @@ GH_CNN_sweep_params = {
     "hierarchy_method": const.MODELSTRUCTURE,  
     "lw_modifier": True,
     "sweep_counts": 10,
+}
+
+ordinal_methods_sweep_params = {
+    **global_config.global_config,
+    **default_params,
+    'model': const.VGG16,
+    "method": "grid",
+    "metric": {"name": "eval/accuracy/fine", "goal": "maximize"},
+    "search_params": {**default_search_params,                 
+                     },
+    "project": const.PROJECT_MULTI_LABEL_SWEEP_ORDINAL_METHODS,
+    "name": "ordinal_methods_classification",
+    "level": const.SMOOTHNESS,
+    "head": const.CLASSIFICATION,
+    "sweep_counts": 10,
+    "hierarchy_method": const.CC,
 }
