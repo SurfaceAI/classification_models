@@ -5,7 +5,7 @@ from collections import OrderedDict
 architecture = "Simple CNN not pretrained"
    
 class ConvNet(nn.Module):
-    def __init__(self, num_classes):
+    def __init__(self, num_classes, avg_pool):
         super(ConvNet, self).__init__()
         # Conv Layer 1
         self.conv1 = nn.Sequential(
@@ -24,6 +24,8 @@ class ConvNet(nn.Module):
             nn.Conv2d(32, 64, kernel_size=3, padding=1, bias=True),
             nn.MaxPool2d(kernel_size=2, stride=2),
             nn.ReLU()) #output is (64, 16, 16)
+        
+        # avg_pool unused
         
         self.flat = nn.Flatten() # output (16384 when 128 image size, 65536 when 256 image size)
         
