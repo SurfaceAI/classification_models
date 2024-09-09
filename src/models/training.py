@@ -680,7 +680,10 @@ def train_hierarchical(
     if lw_modifier:
         alpha = torch.tensor(0.98)
         beta = torch.tensor(0.02)
-        loss_weights_modifier = helper.LossWeightsModifier(alpha, beta)
+        if model == const.GHCNN:
+            loss_weights_modifier = helper.LossWeightsModifier_GH(alpha, beta)
+        else:
+            loss_weights_modifier = helper.LossWeightsModifier(alpha, beta)
         
     trainable_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
 
