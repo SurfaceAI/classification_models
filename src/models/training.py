@@ -703,6 +703,7 @@ def train_hierarchical(
             hierarchy_method,
             lw_modifier,
             wandb_on,
+            epoch,
             alpha=None, #TODO: save within model
             beta=None,
         )
@@ -723,6 +724,7 @@ def train_hierarchical(
             head, 
             hierarchy_method,
             lw_modifier,
+            epoch,
             alpha=None, #TODO: save within model
             beta=None,
             #wandb_on
@@ -1079,7 +1081,7 @@ def validate_epoch(model, dataloader, device, eval_metric, head, hierarchy_metho
                 dataloader.sampler
 )
 
-def train_epoch_hierarchical(model, dataloader, optimizer, device, head, hierarchy_method, lw_modifier, wandb_on, alpha, beta,):
+def train_epoch_hierarchical(model, dataloader, optimizer, device, head, hierarchy_method, lw_modifier, wandb_on, epoch, alpha, beta,):
     model.train()
     
     coarse_criterion = model.coarse_criterion(reduction="sum")
@@ -1114,18 +1116,65 @@ def train_epoch_hierarchical(model, dataloader, optimizer, device, head, hierarc
         coarse_one_hot = helper.to_one_hot_tensor(coarse_labels, model.num_c).to(device)
         
         model_inputs = (inputs, coarse_one_hot)
-
-        coarse_output, fine_output = model.forward(model_inputs)
+        
+        if model == const.GHCNN:
+            raw_coarse, raw_fine = model.forward(inputs)
+            
+            #3 different training phases
+            if epoch < 0.15 * 15:
+                coarse_output, fine_output = raw_coarse, raw_fine
+                
+            elif 0.15 * 15 <= epoch < 0.25 * 15: 
+                coarse_output, fine_output = model.teacher_forcing(raw_coarse, raw_fine, coarse_one_hot)
+                
+            else:
+                coarse_output, fine_output = model.bayesian_adjustment(raw_coarse, raw_fine)
+        
+        else:
+            coarse_output, fine_output = model.forward(model_inputs)
             
         coarse_loss = coarse_criterion(coarse_output, coarse_labels)
-        
         fine_loss = helper.compute_fine_losses(model, fine_criterion, fine_output, fine_labels, device, coarse_labels, hierarchy_method, head)                
-           
-        if lw_modifier:
-            loss = alpha * coarse_loss + beta * fine_loss
+       
+        #GH-CNN training phases
+        if model == const.GHCNN:
+            if lw_modifier:
+                loss_h = torch.sum(alpha * coarse_loss + beta * fine_loss)
+            else:
+                loss_h = coarse_loss + fine_loss
+            
+            #coarse only, weights should be (1,0)
+            if epoch < 0.15 * 15:
+                loss = loss_h   
+            
+            #teacher forcing 
+            elif 0.15 * 15 <= epoch < 0.25 * 15:
+                loss = loss_h 
+                
+            #added calculating the loss_v (greatest error on a prediction where coarse and subclass prediction dont match)
+            else:
+                try:
+                    fine_probs = model.get_class_probabilies(fine_output)
+                    fine_predictions = torch.argmax(fine_probs, dim=1)
+                    mismatched_indices = (coarse_predictions != helper.parent[fine_predictions])
+                    max_mismatched_coarse_loss = coarse_loss[mismatched_indices].max()
+                    max_mismatched_fine_loss = fine_loss[mismatched_indices].max()
+                    loss_v = max(max_mismatched_coarse_loss, max_mismatched_fine_loss)
+                    loss = loss_h + loss_v
+                except IndexError as e:
+                    print(f"IndexError encountered: {e}. Skipping this iteration and continuing.")
+                    loss = loss_h  # Optionally, handle the loss in some other way or set it to a default
+                except Exception as e:
+                    print(f"An error occurred: {e}. Skipping this iteration and continuing.")
+                    loss = loss_h  # Optionally, handle the loss in some other way or set it to a default
+          
+        #All other hierarchical models phases      
         else:
-            loss = coarse_loss + fine_loss  #weighted loss functions for different levels
-        
+            if lw_modifier:
+                loss = alpha * coarse_loss + beta * fine_loss
+            else:
+                loss = coarse_loss + fine_loss  #weighted loss functions for different levels
+            
         loss.backward()
         optimizer.step()
         
@@ -1177,7 +1226,7 @@ def train_epoch_hierarchical(model, dataloader, optimizer, device, head, hierarc
         
     return epoch_loss, epoch_coarse_accuracy, epoch_fine_accuracy, epoch_fine_accuracy_one_off, epoch_mse, epoch_mae, epoch_qwk, epoch_hv, coarse_epoch_loss, fine_epoch_loss
 
-def validate_epoch_hierarchical(model, dataloader, device, head, hierarchy_method, lw_modifier, alpha, beta):
+def validate_epoch_hierarchical(model, dataloader, device, head, hierarchy_method, lw_modifier, epoch, alpha, beta):
     model.eval()
     
     coarse_criterion = model.coarse_criterion(reduction="sum")
