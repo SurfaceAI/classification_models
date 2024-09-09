@@ -188,10 +188,10 @@ class GH_CNN(nn.Module):
             z_2 = torch.cat([fine_output_asphalt, fine_output_concrete, fine_output_paving_stones, 
                             fine_output_sett, fine_output_unpaved], dim=1)
 
-        z_1, z_2 = self.teacher_forcing(z_1, z_2, true_coarse)
-        coarse_output, fine_output = self.bayesian_adjustment(z_1, z_2)
+        # z_1, z_2 = self.teacher_forcing(z_1, z_2, true_coarse)
+        # coarse_output, fine_output = self.bayesian_adjustment(z_1, z_2)
         
-        return coarse_output, fine_output
+        return z_1, z_2
         
     def teacher_forcing(self, z_1, z_2, true_coarse):
         

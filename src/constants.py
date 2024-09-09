@@ -115,6 +115,7 @@ PROJECT_MULTI_LABEL_SWEEP_BCNN = "sweep-road-surface-classification-multi-label-
 PROJECT_MULTI_LABEL_SWEEP_CCNN = "sweep-road-surface-classification-multi-label-C-CNN"
 PROJECT_MULTI_LABEL_SWEEP_HNET = "sweep-road-surface-classification-multi-label-H-NET"
 PROJECT_MULTI_LABEL_SWEEP_GHCNN = "sweep-road-surface-classification-multi-label-GH-CNN"
+PROJECT_MULTI_LABEL_SWEEP_ORDINAL_METHODS = "sweep-road-surface-classification-multi-label-ordinal-methods"
 
 
 
