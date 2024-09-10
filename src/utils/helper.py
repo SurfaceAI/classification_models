@@ -222,6 +222,7 @@ def map_ordinal_to_flatten(label, type):
         return label + 15
     else:
         raise ValueError("Unknown type")
+    
 
 
 def plot_grad_flow(named_parameters):
@@ -585,10 +586,7 @@ def compute_fine_metrics_hierarchical(fine_output, fine_labels, coarse_filter, h
     # Calculate accuracy
     correct = (predictions == fine_labels).sum().item()
     
-    correct_1_off = ((predictions == fine_labels) | 
-               (predictions == fine_labels + 1) | 
-               (predictions == fine_labels - 1)).sum().item()
-
+    correct_1_off = compute_one_off_accuracy_within_groups(predictions, fine_labels, parent)
     # Calculate QWK across all predictions and labels
     qwk = cohen_kappa_score(all_labels, all_predictions, weights='quadratic')
     
@@ -614,9 +612,7 @@ def compute_all_metrics(outputs, labels, head, model):
     correct = (predictions == labels).sum().item()
 
     # Calculate 1-off accuracy
-    correct_1_off = ((predictions == labels) |
-                     (predictions == labels + 1) |
-                     (predictions == labels - 1)).sum().item()
+    correct_1_off = compute_one_off_accuracy_within_groups(predictions, labels, parent)
 
     # Calculate MSE and MAE
     if head == 'regression':
@@ -729,3 +725,17 @@ def is_hierarchy_violation(true_label, predicted_label, parent):
     return parent[true_label] != parent[predicted_label]
 
 parent = torch.tensor([0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 4, 4, 4])
+
+def compute_one_off_accuracy_within_groups(predictions, labels, parent):
+# Get the parent group of the predictions and labels
+    pred_parents = parent[predictions]
+    label_parents = parent[labels]
+
+    # Check if predictions are within ±1 and in the same parent group
+    correct_1_off = ((predictions == labels) |  # Exact match
+                        ((predictions == labels + 1) & (pred_parents == label_parents)) |  # +1 within same group
+                        ((predictions == labels - 1) & (pred_parents == label_parents))    # -1 within same group
+                    ).sum().item()
+
+    return correct_1_off
+
