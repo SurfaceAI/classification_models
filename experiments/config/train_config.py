@@ -248,23 +248,7 @@ vgg16_sweep_params = {
 
 # }
 
-# vgg16_asphalt_classification_params = {
-#     **global_config.global_config,
-#     **default_params,
-#     "batch_size": 16,
-#     "epochs": 30,
-#     "learning_rate": 0.00003,
-#     "is_regression": False,
-#     "eval_metric": const.EVAL_METRIC_ACCURACY,
-#     "clm": False,
-#     "project": const.PROJECT_ORDINAL_REGRESSION_FIXED,
-#     "name": "VGG16_classification_asphalt",
-#     "level": const.ASPHALT,
-#     "selected_classes": global_config.global_config.get("selected_classes")[const.ASPHALT],
-#     "dataset": "V12/annotated/asphalt",
-#     "model": const.VGG16,
 
-# }
 
 # vgg16_asphalt_CLM_params = {
 #     **global_config.global_config,
@@ -571,3 +555,18 @@ asphalt_quality_clm_sweep_params = {
     "hierarchy_method": None
 }
 
+vgg16_asphalt_clm_params = {
+    **global_config.global_config,
+    **default_params,
+    "batch_size": 16,
+    "epochs": 2,
+    "learning_rate": 0.00003,
+    "eval_metric": const.EVAL_METRIC_ALL,
+    "project": const.PROJECT_ORDINAL_REGRESSION_FIXED,
+    "name": "VGG16_clm_asphalt",
+    "level": const.ASPHALT,
+    "model": const.VGG16,
+    "head": const.CLM,
+    "hierarchy_method": None,
+
+}
