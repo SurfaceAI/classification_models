@@ -10,7 +10,7 @@ default_params = {
     "is_hierarchical": False,
     "eval_metric": const.EVAL_METRIC_ALL,
     #"max_class_size": None,
-    "lr_scheduler": True,
+    "lr_scheduler": False,
     "freeze_convs": True,
 }
 
@@ -363,15 +363,15 @@ B_CNN = {
     **default_params,
     "batch_size": 64,
     "epochs": 10,
-    "learning_rate": 0.0001,
+    "learning_rate": 0.01,
     "optimizer": const.OPTI_ADAM,
     "coarse_eval_metric": const.EVAL_METRIC_ACCURACY,
     "fine_eval_metric": const.EVAL_METRIC_ACCURACY,
     "project": const.PROJECT_MULTI_LABEL_FIXED,
-    "name": "B_CNN_CLASSIFICATION_QWK",
+    "name": "B_CNN_CLM",
     "level": const.HIERARCHICAL,
     "model": const.BCNN,
-    "head": const.CLASSIFICATION_QWK, #'regression', 'classification', 'corn', 'clm'
+    "head": const.CLM, #'regression', 'classification', 'corn', 'clm'
     "hierarchy_method": const.MODELSTRUCTURE, #'use_ground_truth', 'use_condition_layer', 'b_cnn'
     "lw_modifier": True,
     "fc_neurons": 512,
@@ -421,7 +421,7 @@ GH_CNN = {
     **global_config.global_config,
     **default_params,
     "batch_size": 16,
-    "epochs": 10,
+    "epochs": 15,
     "learning_rate": 0.0001,
     "optimizer": const.OPTI_ADAM,
     "coarse_eval_metric": const.EVAL_METRIC_ACCURACY,

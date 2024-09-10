@@ -478,7 +478,7 @@ def compute_fine_losses(model, fine_criterion, fine_output, fine_labels, device,
             fine_loss = fine_criterion(fine_output, fine_labels)
         
         elif head == 'clm':
-            fine_loss = fine_criterion(torch.log(fine_output + 1e-9), fine_labels_mapped) #TODO wie kann das berechnet werden?
+            fine_loss = fine_criterion(torch.log(fine_output + 1e-9), fine_labels) #TODO wie kann das berechnet werden?
                             
         # elif head == 'regression' or head == 'single':
         #     fine_output = fine_output.flatten().float()
@@ -727,6 +727,5 @@ def is_hierarchy_violation(true_label, predicted_label, parent):
     """
     # Check if the parent classes of the true and predicted labels are the same
     return parent[true_label] != parent[predicted_label]
-
 
 parent = torch.tensor([0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 4, 4, 4])
