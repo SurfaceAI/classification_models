@@ -326,7 +326,7 @@ def prepare_train(
     # validloader = DataLoader(valid_data, batch_size=valid_batch_size)
 
     # load model
-    if level == 'hierarchical': #TODO: adapt num_coarse_classes automatically
+    if level == const.HIERARCHICAL: #TODO: adapt num_coarse_classes automatically
         num_coarse_classes = 5
      
     #head for fine classes hierarchical models or classifier chain quality part   
@@ -338,7 +338,7 @@ def prepare_train(
         
 
     # instanciate model with number of classes
-    if level == 'hierarchical':
+    if level == const.HIERARCHICAL:
         model = model_cls(num_coarse_classes, num_classes, head, hierarchy_method, fc_neurons)
     else:
         model = model_cls(num_classes, head)
@@ -552,6 +552,7 @@ def train(
                 device,
                 eval_metric,
                 head,
+                hierarchy_method,
                 wandb_on=wandb_on,
             )
 
@@ -561,6 +562,7 @@ def train(
                 device,
                 eval_metric,
                 head,
+                hierarchy_method,
             )
         
         if lr_scheduler:
@@ -675,7 +677,7 @@ def train_hierarchical(
     # if wandb_on:
     #     wandb.watch(model, log_freq=27)
     if lr_scheduler:
-        scheduler = StepLR(optimizer, step_size=4, gamma=0.1) 
+        scheduler = StepLR(optimizer, step_size=4, gamma=0.5) 
     
     if lw_modifier:
         alpha = torch.tensor(0.98)
