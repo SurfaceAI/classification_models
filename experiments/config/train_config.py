@@ -11,7 +11,7 @@ default_params = {
     "eval_metric": const.EVAL_METRIC_ALL,
     #"max_class_size": None,
     "lr_scheduler": False,
-    "freeze_convs": True,
+    "freeze_convs": False,
 }
 
 default_search_params = {
@@ -365,8 +365,8 @@ B_CNN = {
     "epochs": 10,
     "learning_rate": 0.01,
     "optimizer": const.OPTI_ADAM,
-    "coarse_eval_metric": const.EVAL_METRIC_ACCURACY,
-    "fine_eval_metric": const.EVAL_METRIC_ACCURACY,
+    "coarse_eval_metric": const.EVAL_METRIC_ALL,
+    "fine_eval_metric": const.EVAL_METRIC_ALL,
     "project": const.PROJECT_MULTI_LABEL_FIXED,
     "name": "B_CNN_CLM",
     "level": const.HIERARCHICAL,
@@ -386,8 +386,8 @@ C_CNN = {
     "epochs": 1,
     "learning_rate": 0.0001,
     "optimizer": const.OPTI_ADAM,
-    "coarse_eval_metric": const.EVAL_METRIC_ACCURACY,
-    "fine_eval_metric": const.EVAL_METRIC_ACCURACY,
+    "coarse_eval_metric": const.EVAL_METRIC_ALL,
+    "fine_eval_metric": const.EVAL_METRIC_ALL,
     "project": const.PROJECT_MULTI_LABEL_FIXED,
     "name": "C_CNN_classification",
     "level": const.HIERARCHICAL,
@@ -401,12 +401,12 @@ C_CNN = {
 H_NET = {
     **global_config.global_config,
     **default_params,
-    "batch_size": 128,
-    "epochs": 1,
+    "batch_size": 64,
+    "epochs": 15,
     "learning_rate": 0.0001,
     "optimizer": const.OPTI_ADAM,
-    "coarse_eval_metric": const.EVAL_METRIC_ACCURACY,
-    "fine_eval_metric": const.EVAL_METRIC_ACCURACY,
+    "coarse_eval_metric": const.EVAL_METRIC_ALL,
+    "fine_eval_metric": const.EVAL_METRIC_ALL,
     "project": const.PROJECT_MULTI_LABEL_FIXED,
     "name": "HiearchyNet_classification",
     "level": const.HIERARCHICAL,
@@ -414,7 +414,7 @@ H_NET = {
     "head": const.CLASSIFICATION, #'regression', 'classification', 'obd', 'clm'
     "hierarchy_method": const.MODELSTRUCTURE, #'use_ground_truth', 'None',
     "lw_modifier": False,
-    "fc_neurons": 512,
+    "fc_neurons": 1024,
 }
 
 GH_CNN = {
@@ -424,8 +424,8 @@ GH_CNN = {
     "epochs": 15,
     "learning_rate": 0.0001,
     "optimizer": const.OPTI_ADAM,
-    "coarse_eval_metric": const.EVAL_METRIC_ACCURACY,
-    "fine_eval_metric": const.EVAL_METRIC_ACCURACY,
+    "coarse_eval_metric": const.EVAL_METRIC_ALL,
+    "fine_eval_metric": const.EVAL_METRIC_ALL,
     "project": const.PROJECT_MULTI_LABEL_FIXED,
     "name": "GH_CNN_CLASSIFICATION",
     "level": const.HIERARCHICAL,
