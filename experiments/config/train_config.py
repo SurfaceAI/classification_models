@@ -15,8 +15,8 @@ default_params = {
 }
 
 default_search_params = {
-    "batch_size": {"values": [16, 48, 128]},
-    "epochs": {"value": 10},
+    "batch_size": {"values": [16, 32, 48]},
+    "epochs": {"value": 15},
     "learning_rate": {"values": [1e-05, 1e-04, 1e-03]},
     #"learning_rate": {"distribution": "log_uniform_values", "min": 1e-05, "max": 0.001},
     "optimizer": {"value": const.OPTI_ADAM},
@@ -436,6 +436,9 @@ GH_CNN = {
     "fc_neurons": 512,
 }
 
+
+####### Sweeps for different hierarchical methods ########
+
 B_CNN_sweep_params = {
     **global_config.global_config,
     **default_params,
@@ -504,7 +507,9 @@ GH_CNN_sweep_params = {
     "sweep_counts": 10,
 }
 
-ordinal_methods_sweep_params = {
+####### Sweeps for different 'heads'/ ordinal methods ########
+
+asphalt_quality_classification_sweep_params = {
     **global_config.global_config,
     **default_params,
     'model': const.VGG16,
@@ -512,10 +517,57 @@ ordinal_methods_sweep_params = {
     "metric": {"name": "eval/accuracy/fine", "goal": "maximize"},
     "search_params": {**default_search_params,                 
                      },
-    "project": const.PROJECT_MULTI_LABEL_SWEEP_ORDINAL_METHODS,
-    "name": "ordinal_methods_classification",
-    "level": const.SMOOTHNESS,
+    "project": const.PROJECT_MULTI_LABEL_SWEEP_CLASSIFICATION,
+    "name": "Quality_Asphalt_Classification",
+    "level": const.ASPHALT,
     "head": const.CLASSIFICATION,
     "sweep_counts": 10,
-    "hierarchy_method": const.CC,
 }
+
+asphalt_quality_regression_sweep_params = {
+    **global_config.global_config,
+    **default_params,
+    'model': const.VGG16,
+    "method": "grid",
+    "metric": {"name": "eval/accuracy/fine", "goal": "maximize"},
+    "search_params": {**default_search_params,                 
+                     },
+    "project": const.PROJECT_MULTI_LABEL_SWEEP_REGRESSION,
+    "name": "Quality_Asphalt_Regression",
+    "level": const.ASPHALT,
+    "head": const.REGRESSION,
+    "sweep_counts": 10,
+}
+
+asphalt_quality_corn_sweep_params = {
+    **global_config.global_config,
+    **default_params,
+    'model': const.VGG16,
+    "method": "grid",
+    "metric": {"name": "eval/accuracy/fine", "goal": "maximize"},
+    "search_params": {**default_search_params,                 
+                     },
+    "project": const.PROJECT_MULTI_LABEL_SWEEP_CORN,
+    "name": "Quality_Asphalt_CORN",
+    "level": const.ASPHALT,
+    "head": const.CORN,
+    "sweep_counts": 10,
+}
+
+asphalt_quality_clm_sweep_params = {
+    **global_config.global_config,
+    **default_params,
+    'model': const.VGG16,
+    "method": "grid",
+    "metric": {"name": "eval/accuracy/fine", "goal": "maximize"},
+    "search_params": {**default_search_params, 
+                      'learning_rate': {'values': [0.1, 0.01, 0.001]},                
+                     },
+    "project": const.PROJECT_MULTI_LABEL_SWEEP_CLM,
+    "name": "Quality_Asphalt_CLM",
+    "level": const.ASPHALT,
+    "head": const.CLM,
+    "sweep_counts": 10,
+    "hierarchy_method": None
+}
+
