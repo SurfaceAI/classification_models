@@ -40,13 +40,13 @@ class GH_CNN(nn.Module):
         self.features = model.features
         
         self.coarse_classifier = nn.Sequential(
-            nn.Linear(512 * 8 * 8, self.fc_neurons),
+            nn.Linear(512 * 8 * 8, 512),
             nn.ReLU(),
             nn.Dropout(0.5),
-            nn.Linear(self.fc_neurons, self.fc_neurons),
+            nn.Linear(512, 512),
             nn.ReLU(),
             nn.Dropout(0.5),
-            nn.Linear(self.fc_neurons, num_c)
+            nn.Linear(512, num_c)
         )
         
         self.coarse_criterion = nn.CrossEntropyLoss
