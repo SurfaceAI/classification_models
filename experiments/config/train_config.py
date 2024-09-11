@@ -10,17 +10,18 @@ default_params = {
     "is_hierarchical": False,
     "eval_metric": const.EVAL_METRIC_ALL,
     #"max_class_size": None,
-    "lr_scheduler": False,
-    "freeze_convs": False,
+    "lr_scheduler": True,
+    #"freeze_convs": True,
+    "fc_neurons": 512,
 }
 
 default_search_params = {
-    "batch_size": {"values": [16, 32, 48]},
-    "epochs": {"value": 15},
+    "batch_size": {"values": [16, 48, 64]},
+    "epochs": {"value": 12},
     "learning_rate": {"values": [1e-05, 1e-04, 1e-03]},
     #"learning_rate": {"distribution": "log_uniform_values", "min": 1e-05, "max": 0.001},
     "optimizer": {"value": const.OPTI_ADAM},
-    "fc_neurons": {"values": [512, 1024]},
+    #"fc_neurons": {"values": [512, 1024]},
     "freeze_convs": {"values": [True, False]}
 }
 
@@ -545,7 +546,8 @@ asphalt_quality_clm_sweep_params = {
     "method": "grid",
     "metric": {"name": "eval/accuracy/fine", "goal": "maximize"},
     "search_params": {**default_search_params, 
-                      'learning_rate': {'values': [0.1, 0.01, 0.001]},                
+                      'learning_rate': {'values': [0.1, 0.01, 0.001]},  
+                      'gamma': {'values': [0.1, 0.5, 0.9]},              
                      },
     "project": const.PROJECT_MULTI_LABEL_SWEEP_CLM,
     "name": "Quality_Asphalt_CLM",
@@ -568,5 +570,4 @@ vgg16_asphalt_clm_params = {
     "model": const.VGG16,
     "head": const.CLM,
     "hierarchy_method": None,
-
 }
