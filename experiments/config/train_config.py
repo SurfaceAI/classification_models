@@ -349,15 +349,15 @@ B_CNN = {
     **default_params,
     "batch_size": 64,
     "epochs": 12,
-    "learning_rate": 0.0001,
+    "learning_rate": 0.01,
     "optimizer": const.OPTI_ADAM,
     "coarse_eval_metric": const.EVAL_METRIC_ALL,
     "fine_eval_metric": const.EVAL_METRIC_ALL,
     "project": const.PROJECT_MULTI_LABEL_FIXED,
-    "name": "B_CNN_classification",
+    "name": "B_CNN_clm",
     "level": const.HIERARCHICAL,
     "model": const.BCNN,
-    "head": const.CLASSIFICATION, #'regression', 'classification', 'corn', 'clm'
+    "head": const.CLM, #'regression', 'classification', 'corn', 'clm'
     "hierarchy_method": const.MODELSTRUCTURE, #'use_ground_truth', 'use_condition_layer', 'b_cnn'
     "lw_modifier": True,
     "lr_scheduler": True,
@@ -379,7 +379,7 @@ C_CNN = {
     "name": "C_CNN_classification",
     "level": const.HIERARCHICAL,
     "model": const.CCNN,
-    "head": const.CLASSIFICATION, #'regression', 'classification', 'obd', 'clm'
+    "head": const.CLM, #'regression', 'classification', 'obd', 'clm'
     "hierarchy_method": const.MODELSTRUCTURE, #'use_ground_truth', 'None',
     "lw_modifier": False,
     "lr_scheduler": True,
