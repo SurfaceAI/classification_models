@@ -4,6 +4,8 @@ from torchvision import models
 
 from multi_label.CLM import CLM
 from coral_pytorch.losses import corn_loss
+from multi_label.QWK import QWK_Loss
+from src import constants as const
 
 
 class CustomMultLayer(nn.Module):
@@ -46,12 +48,19 @@ class H_NET(nn.Module):
             nn.Linear(512, num_c)
         )
         
-        if head == 'clm':      
+        self.coarse_criterion = nn.CrossEntropyLoss
+        
+        if head == 'clm' or head == 'clm_qwk':      
             self.classifier_asphalt = self._create_quality_fc_clm(num_classes=4)
             self.classifier_concrete = self._create_quality_fc_clm(num_classes=4)
             self.classifier_paving_stones = self._create_quality_fc_clm(num_classes=4)
             self.classifier_sett = self._create_quality_fc_clm(num_classes=3)
             self.classifier_unpaved = self._create_quality_fc_clm(num_classes=3)
+            
+            if head == 'clm':
+                self.fine_criterion = nn.NLLLoss
+            elif head == 'clm_qwk':
+                self.fine_criterion = QWK_Loss
          
         elif head == 'regression':      
             self.classifier_asphalt = self._create_quality_fc_regression()
@@ -60,6 +69,8 @@ class H_NET(nn.Module):
             self.classifier_sett = self._create_quality_fc_regression()
             self.classifier_unpaved = self._create_quality_fc_regression()
             
+            self.fine_criterion = nn.MSELoss
+            
         elif head == 'corn':
             self.classifier_asphalt = self._create_quality_fc_corn(num_classes=4)
             self.classifier_concrete = self._create_quality_fc_corn(num_classes=4)
@@ -67,7 +78,9 @@ class H_NET(nn.Module):
             self.classifier_sett = self._create_quality_fc_corn(num_classes=3)
             self.classifier_unpaved = self._create_quality_fc_corn(num_classes=3)
             
-        elif head == 'classification':
+            self.fine_criterion = corn_loss
+            
+        elif head == 'classification' or head == 'classification_qwk':
             self.fine_classifier = nn.Sequential(
                 nn.Linear(512 * 8 * 8, self.fc_neurons),
                 nn.ReLU(),
@@ -78,16 +91,10 @@ class H_NET(nn.Module):
                 nn.Linear(self.fc_neurons, num_classes) 
             )
             
-        self.coarse_criterion = nn.CrossEntropyLoss
-        
-        if head == 'regression' or head == 'single':
-            self.fine_criterion = nn.MSELoss
-        elif head == 'clm':
-            self.fine_criterion = nn.NLLLoss
-        elif head == 'corn':
-            self.fine_criterion = corn_loss
-        else:
-            self.fine_criterion = nn.CrossEntropyLoss
+            if head == 'classification':
+                self.fine_criterion = nn.CrossEntropyLoss
+            elif head == 'classification_qwk':
+                self.fine_criterion = QWK_Loss
 
     def _create_quality_fc_clm(self, num_classes=4):
         layers = nn.Sequential(
@@ -149,7 +156,7 @@ class H_NET(nn.Module):
         coarse_probs = self.get_class_probabilies(coarse_output)
         
         #cropping coarse outputs
-        if self.head == 'clm':
+        if self.head == 'clm' or self.head == 'clm_qwk':
             coarse_1 = self.crop(coarse_probs, 1, 0, 1)
             coarse_2 = self.crop(coarse_probs, 1, 1, 2)
             coarse_3 = self.crop(coarse_probs, 1, 2, 3)
@@ -163,7 +170,7 @@ class H_NET(nn.Module):
             coarse_5 = self.crop(coarse_output, 1, 4, 5)
             
         #coarse_pred = F.softmax(coarse_output, dim=1)
-        if self.head == 'classification':
+        if self.head == 'classification' or self.head == 'classification_qwk':
             raw_fine_output = self.fine_classifier(flat)
             
             fine_1 = self.crop(raw_fine_output, 1, 0, 4)
@@ -172,38 +179,42 @@ class H_NET(nn.Module):
             fine_4 = self.crop(raw_fine_output, 1, 12, 15)
             fine_5 = self.crop(raw_fine_output, 1, 15, 18)
             
-            fine_1 = self.custom_layer(coarse_1, fine_1)
-            fine_2 = self.custom_layer(coarse_2, fine_2)
-            fine_3 = self.custom_layer(coarse_3, fine_3)
-            fine_4 = self.custom_layer(coarse_4, fine_4)
-            fine_5 = self.custom_layer(coarse_5, fine_5)
+            if self.hierarchy_method == const.MODELSTRUCTURE:
+                fine_1 = self.custom_layer(coarse_1, fine_1)
+                fine_2 = self.custom_layer(coarse_2, fine_2)
+                fine_3 = self.custom_layer(coarse_3, fine_3)
+                fine_4 = self.custom_layer(coarse_4, fine_4)
+                fine_5 = self.custom_layer(coarse_5, fine_5)
            
-        elif self.head == 'regression' or self.head == 'corn':
+        elif self.head == 'regression' or self.head == 'corn': #Why am I not multiplying with custom layer here?
             fine_1 = self.classifier_asphalt(flat) #([batch_size, 1024])
             fine_2 = self.classifier_concrete(flat)
             fine_3 = self.classifier_paving_stones(flat)           
             fine_4 = self.classifier_sett(flat)
             fine_5 = self.classifier_unpaved(flat)
-                   
-        else:
-            raw_fine_asphalt = self.classifier_asphalt(flat) #([batch_size, 1024])
-            raw_fine_concrete = self.classifier_concrete(flat)
-            raw_fine_paving_stones = self.classifier_paving_stones(flat)           
-            raw_fine_sett = self.classifier_sett(flat)
-            raw_fine_unpaved = self.classifier_unpaved(flat)
             
-            fine_1 = self.custom_layer(coarse_1, raw_fine_asphalt)
-            fine_2 = self.custom_layer(coarse_2, raw_fine_concrete)
-            fine_3 = self.custom_layer(coarse_3, raw_fine_paving_stones)
-            fine_4 = self.custom_layer(coarse_4, raw_fine_sett)
-            fine_5 = self.custom_layer(coarse_5, raw_fine_unpaved)
+            #if self.hierarchy_method == const.MODELSTRUCTURE: TODO: or do we not have model structure here?
+                   
+        else: #clm
+            fine_1 = self.classifier_asphalt(flat) #([batch_size, 1024])
+            fine_2 = self.classifier_concrete(flat)
+            fine_3 = self.classifier_paving_stones(flat)           
+            fine_4 = self.classifier_sett(flat)
+            fine_5 = self.classifier_unpaved(flat)
+            
+            if self.hierarchy_method == const.MODELSTRUCTURE:
+                fine_1 = self.custom_layer(coarse_1, fine_1)
+                fine_2 = self.custom_layer(coarse_2, fine_2)
+                fine_3 = self.custom_layer(coarse_3, fine_3)
+                fine_4 = self.custom_layer(coarse_4, fine_4)
+                fine_5 = self.custom_layer(coarse_5, fine_5)
             
         fine_output = torch.cat([fine_1, fine_2, fine_3, fine_4, fine_5], dim=1)
         
         return coarse_output, fine_output
     
     def get_optimizer_layers(self):
-        if self.head == 'classification':
+        if self.head == 'classification' or self.head == 'classification_qwk':
             return self.features, self.coarse_classifier, self.fine_classifier
         else:
             return self.features, self.coarse_classifier, self.classifier_asphalt, self.classifier_concrete, self.classifier_paving_stones, self.classifier_sett, self.classifier_unpaved, 
