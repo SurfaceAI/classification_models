@@ -9,6 +9,7 @@ from multi_label.CLM import CLM
 from coral_pytorch.losses import corn_loss
 from src import constants as const
 import copy
+from multi_label.QWK import QWK_Loss
 
 
 class NonNegUnitNorm:
@@ -73,13 +74,20 @@ class C_CNN(nn.Module):
             nn.Linear(512, num_c)
         )
         
-        #Individual fine prediction branches  
-        if head == 'clm':      
+        #Individual fine prediction branches 
+        self.coarse_criterion = nn.CrossEntropyLoss
+         
+        if head == 'clm' or head == 'clm_qwk':      
             self.classifier_asphalt = self._create_quality_fc_clm(num_classes=4)
             self.classifier_concrete = self._create_quality_fc_clm(num_classes=4)
             self.classifier_paving_stones = self._create_quality_fc_clm(num_classes=4)
             self.classifier_sett = self._create_quality_fc_clm(num_classes=3)
             self.classifier_unpaved = self._create_quality_fc_clm(num_classes=3)
+            
+            if head == 'clm':
+                self.fine_criterion = nn.NLLLoss
+            elif head == 'clm_qwk':
+                self.fine_criterion = QWK_Loss
             
         elif head == 'regression':
             self.classifier_asphalt = self._create_quality_fc_regression()
@@ -88,12 +96,16 @@ class C_CNN(nn.Module):
             self.classifier_sett = self._create_quality_fc_regression()
             self.classifier_unpaved = self._create_quality_fc_regression()
             
+            self.fine_criterion = nn.MSELoss
+            
         elif head == 'corn':
             self.classifier_asphalt = self._create_quality_fc_corn(num_classes=4)
             self.classifier_concrete = self._create_quality_fc_corn(num_classes=4)
             self.classifier_paving_stones = self._create_quality_fc_corn(num_classes=4)
             self.classifier_sett = self._create_quality_fc_corn(num_classes=3)
             self.classifier_unpaved = self._create_quality_fc_corn(num_classes=3)
+            
+            self.fine_criterion = corn_loss
             
         elif head == 'single':
             self.fine_classifier = nn.Sequential(
@@ -106,7 +118,7 @@ class C_CNN(nn.Module):
             nn.Linear(self.fc_neurons, 1)
         )
                 
-        elif head == 'classification':
+        elif head == 'classification' or head == 'classification_qwk':
             self.fine_classifier = nn.Sequential(
                 nn.Linear(512 * 16 * 16, self.fc_neurons),
                 nn.ReLU(),
@@ -117,27 +129,21 @@ class C_CNN(nn.Module):
                 nn.Linear(self.fc_neurons, num_classes) 
             )
             
+        if head == 'classification':
+            self.fine_criterion = nn.CrossEntropyLoss
+        elif head == 'classification_qwk':
+            self.fine_criterion = QWK_Loss
+            
         ### Condition part
         if head == 'regression' or head == 'single':
             self.coarse_condition = nn.Linear(num_c, num_c, bias=False)
-        if head == 'corn':
+        elif head == 'corn':
             self.coarse_condition = nn.Linear(num_c, num_classes - 5, bias=False)
         else: 
             self.coarse_condition = nn.Linear(num_c, num_classes, bias=False)
         self.coarse_condition.weight.data.fill_(0)  # Initialize weights to zero
         self.constraint = NonNegUnitNorm(axis=0) 
 
-        # criteria for different heads          
-        self.coarse_criterion = nn.CrossEntropyLoss
-        
-        if head == 'regression' or head == 'single':
-            self.fine_criterion = nn.MSELoss
-        elif head == 'clm':
-            self.fine_criterion = nn.NLLLoss
-        elif head == 'corn':
-            self.fine_criterion = corn_loss
-        else:
-            self.fine_criterion = nn.CrossEntropyLoss
                      
     def _create_quality_fc_clm(self, num_classes=4):
         layers = nn.Sequential(
@@ -196,7 +202,7 @@ class C_CNN(nn.Module):
         
         x_fine = self.block5_fine(x)
         fine_flat = x_fine.reshape(x_fine.size(0), -1)  
-        if self.head == 'clm' or self.head == 'regression' or self.head == 'corn':
+        if self.head == 'clm' or self.head == 'clm_qwk' or self.head == 'regression' or self.head == 'corn':
             fine_output_asphalt = self.classifier_asphalt(fine_flat) #([batch_size, 1024])  
             fine_output_concrete = self.classifier_concrete(fine_flat)
             fine_output_paving_stones = self.classifier_paving_stones(fine_flat)      
@@ -209,10 +215,6 @@ class C_CNN(nn.Module):
                                             fine_output_sett, 
                                             fine_output_unpaved], 
                                             dim=1)
-                    
-                
-        elif self.head == 'single':
-            fine_output = self.fine_classifier(fine_flat)
         
         elif self.head == const.CLASSIFICATION or self.head == const.CLASSIFICATION_QWK:
             fine_output = self.fine_classifier(fine_flat)
