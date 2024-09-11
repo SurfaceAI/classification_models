@@ -11,8 +11,9 @@ default_params = {
     "eval_metric": const.EVAL_METRIC_ALL,
     #"max_class_size": None,
     "lr_scheduler": True,
-    #"freeze_convs": True,
+    "freeze_convs": True,
     "fc_neurons": 512,
+    "gamma": 0.1,
 }
 
 default_search_params = {
@@ -347,19 +348,20 @@ B_CNN = {
     **global_config.global_config,
     **default_params,
     "batch_size": 64,
-    "epochs": 10,
-    "learning_rate": 0.01,
+    "epochs": 12,
+    "learning_rate": 0.0001,
     "optimizer": const.OPTI_ADAM,
     "coarse_eval_metric": const.EVAL_METRIC_ALL,
     "fine_eval_metric": const.EVAL_METRIC_ALL,
     "project": const.PROJECT_MULTI_LABEL_FIXED,
-    "name": "B_CNN_CLM",
+    "name": "B_CNN_classification",
     "level": const.HIERARCHICAL,
     "model": const.BCNN,
-    "head": const.CLM, #'regression', 'classification', 'corn', 'clm'
+    "head": const.CLASSIFICATION, #'regression', 'classification', 'corn', 'clm'
     "hierarchy_method": const.MODELSTRUCTURE, #'use_ground_truth', 'use_condition_layer', 'b_cnn'
     "lw_modifier": True,
-    "fc_neurons": 512,
+    "lr_scheduler": True,
+    "fc_neurons": 1024,
 }
 
 
@@ -367,8 +369,8 @@ B_CNN = {
 C_CNN = {
     **global_config.global_config,
     **default_params,
-    "batch_size": 128,
-    "epochs": 1,
+    "batch_size": 64,
+    "epochs": 12,
     "learning_rate": 0.0001,
     "optimizer": const.OPTI_ADAM,
     "coarse_eval_metric": const.EVAL_METRIC_ALL,
@@ -380,14 +382,15 @@ C_CNN = {
     "head": const.CLASSIFICATION, #'regression', 'classification', 'obd', 'clm'
     "hierarchy_method": const.MODELSTRUCTURE, #'use_ground_truth', 'None',
     "lw_modifier": False,
-    "fc_neurons": 512,
+    "lr_scheduler": True,
+    "fc_neurons": 1024,
 }
 
 H_NET = {
     **global_config.global_config,
     **default_params,
     "batch_size": 64,
-    "epochs": 15,
+    "epochs": 12,
     "learning_rate": 0.0001,
     "optimizer": const.OPTI_ADAM,
     "coarse_eval_metric": const.EVAL_METRIC_ALL,
@@ -399,26 +402,28 @@ H_NET = {
     "head": const.CLASSIFICATION, #'regression', 'classification', 'obd', 'clm'
     "hierarchy_method": const.MODELSTRUCTURE, #'use_ground_truth', 'None',
     "lw_modifier": False,
+    "lr_scheduler": True,
     "fc_neurons": 1024,
 }
 
 GH_CNN = {
     **global_config.global_config,
     **default_params,
-    "batch_size": 16,
-    "epochs": 15,
+    "batch_size": 64,
+    "epochs": 12,
     "learning_rate": 0.0001,
     "optimizer": const.OPTI_ADAM,
     "coarse_eval_metric": const.EVAL_METRIC_ALL,
     "fine_eval_metric": const.EVAL_METRIC_ALL,
     "project": const.PROJECT_MULTI_LABEL_FIXED,
-    "name": "GH_CNN_CLASSIFICATION",
+    "name": "GH_CNN_classification",
     "level": const.HIERARCHICAL,
     "model": const.GHCNN,
     "head": const.CLASSIFICATION, #'regression', 'classification', 'corn', 'clm', 'clm_kappa', 'classification_kappa',
     "hierarchy_method": const.MODELSTRUCTURE, #'use_ground_truth', 'use_condition_layer', 'b_cnn'
     "lw_modifier": True,
-    "fc_neurons": 512,
+    "lr_scheduler": True,
+    "fc_neurons": 1024,
 }
 
 
@@ -445,7 +450,7 @@ C_CNN_sweep_params = {
     **global_config.global_config,
     **default_params,
     'model': const.CCNN,
-    "method": "grid",
+    "method": "bayes",
     "metric": {"name": "eval/accuracy/fine", "goal": "maximize"},
     "search_params": {**default_search_params,                 
                      },
@@ -462,7 +467,7 @@ H_NET_sweep_params = {
     **global_config.global_config,
     **default_params,
     'model': const.HNET,
-    "method": "grid",
+    "method": "bayes",
     "metric": {"name": "eval/accuracy/fine", "goal": "maximize"},
     "search_params": {**default_search_params,                 
                      },
@@ -479,7 +484,7 @@ GH_CNN_sweep_params = {
     **global_config.global_config,
     **default_params,
     'model': const.GHCNN,
-    "method": "grid",
+    "method": "bayes",
     "metric": {"name": "eval/accuracy/fine", "goal": "maximize"},
     "search_params": {**default_search_params,                 
                      },
@@ -498,7 +503,7 @@ asphalt_quality_classification_sweep_params = {
     **global_config.global_config,
     **default_params,
     'model': const.VGG16,
-    "method": "grid",
+    "method": "bayes",
     "metric": {"name": "eval/accuracy/fine", "goal": "maximize"},
     "search_params": {**default_search_params,                 
                      },
@@ -513,7 +518,7 @@ asphalt_quality_regression_sweep_params = {
     **global_config.global_config,
     **default_params,
     'model': const.VGG16,
-    "method": "grid",
+    "method": "bayes",
     "metric": {"name": "eval/accuracy/fine", "goal": "maximize"},
     "search_params": {**default_search_params,                 
                      },
@@ -528,7 +533,7 @@ asphalt_quality_corn_sweep_params = {
     **global_config.global_config,
     **default_params,
     'model': const.VGG16,
-    "method": "grid",
+    "method": "bayes",
     "metric": {"name": "eval/accuracy/fine", "goal": "maximize"},
     "search_params": {**default_search_params,                 
                      },
@@ -543,7 +548,7 @@ asphalt_quality_clm_sweep_params = {
     **global_config.global_config,
     **default_params,
     'model': const.VGG16,
-    "method": "grid",
+    "method": "bayes",
     "metric": {"name": "eval/accuracy/fine", "goal": "maximize"},
     "search_params": {**default_search_params, 
                       'learning_rate': {'values': [0.1, 0.01, 0.001]},  
@@ -554,7 +559,7 @@ asphalt_quality_clm_sweep_params = {
     "level": const.ASPHALT,
     "head": const.CLM,
     "sweep_counts": 10,
-    "hierarchy_method": None
+    "hierarchy_method": const.FLATTEN, 
 }
 
 vgg16_asphalt_clm_params = {
@@ -569,5 +574,5 @@ vgg16_asphalt_clm_params = {
     "level": const.ASPHALT,
     "model": const.VGG16,
     "head": const.CLM,
-    "hierarchy_method": None,
+    "hierarchy_method": const.FLATTEN,
 }
