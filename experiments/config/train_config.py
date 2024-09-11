@@ -349,16 +349,16 @@ B_CNN = {
     **default_params,
     "batch_size": 64,
     "epochs": 12,
-    "learning_rate": 0.01,
+    "learning_rate": 0.0001,
     "optimizer": const.OPTI_ADAM,
     "coarse_eval_metric": const.EVAL_METRIC_ALL,
     "fine_eval_metric": const.EVAL_METRIC_ALL,
     "project": const.PROJECT_MULTI_LABEL_FIXED,
-    "name": "B_CNN_clm",
+    "name": "B_CNN_regression",
     "level": const.HIERARCHICAL,
     "model": const.BCNN,
-    "head": const.CLM, #'regression', 'classification', 'corn', 'clm'
-    "hierarchy_method": const.MODELSTRUCTURE, #'use_ground_truth', 'use_condition_layer', 'b_cnn'
+    "head": const.REGRESSION, #'regression', 'classification', 'corn', 'clm'
+    "hierarchy_method": const.GROUNDTRUTH, #'use_ground_truth', 'use_condition_layer', 'b_cnn'
     "lw_modifier": True,
     "lr_scheduler": True,
     "fc_neurons": 1024,
@@ -391,16 +391,16 @@ H_NET = {
     **default_params,
     "batch_size": 64,
     "epochs": 12,
-    "learning_rate": 0.0001,
+    "learning_rate": 0.0006,
     "optimizer": const.OPTI_ADAM,
     "coarse_eval_metric": const.EVAL_METRIC_ALL,
     "fine_eval_metric": const.EVAL_METRIC_ALL,
     "project": const.PROJECT_MULTI_LABEL_FIXED,
-    "name": "HiearchyNet_classification",
+    "name": "HiearchyNet_corn",
     "level": const.HIERARCHICAL,
     "model": const.HNET,
-    "head": const.CLASSIFICATION, #'regression', 'classification', 'obd', 'clm'
-    "hierarchy_method": const.MODELSTRUCTURE, #'use_ground_truth', 'None',
+    "head": const.CORN, #'regression', 'classification', 'obd', 'clm'
+    "hierarchy_method": const.GROUNDTRUTH, #'use_ground_truth', 'None',
     "lw_modifier": False,
     "lr_scheduler": True,
     "fc_neurons": 1024,
