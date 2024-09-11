@@ -168,6 +168,7 @@ def _run_training(project=None, name=None, config=None, wandb_on=True):
             optimizer=optimizer,
             head=config.get("head"),
             hierarchy_method=config.get("hierarchy_method"),
+            gamma=config.get("gamma"),
             device=device,
             epochs=config.get("epochs"),
             wandb_on=wandb_on,
@@ -195,6 +196,7 @@ def _run_training(project=None, name=None, config=None, wandb_on=True):
                 eval_metric=config.get("eval_metric"),
                 head = config.get("head"), 
                 hierarchy_method=config.get("hierarchy_method"),
+                gamma=config.get("gamma"),
                 device=device,
                 epochs=config.get("epochs"),
                 wandb_on=wandb_on,
@@ -219,6 +221,7 @@ def _run_training(project=None, name=None, config=None, wandb_on=True):
                 eval_metric=config.get("eval_metric"),
                 head = config.get("head"), 
                 hierarchy_method=config.get("hierarchy_method"),
+                gamma = config.get("gamma"),
                 device=device,
                 epochs=config.get("epochs"),
                 wandb_on=wandb_on,
@@ -449,6 +452,7 @@ def train(
     eval_metric,
     head,
     hierarchy_method,
+    gamma,
     device,
     epochs,
     wandb_on,
@@ -475,7 +479,7 @@ def train(
     # if wandb_on:
     #     wandb.watch(model, log_freq=27)
     if lr_scheduler:
-        scheduler = StepLR(optimizer, step_size=4, gamma=0.1) 
+        scheduler = StepLR(optimizer, step_size=4, gamma=gamma) 
 
     if hierarchy_method == const.CC:
         all_epoch_metrics_df = pd.DataFrame(columns=['epoch', 'train_loss', 'train_correct', 'train_correct_one_off', 
@@ -650,6 +654,7 @@ def train_hierarchical(
     optimizer,
     head,
     hierarchy_method,
+    gamma,
     device,
     epochs,
     wandb_on,
@@ -677,7 +682,7 @@ def train_hierarchical(
     # if wandb_on:
     #     wandb.watch(model, log_freq=27)
     if lr_scheduler:
-        scheduler = StepLR(optimizer, step_size=4, gamma=0.5) 
+        scheduler = StepLR(optimizer, step_size=4, gamma=gamma) 
     
     if lw_modifier:
         alpha = torch.tensor(0.98)
