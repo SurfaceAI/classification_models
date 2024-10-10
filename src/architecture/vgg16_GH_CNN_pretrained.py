@@ -16,12 +16,11 @@ class CustomBayesLayer(nn.Module):
         return y_subclass
     
 class GH_CNN(nn.Module):
-    def __init__(self, num_c, num_classes, head, hierarchy_method, fc_neurons):
+    def __init__(self, num_c, num_classes, head, hierarchy_method):
         super(GH_CNN, self).__init__()
         
         #Custom layer
         self.custom_bayes_layer = CustomBayesLayer()
-        self.fc_neurons = fc_neurons
         self.hierarchy_method = hierarchy_method
         self.head = head
         self.num_c = num_c
@@ -68,13 +67,13 @@ class GH_CNN(nn.Module):
             
         elif head == 'classification' or head == 'classification_qwk':
             self.fine_classifier = nn.Sequential(
-                nn.Linear(512 * 8 * 8, self.fc_neurons),
+                nn.Linear(512 * 8 * 8, 1024),
                 nn.ReLU(),
                 nn.Dropout(0.5),
-                nn.Linear(self.fc_neurons, self.fc_neurons),
+                nn.Linear(1024, 1024),
                 nn.ReLU(),
                 nn.Dropout(0.5),
-                nn.Linear(self.fc_neurons, num_classes)
+                nn.Linear(1024, num_classes)
             )
             if head == 'classification':
                 self.fine_criterion = nn.CrossEntropyLoss
@@ -83,7 +82,7 @@ class GH_CNN(nn.Module):
         
         #num_features = model.classifier[6].in_features
         # Modify the first fully connected layer to accept the correct input size
-        # model.classifier[0] = nn.Linear(in_features=512*8*8, out_features=self.fc_neurons, bias=True)
+        # model.classifier[0] = nn.Linear(in_features=512*8*8, out_features=1024, bias=True)
 
         # # Modify other parts of the classifier if needed
         # classifier_layers = list(model.classifier.children())
@@ -93,8 +92,8 @@ class GH_CNN(nn.Module):
         # self.fc_1 = nn.Sequential(*classifier_layers[3:6])
 
         # # Output layers for coarse and fine classification
-        # self.fc_2_coarse = nn.Linear(self.fc_neurons, num_c)
-        # self.fc_2_fine = nn.Linear(self.fc_neurons, num_classes)
+        # self.fc_2_coarse = nn.Linear(1024, num_c)
+        # self.fc_2_fine = nn.Linear(1024, num_classes)
 
         
         
@@ -121,37 +120,37 @@ class GH_CNN(nn.Module):
 
     def _create_quality_fc_clm(self, num_classes=4):
         return nn.Sequential(
-            nn.Linear(512 * 8 * 8, self.fc_neurons),
+            nn.Linear(512 * 8 * 8, 1024),
             nn.ReLU(),
             nn.Dropout(0.5),
-            nn.Linear(self.fc_neurons, self.fc_neurons),
+            nn.Linear(1024, 1024),
             nn.ReLU(),
             nn.Dropout(0.5),
-            nn.Linear(self.fc_neurons, 1),
+            nn.Linear(1024, 1),
             nn.BatchNorm1d(1),
             CLM(classes=num_classes, link_function="logit", min_distance=0.0, use_slope=False, fixed_thresholds=False)
         )
 
     def _create_quality_fc_regression(self):
         return nn.Sequential(
-            nn.Linear(512 * 8 * 8, self.fc_neurons),
+            nn.Linear(512 * 8 * 8, 1024),
             nn.ReLU(),
             nn.Dropout(0.5),
-            nn.Linear(self.fc_neurons, self.fc_neurons),
+            nn.Linear(1024, 1024),
             nn.ReLU(),
             nn.Dropout(0.5),
-            nn.Linear(self.fc_neurons, 1)
+            nn.Linear(1024, 1)
         )
 
     def _create_quality_fc_corn(self, num_classes):
         return nn.Sequential(
-            nn.Linear(512 * 8 * 8, self.fc_neurons),
+            nn.Linear(512 * 8 * 8, 1024),
             nn.ReLU(),
             nn.Dropout(0.5),
-            nn.Linear(self.fc_neurons, self.fc_neurons),
+            nn.Linear(1024, 1024),
             nn.ReLU(),
             nn.Dropout(0.5),
-            nn.Linear(self.fc_neurons, num_classes - 1)
+            nn.Linear(1024, num_classes - 1)
         )
                 
     @ staticmethod

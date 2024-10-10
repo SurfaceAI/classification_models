@@ -8,14 +8,13 @@ from multi_label.QWK import QWK_Loss
 
 
 class B_CNN(nn.Module):
-    def __init__(self, num_c, num_classes, head, hierarchy_method, fc_neurons):
+    def __init__(self, num_c, num_classes, head, hierarchy_method,):
         super(B_CNN, self).__init__()
         
         self.num_c = num_c
         self.num_classes = num_classes
         self.head = head     
         self.hierarchy_method = hierarchy_method
-        self.fc_neurons = fc_neurons
            
         #Load pretrained weights
         model = models.vgg16(weights='VGG16_Weights.IMAGENET1K_V1')
@@ -71,13 +70,13 @@ class B_CNN(nn.Module):
             
         elif head == 'classification' or head == 'classification_qwk':
             self.fine_classifier = nn.Sequential(
-                nn.Linear(512 * 8 * 8, self.fc_neurons),
+                nn.Linear(512 * 8 * 8, 1024),
                 nn.ReLU(),
                 nn.Dropout(0.5),
-                nn.Linear(self.fc_neurons, self.fc_neurons),
+                nn.Linear(1024, 1024),
                 nn.ReLU(),
                 nn.Dropout(0.5),
-                nn.Linear(self.fc_neurons, num_classes) 
+                nn.Linear(1024, num_classes) 
             )
             
             if head == 'classification':
@@ -88,13 +87,13 @@ class B_CNN(nn.Module):
             
     def _create_quality_fc_clm(self, num_classes=4):
         layers = nn.Sequential(
-            nn.Linear(512 * 8 * 8, self.fc_neurons),
+            nn.Linear(512 * 8 * 8, 1024),
             nn.ReLU(),
             nn.Dropout(0.5),
-            nn.Linear(self.fc_neurons, self.fc_neurons),
+            nn.Linear(1024, 1024),
             nn.ReLU(),
             nn.Dropout(0.5),
-            nn.Linear(self.fc_neurons, 1),
+            nn.Linear(1024, 1),
             nn.BatchNorm1d(1),
             CLM(classes=num_classes, link_function="logit", min_distance=0.0, use_slope=False, fixed_thresholds=False)
         )
@@ -102,25 +101,25 @@ class B_CNN(nn.Module):
     
     def _create_quality_fc_regression(self):
         layers = nn.Sequential(
-            nn.Linear(512 * 8 * 8, self.fc_neurons),
+            nn.Linear(512 * 8 * 8, 1024),
             nn.ReLU(),
             nn.Dropout(0.5),
-            nn.Linear(self.fc_neurons, self.fc_neurons),
+            nn.Linear(1024, 1024),
             nn.ReLU(),
             nn.Dropout(0.5),
-            nn.Linear(self.fc_neurons, 1),
+            nn.Linear(1024, 1),
         )
         return layers
     
     def _create_quality_fc_corn(self, num_classes):
         layers = nn.Sequential(
-            nn.Linear(512 * 8 * 8, self.fc_neurons),
+            nn.Linear(512 * 8 * 8, 1024),
             nn.ReLU(),
             nn.Dropout(0.5),
-            nn.Linear(self.fc_neurons, self.fc_neurons),
+            nn.Linear(1024, 1024),
             nn.ReLU(),
             nn.Dropout(0.5),
-            nn.Linear(self.fc_neurons, num_classes - 1),
+            nn.Linear(1024, num_classes - 1),
         )
         return layers
     

@@ -34,23 +34,23 @@ class CustomVGG16(nn.Module):
 
         # Define the final layer based on the head type
         if self.head == const.REGRESSION:
-            top_layer = nn.Linear(512, 1) 
+            top_layer = nn.Linear(1024, 1) 
             self.criterion = nn.MSELoss
             
         elif self.head == const.CLM:
             top_layer = nn.Sequential(
-                nn.Linear(512, 1),
+                nn.Linear(1024, 1),
                 nn.BatchNorm1d(1),
                 CLM(classes=num_classes, link_function="logit", min_distance=0.0, use_slope=False, fixed_thresholds=False)
             )
             self.criterion = nn.NLLLoss
             
         elif self.head == const.CORN:
-            top_layer = nn.Linear(512, num_classes - 1)
+            top_layer = nn.Linear(1024, num_classes - 1)
             self.criterion = corn_loss
             
         else:
-            top_layer = nn.Linear(512, num_classes)
+            top_layer = nn.Linear(1024, num_classes)
             self.criterion = nn.CrossEntropyLoss
 
         # Combine the shared layers with the top layer

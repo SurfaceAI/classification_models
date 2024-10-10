@@ -152,7 +152,6 @@ def _run_training(project=None, name=None, config=None, wandb_on=True):
         random_seed=config.get("seed"),
         head=config.get("head"),
         hierarchy_method=config.get("hierarchy_method"),
-        fc_neurons=config.get("fc_neurons"),
         max_class_size=config.get("max_class_size"),
         freeze_convs=config.get("freeze_convs"),
     )
@@ -265,7 +264,6 @@ def prepare_train(
     random_seed,
     head,
     hierarchy_method,
-    fc_neurons,
     max_class_size,
     freeze_convs,
 ):
@@ -342,7 +340,7 @@ def prepare_train(
 
     # instanciate model with number of classes
     if level == const.HIERARCHICAL:
-        model = model_cls(num_coarse_classes, num_classes, head, hierarchy_method, fc_neurons)
+        model = model_cls(num_coarse_classes, num_classes, head, hierarchy_method)
     else:
         model = model_cls(num_classes, head)
 
