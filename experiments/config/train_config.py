@@ -2,17 +2,16 @@ from src import constants as const
 from experiments.config  import global_config
 
 default_params = {
-    "batch_size": 64, #16,  # 48
+    "batch_size": 16, #16,  # 48
     "epochs": 10,
     "learning_rate": 0.01,
     "optimizer": const.OPTI_ADAM,
     "is_regression": False,
-    "is_hierarchical": False,
+    "is_hierarchical": True,
     "eval_metric": const.EVAL_METRIC_ALL,
     #"max_class_size": None,
-    "lr_scheduler": True,
-    "freeze_convs": True,
-    "fc_neurons": 512,
+    "lr_scheduler": False,
+    "freeze_convs": False,
     "gamma": 0.1,
 }
 
@@ -389,21 +388,20 @@ C_CNN = {
 H_NET = {
     **global_config.global_config,
     **default_params,
-    "batch_size": 64,
-    "epochs": 12,
-    "learning_rate": 0.0006,
+    "batch_size": 16,
+    "epochs": 9,
+    "learning_rate": 0.0001,
     "optimizer": const.OPTI_ADAM,
     "coarse_eval_metric": const.EVAL_METRIC_ALL,
     "fine_eval_metric": const.EVAL_METRIC_ALL,
     "project": const.PROJECT_MULTI_LABEL_FIXED,
-    "name": "HiearchyNet_corn",
+    "name": "HiearchyNet_classification",
     "level": const.HIERARCHICAL,
     "model": const.HNET,
-    "head": const.CORN, #'regression', 'classification', 'obd', 'clm'
-    "hierarchy_method": const.GROUNDTRUTH, #'use_ground_truth', 'None',
+    "head": const.CLASSIFICATION, #'regression', 'classification', 'obd', 'clm'
+    "hierarchy_method": const.MODELSTRUCTURE, #'use_ground_truth', 'None',
     "lw_modifier": False,
-    "lr_scheduler": True,
-    "fc_neurons": 1024,
+    "lr_scheduler": False,
 }
 
 GH_CNN = {
