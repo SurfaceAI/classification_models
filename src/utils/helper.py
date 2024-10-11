@@ -625,7 +625,6 @@ def compute_all_metrics(outputs, labels, head, model):
         
     qwk = cohen_kappa_score(labels.cpu().detach().numpy(), predictions.cpu().detach().numpy(), weights='quadratic')
 
-
     return correct, correct_1_off, total_mse, total_mae, qwk
 
 

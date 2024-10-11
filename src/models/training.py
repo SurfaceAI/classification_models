@@ -970,8 +970,8 @@ def train_epoch(model, dataloader, optimizer, device, eval_metric, head, hierarc
         else:
             epoch_accuracy = 100 * correct / len(dataloader.sampler)
             epoch_accuracy_one_off = 100 * correct_one_off / len(dataloader.sampler)
-            epoch_mse = mse / len(dataloader)
-            epoch_mae = mae / len(dataloader)
+            epoch_mse = mse / len(dataloader.sampler)
+            epoch_mae = mae / len(dataloader.sampler)
             epoch_loss = running_loss / len(dataloader.sampler)
             epoch_qwk = qwk / len(dataloader)
 
@@ -1083,8 +1083,8 @@ def validate_epoch(model, dataloader, device, eval_metric, head, hierarchy_metho
                 val_epoch_loss = eval_running_loss / len(dataloader.sampler)
                 epoch_eval_accuracy = 100 * eval_correct / len(dataloader.sampler)
                 epoch_eval_accuracy_one_off = 100 * eval_correct_one_off / len(dataloader.sampler)
-                epoch_eval_mse = eval_mse / len(dataloader)
-                epoch_eval_mae = eval_mae / len(dataloader)
+                epoch_eval_mse = eval_mse / len(dataloader.sampler)
+                epoch_eval_mae = eval_mae / len(dataloader.sampler)
                 epoch_eval_qwk = eval_qwk / len(dataloader)
                 return val_epoch_loss, epoch_eval_accuracy, epoch_eval_accuracy_one_off, epoch_eval_mse, epoch_eval_mae, epoch_eval_qwk,
             
@@ -1221,13 +1221,14 @@ def train_epoch_hierarchical(model, dataloader, optimizer, device, head, hierarc
         fine_qwk += fine_qwk_item
         fine_hv += fine_hv_item
         
-        #break
+        break
+    
     epoch_loss = running_loss /  len(dataloader.sampler)
     epoch_coarse_accuracy = 100 * coarse_correct / len(dataloader.sampler)
     epoch_fine_accuracy = 100 * fine_correct / len(dataloader.sampler)
     epoch_fine_accuracy_one_off = 100 * fine_correct_one_off / len(dataloader.sampler)
-    epoch_mse = fine_mse / len(dataloader)
-    epoch_mae = fine_mae / len(dataloader)
+    epoch_mse = fine_mse / len(dataloader.sampler)
+    epoch_mae = fine_mae / len(dataloader.sampler)
     epoch_qwk = fine_qwk / len(dataloader)
     epoch_hv = fine_hv / len(dataloader.sampler)
     
@@ -1308,14 +1309,14 @@ def validate_epoch_hierarchical(model, dataloader, device, head, hierarchy_metho
         val_fine_qwk += val_fine_qwk_item
         val_fine_hv += val_fine_hv_item
         
-        #break
+        break
 
     val_epoch_loss = val_running_loss /  len(dataloader.sampler)
     val_epoch_coarse_accuracy = 100 * val_coarse_correct / len(dataloader.sampler)
     val_epoch_fine_accuracy = 100 * val_fine_correct / len(dataloader.sampler)
     val_epoch_fine_accuracy_one_off = 100 * val_fine_correct_one_off / len(dataloader.sampler)
-    val_epoch_fine_mse = val_fine_mse /  len(dataloader)
-    val_epoch_fine_mae = val_fine_mae /  len(dataloader)
+    val_epoch_fine_mse = val_fine_mse /  len(dataloader.sampler)
+    val_epoch_fine_mae = val_fine_mae /  len(dataloader.sampler)
     val_epoch_fine_qwk = val_fine_qwk /  len(dataloader)
     val_epoch_fine_hv = val_fine_hv /  len(dataloader.sampler)
     

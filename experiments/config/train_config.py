@@ -2,15 +2,15 @@ from src import constants as const
 from experiments.config  import global_config
 
 default_params = {
-    "batch_size": 16, #16,  # 48
-    "epochs": 10,
-    "learning_rate": 0.01,
+    "batch_size": 64, #16,  # 48
+    "epochs": 12,
+    #"learning_rate": 0.01,
     "optimizer": const.OPTI_ADAM,
     "is_regression": False,
     "is_hierarchical": True,
     "eval_metric": const.EVAL_METRIC_ALL,
     #"max_class_size": None,
-    "lr_scheduler": False,
+    "lr_scheduler": True,
     "freeze_convs": False,
     "gamma": 0.1,
 }
@@ -18,7 +18,7 @@ default_params = {
 default_search_params = {
     #"batch_size": {"values": [16, 48, 64]},
     "epochs": {"value": 12},
-    "learning_rate": {"values": [1e-05, 1e-04, 1e-03]},
+    "learning_rate": {"values": [1e-05]},
     "gamma": {"values": [0.1, 0.3, 0.5]}
     #"learning_rate": {"distribution": "log_uniform_values", "min": 1e-05, "max": 0.001},
     #"optimizer": {"value": const.OPTI_ADAM},
@@ -390,7 +390,7 @@ H_NET = {
     **global_config.global_config,
     **default_params,
     "batch_size": 64,
-    "epochs": 14,
+    "epochs": 12,
     "learning_rate": 0.0001,
     "optimizer": const.OPTI_ADAM,
     "coarse_eval_metric": const.EVAL_METRIC_ALL,
