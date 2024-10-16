@@ -3,23 +3,23 @@ from experiments.config  import global_config
 
 default_params = {
     "batch_size": 64, #16,  # 48
-    "epochs": 12,
+    #"epochs": 12,
     #"learning_rate": 0.01,
     "optimizer": const.OPTI_ADAM,
     "is_regression": False,
-    "is_hierarchical": True,
+    "is_hierarchical": False,
     "eval_metric": const.EVAL_METRIC_ALL,
     #"max_class_size": None,
     "lr_scheduler": True,
     "freeze_convs": False,
-    "gamma": 0.1,
+    #"gamma": 0.1,
 }
 
 default_search_params = {
     #"batch_size": {"values": [16, 48, 64]},
     "epochs": {"value": 12},
-    "learning_rate": {"values": [1e-05]},
-    "gamma": {"values": [0.1, 0.3, 0.5]}
+    "learning_rate": {"values": [1e-05, 1e-04, 1e-03]},
+    "gamma": {"values": [0.1, 0.3, 0.5]},
     #"learning_rate": {"distribution": "log_uniform_values", "min": 1e-05, "max": 0.001},
     #"optimizer": {"value": const.OPTI_ADAM},
     #"fc_neurons": {"values": [512, 1024]},
@@ -518,7 +518,9 @@ asphalt_quality_regression_sweep_params = {
     'model': const.VGG16,
     "method": "bayes",
     "metric": {"name": "eval/accuracy/fine", "goal": "maximize"},
-    "search_params": {**default_search_params,                 
+    "search_params": {'epochs': {'value': 12},
+                      'learning_rate': {'values': [5e-05, 1e-04, 5e-04]},  
+                      'gamma': {'values': [0.1, 0.5, 0.9]},                     
                      },
     "project": const.PROJECT_MULTI_LABEL_SWEEP_REGRESSION,
     "name": "Quality_Asphalt_Regression",
@@ -533,7 +535,9 @@ asphalt_quality_corn_sweep_params = {
     'model': const.VGG16,
     "method": "bayes",
     "metric": {"name": "eval/accuracy/fine", "goal": "maximize"},
-    "search_params": {**default_search_params,                 
+    "search_params": {'epochs': {'value': 12},
+                      'learning_rate': {'values': [5e-05, 1e-04, 5e-04]},  
+                      'gamma': {'values': [0.1, 0.5, 0.9]},                   
                      },
     "project": const.PROJECT_MULTI_LABEL_SWEEP_CORN,
     "name": "Quality_Asphalt_CORN",
@@ -542,13 +546,14 @@ asphalt_quality_corn_sweep_params = {
     "sweep_counts": 10,
 }
 
+
 asphalt_quality_clm_sweep_params = {
     **global_config.global_config,
     **default_params,
     'model': const.VGG16,
     "method": "bayes",
     "metric": {"name": "eval/accuracy/fine", "goal": "maximize"},
-    "search_params": {**default_search_params, 
+    "search_params": {'epochs': {'value': 12},
                       'learning_rate': {'values': [0.1, 0.01, 0.001]},  
                       'gamma': {'values': [0.1, 0.5, 0.9]},              
                      },
