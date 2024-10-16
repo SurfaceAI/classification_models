@@ -12,6 +12,7 @@ default_params = {
     #"max_class_size": None,
     "lr_scheduler": True,
     "freeze_convs": False,
+    "hierarchy_method": const.FLATTEN, 
     #"gamma": 0.1,
 }
 
@@ -563,7 +564,6 @@ asphalt_quality_clm_sweep_params = {
     "level": const.ASPHALT,
     "head": const.CLM,
     "sweep_counts": 10,
-    "hierarchy_method": const.FLATTEN, 
 }
 
 vgg16_asphalt_clm_params = {
