@@ -422,8 +422,7 @@ GH_CNN = {
     "head": const.CLASSIFICATION, #'regression', 'classification', 'corn', 'clm', 'clm_kappa', 'classification_kappa',
     "hierarchy_method": const.MODELSTRUCTURE, #'use_ground_truth', 'use_condition_layer', 'b_cnn'
     "lw_modifier": True,
-    "lr_scheduler": True,
-    "fc_neurons": 1024,
+    "lr_scheduler": True,    
 }
 
 
