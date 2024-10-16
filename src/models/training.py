@@ -532,6 +532,8 @@ def train(
                 hierarchy_method,
             )
             
+            val_loss = epoch_metrics_df['loss'].item()
+            
             #TODO: something wrong with epoch_metrics_df['loss'] more than one value 
             epoch_data = pd.DataFrame([{
                 'epoch': epoch + 1,
@@ -1064,6 +1066,7 @@ def validate_epoch(model, dataloader, device, eval_metric, head, hierarchy_metho
                     raise ValueError(f"Unknown eval_metric: {eval_metric}")
             
             #break
+        
         if eval_metric == const.EVAL_METRIC_ALL:
             
             if hierarchy_method == const.CC:

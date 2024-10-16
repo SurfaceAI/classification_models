@@ -3,7 +3,7 @@ from experiments.config  import global_config
 
 default_params = {
     "batch_size": 64, #16,  # 48
-    "epochs": 12,
+    #"epochs": 12,
     #"learning_rate": 0.01,
     "optimizer": const.OPTI_ADAM,
     "is_regression": False,
@@ -12,14 +12,14 @@ default_params = {
     #"max_class_size": None,
     "lr_scheduler": True,
     "freeze_convs": False,
-    "gamma": 0.1,
+    #"gamma": 0.1,
 }
 
 default_search_params = {
     #"batch_size": {"values": [16, 48, 64]},
     "epochs": {"value": 12},
-    "learning_rate": {"values": [1e-05]},
-    "gamma": {"values": [0.1, 0.3, 0.5]}
+    "learning_rate": {"values": [1e-05, 1e-04, 1e-03]},
+    "gamma": {"values": [0.1, 0.3, 0.5]},
     #"learning_rate": {"distribution": "log_uniform_values", "min": 1e-05, "max": 0.001},
     #"optimizer": {"value": const.OPTI_ADAM},
     #"fc_neurons": {"values": [512, 1024]},
