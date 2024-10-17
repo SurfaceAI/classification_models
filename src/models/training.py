@@ -331,10 +331,14 @@ def prepare_train(
     # load model
     if level == const.HIERARCHICAL: #TODO: adapt num_coarse_classes automatically
         num_coarse_classes = 5
-     
+
     #head for fine classes hierarchical models or classifier chain quality part   
     if head == const.REGRESSION:
         num_classes = 1
+        
+    if level == const.ASPHALT:
+        num_classes = 4
+        
     else:
         num_classes = 18
         #num_classes = sum(len(selected_class) for selected_class in selected_classes.values())
@@ -489,6 +493,7 @@ def train(
                                                     'val_correct_one_off', 'val_mse', 'val_mae'])
 
     for epoch in range(epochs):
+        #This is the case where we train only one model, e.g. for asphalt or the surface model only
         if eval_metric == const.EVAL_METRIC_ALL and hierarchy_method == const.FLATTEN:
             train_loss, accuracy, accuracy_one_off, mse, mae, qwk  = train_epoch(
                 model,
@@ -509,7 +514,8 @@ def train(
                 head,
                 hierarchy_method,
             )
-            
+        
+        #This is the case for the Classifier Chain, or training all quality models sequentially     
         elif eval_metric == const.EVAL_METRIC_ALL and hierarchy_method == const.CC:
         
             epoch_metrics_df  = train_epoch(
@@ -927,8 +933,8 @@ def train_epoch(model, dataloader, optimizer, device, eval_metric, head, hierarc
             mae += mae_item
             qwk += qwk_item
         
-            # if batch_idx == 0:
-            #     break
+            if batch_idx == 0:
+                break
 
         # TODO: metric as function, metric_name as input argument
         else:
@@ -1038,8 +1044,8 @@ def validate_epoch(model, dataloader, device, eval_metric, head, hierarchy_metho
                 eval_mae += eval_mae_item
                 eval_qwk += eval_qwk_item
                 
-                # if batch_idx == 0:
-                #     break
+                if batch_idx == 0:
+                    break
                 
                 #break
                 
