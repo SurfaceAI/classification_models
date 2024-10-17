@@ -933,8 +933,8 @@ def train_epoch(model, dataloader, optimizer, device, eval_metric, head, hierarc
             mae += mae_item
             qwk += qwk_item
         
-            if batch_idx == 0:
-                break
+            # if batch_idx == 0:
+            #     break
 
         # TODO: metric as function, metric_name as input argument
         else:
@@ -1044,8 +1044,8 @@ def validate_epoch(model, dataloader, device, eval_metric, head, hierarchy_metho
                 eval_mae += eval_mae_item
                 eval_qwk += eval_qwk_item
                 
-                if batch_idx == 0:
-                    break
+                # if batch_idx == 0:
+                #     break
                 
                 #break
                 
