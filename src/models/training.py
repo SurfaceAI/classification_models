@@ -119,7 +119,6 @@ def _run_training(project=None, name=None, config=None, wandb_on=True):
     type_class = None
     if len(level) == 2:
         type_class = level[-1]
-
     start_time = datetime.fromtimestamp(
         time.time() if not wandb_on else run.start_time
     ).strftime("%Y%m%d_%H%M%S")
@@ -335,12 +334,11 @@ def prepare_train(
     #head for fine classes hierarchical models or classifier chain quality part   
     if head == const.REGRESSION:
         num_classes = 1
+    else:
+        num_classes = 18
         
     if level == const.ASPHALT:
         num_classes = 4
-        
-    else:
-        num_classes = 18
         #num_classes = sum(len(selected_class) for selected_class in selected_classes.values())
         
 
