@@ -6,8 +6,6 @@ default_params = {
     #"epochs": 12,
     #"learning_rate": 0.01,
     "optimizer": const.OPTI_ADAM,
-    "is_regression": False,
-    "is_hierarchical": False,
     "eval_metric": const.EVAL_METRIC_ALL,
     #"max_class_size": None,
     "lr_scheduler": True,
@@ -20,7 +18,7 @@ default_search_params = {
     #"batch_size": {"values": [16, 48, 64]},
     "epochs": {"value": 12},
     "learning_rate": {"values": [1e-05, 1e-04, 1e-03]},
-    "gamma": {"values": [0.1, 0.3, 0.5]},
+    "gamma": {"values": [0.1, 0.5, 0.9]},
     #"learning_rate": {"distribution": "log_uniform_values", "min": 1e-05, "max": 0.001},
     #"optimizer": {"value": const.OPTI_ADAM},
     #"fc_neurons": {"values": [512, 1024]},
@@ -511,6 +509,7 @@ asphalt_quality_classification_sweep_params = {
     "level": const.ASPHALT,
     "head": const.CLASSIFICATION,
     "sweep_counts": 10,
+    "hierarchy_method": const.FLATTEN, 
 }
 
 asphalt_quality_regression_sweep_params = {
@@ -528,6 +527,7 @@ asphalt_quality_regression_sweep_params = {
     "level": const.ASPHALT,
     "head": const.REGRESSION,
     "sweep_counts": 10,
+    "hierarchy_method": const.FLATTEN, 
 }
 
 asphalt_quality_corn_sweep_params = {
@@ -545,6 +545,7 @@ asphalt_quality_corn_sweep_params = {
     "level": const.ASPHALT,
     "head": const.CORN,
     "sweep_counts": 10,
+    "hierarchy_method": const.FLATTEN, 
 }
 
 
@@ -563,6 +564,7 @@ asphalt_quality_clm_sweep_params = {
     "level": const.ASPHALT,
     "head": const.CLM,
     "sweep_counts": 10,
+    "hierarchy_method": const.FLATTEN, 
 }
 
 vgg16_asphalt_clm_params = {
