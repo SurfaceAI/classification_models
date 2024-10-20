@@ -3,7 +3,7 @@ from experiments.config  import global_config
 
 default_params = {
     "batch_size": 64, #16,  # 48
-    #"epochs": 12,
+    "epochs": 12,
     #"learning_rate": 0.01,
     "optimizer": const.OPTI_ADAM,
     "eval_metric": const.EVAL_METRIC_ALL,
@@ -11,7 +11,7 @@ default_params = {
     "lr_scheduler": True,
     "freeze_convs": False,
     "hierarchy_method": const.FLATTEN, 
-    #"gamma": 0.1,
+    "gamma": 0.5,
 }
 
 default_search_params = {
@@ -546,6 +546,23 @@ asphalt_quality_corn_sweep_params = {
     "head": const.CORN,
     "sweep_counts": 10,
     "hierarchy_method": const.FLATTEN, 
+}
+
+asphalt_quality_corn_fixed_params = {
+    **global_config.global_config,
+    **default_params,
+    "project": const.PROJECT_MULTI_LABEL_FIXED,
+    "name": "Quality_Asphalt_CORN",
+    "level": const.ASPHALT,
+    "model": const.VGG16,
+    "learning_rate": 1e-04,
+    #"dataset": "V1_0/train",
+    #"metadata": "V1_0/metadata",
+    #"train_valid_split_list": "train_valid_split.csv",
+    "head": const.CORN,
+    "hierarchy_method": const.FLATTEN,
+    "eval_metric": const.EVAL_METRIC_ALL,
+    # "gpu_kernel": 0,
 }
 
 
