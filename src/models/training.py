@@ -328,19 +328,24 @@ def prepare_train(
     # validloader = DataLoader(valid_data, batch_size=valid_batch_size)
 
     # load model
-    if level == const.HIERARCHICAL: #TODO: adapt num_coarse_classes automatically
-        num_coarse_classes = 5
-
-    #head for fine classes hierarchical models or classifier chain quality part   
-    if head == const.REGRESSION:
-        num_classes = 1
-    else:
+    if level == const.HIERARCHICAL or level == const.FLATTEN: #TODO: adapt num_coarse_classes automatically
         num_classes = 18
         
-    if level == const.ASPHALT:
+        if level == const.HIERARCHICAL:
+            num_coarse_classes = 5
+                
+    elif level == const.SURFACE:
+        num_classes = 5   
+    
+    elif level == const.SMOOTHNESS:
+        num_classes = len(selected_classes)
+        
+    elif level == const.ASPHALT:
         num_classes = 4
         #num_classes = sum(len(selected_class) for selected_class in selected_classes.values())
         
+    if head == const.REGRESSION:
+        num_classes = 1
 
     # instanciate model with number of classes
     if level == const.HIERARCHICAL:
@@ -470,7 +475,7 @@ def train(
     checkpointer = checkpointing.CheckpointSaver(
         dirpath=model_saving_path,
         saving_name=model_saving_name,
-        decreasing=True,
+        decreasing=False,
         config=config,
         dataset=validloader.dataset,
         top_n=checkpoint_top_n,
@@ -492,7 +497,7 @@ def train(
 
     for epoch in range(epochs):
         #This is the case where we train only one model, e.g. for asphalt or the surface model only
-        if eval_metric == const.EVAL_METRIC_ALL and hierarchy_method == const.FLATTEN:
+        if hierarchy_method == const.FLATTEN:
             train_loss, accuracy, accuracy_one_off, mse, mae, qwk  = train_epoch(
                 model,
                 trainloader,
@@ -514,7 +519,7 @@ def train(
             )
         
         #This is the case for the Classifier Chain, or training all quality models sequentially     
-        elif eval_metric == const.EVAL_METRIC_ALL and hierarchy_method == const.CC:
+        if hierarchy_method == const.CC:
         
             epoch_metrics_df  = train_epoch(
                 model,
@@ -1356,7 +1361,7 @@ def load_wandb_model(model_name, run_path):
 def extract_levels(level, selected_classes):
     # TODO: selected_classes must not be None (for surface/smoothness), but None should be possible (=all classes)
     to_train_list = []
-    if level == const.FLATTEN:
+    if level == const.FLATTEN or level == const.HIERARCHICAL:
         to_train_list.append({"level": level, "selected_classes": selected_classes})
     elif level == const.SURFACE:
         to_train_list.append(
@@ -1370,6 +1375,13 @@ def extract_levels(level, selected_classes):
                     "selected_classes": selected_classes[type_class],
                 }
             )
+    elif level == const.ASPHALT:
+        to_train_list.append(
+            {
+                "level": level,
+                "selected_classes": selected_classes[const.ASPHALT],
+            }
+        )
     else:
         to_train_list.append({"level": level, "selected_classes": selected_classes})
 

@@ -612,7 +612,11 @@ def compute_all_metrics(outputs, labels, head, model):
     correct = (predictions == labels).sum().item()
 
     # Calculate 1-off accuracy
-    correct_1_off = compute_one_off_accuracy_within_groups(predictions, labels, parent)
+    correct_1_off = ((predictions == labels) |  # Exact match
+                        (predictions == labels + 1) |  # +1 within same group
+                        (predictions == labels - 1)   # -1 within same group
+                    ).sum().item()
+    #correct_1_off = compute_one_off_accuracy_within_groups(predictions, labels, parent)
 
     # Calculate MSE and MAE
     if head == 'regression':

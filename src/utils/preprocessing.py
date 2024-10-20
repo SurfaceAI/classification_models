@@ -320,7 +320,7 @@ def create_train_validation_datasets(
         complete_dataset = PartialImageFolder(
             data_path,
             head=head,
-            selected_classes=selected_classes['asphalt']
+            selected_classes=selected_classes
         )
     
     else:
