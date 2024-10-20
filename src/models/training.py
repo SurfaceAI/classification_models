@@ -520,7 +520,7 @@ def train(
             )
         
         #This is the case for the Classifier Chain, or training all quality models sequentially     
-        if hierarchy_method == const.CC:
+        elif hierarchy_method == const.CC:
         
             epoch_metrics_df  = train_epoch(
                 model,
