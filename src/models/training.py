@@ -108,7 +108,8 @@ def _run_training(project=None, name=None, config=None, wandb_on=True):
         run = wandb.init(project=project, name=name, config=config)
         config = wandb.config #TODO: why do we need this and why does it overwrite my loop of t loop
         # TODO: wandb best instead of last value for metric
-        summary = "max" if config.get("eval_metric")==const.EVAL_METRIC_ACCURACY else "min"
+        #summary = "max" if config.get("eval_metric")==const.EVAL_METRIC_ACCURACY else "min"
+        summary = "max"
         wandb.define_metric(f'eval/{config.get("eval_metric")}', summary=summary)
         # wandb.define_metric("val/acc", summary="max")
         # wandb.define_metric("val/mse", summary="min")
