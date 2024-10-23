@@ -731,7 +731,7 @@ parent = torch.tensor([0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 4, 4, 4])
 
 def compute_one_off_accuracy_within_groups(predictions, labels, parent):
 # Get the parent group of the predictions and labels
-    predictions = predictions - 1
+    #predictions = predictions - 1
     pred_parents = parent[predictions]
     label_parents = parent[labels]
 
