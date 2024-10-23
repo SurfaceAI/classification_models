@@ -2,15 +2,15 @@ from src import constants as const
 from experiments.config  import global_config
 
 default_params = {
-    "batch_size": 64, #16,  # 48
+    "batch_size": 16, #16,  # 48
     "epochs": 12,
     #"learning_rate": 0.01,
     "optimizer": const.OPTI_ADAM,
     "eval_metric": const.EVAL_METRIC_ALL,
     #"max_class_size": None,
-    "lr_scheduler": False,
+    "lr_scheduler": True,
     "freeze_convs": False,
-    "hierarchy_method": const.FLATTEN, 
+    "hierarchy_method": const.HIERARCHICAL, 
     "gamma": 0.5,
 }
 
@@ -346,21 +346,20 @@ vgg16_flatten = {
 B_CNN = {
     **global_config.global_config,
     **default_params,
-    "batch_size": 64,
-    "epochs": 12,
-    "learning_rate": 0.0001,
+    #"batch_size": 64,
+    #"epochs": 12,
+    "learning_rate": 0.00001,
     "optimizer": const.OPTI_ADAM,
     "coarse_eval_metric": const.EVAL_METRIC_ALL,
     "fine_eval_metric": const.EVAL_METRIC_ALL,
-    "project": const.PROJECT_MULTI_LABEL_FIXED,
-    "name": "B_CNN_regression",
+    "project": const.PROJECT_FINAL,
+    "name": "B_CNN_classification",
     "level": const.HIERARCHICAL,
     "model": const.BCNN,
-    "head": const.REGRESSION, #'regression', 'classification', 'corn', 'clm'
-    "hierarchy_method": const.GROUNDTRUTH, #'use_ground_truth', 'use_condition_layer', 'b_cnn'
+    "head": const.CLASSIFICATION, #'regression', 'classification', 'corn', 'clm'
+    "hierarchy_method": const.MODELSTRUCTURE, #'use_ground_truth', 'use_condition_layer', 'b_cnn'
     "lw_modifier": True,
-    "lr_scheduler": True,
-    "fc_neurons": 1024,
+    #"lr_scheduler": True,
 }
 
 
@@ -368,59 +367,56 @@ B_CNN = {
 C_CNN = {
     **global_config.global_config,
     **default_params,
-    "batch_size": 64,
-    "epochs": 12,
-    "learning_rate": 0.0001,
+    "learning_rate": 0.00001,
     "optimizer": const.OPTI_ADAM,
     "coarse_eval_metric": const.EVAL_METRIC_ALL,
     "fine_eval_metric": const.EVAL_METRIC_ALL,
-    "project": const.PROJECT_MULTI_LABEL_FIXED,
+    "project": const.PROJECT_FINAL,
     "name": "C_CNN_classification",
     "level": const.HIERARCHICAL,
     "model": const.CCNN,
-    "head": const.CLM, #'regression', 'classification', 'obd', 'clm'
+    "head": const.CLASSIFICATION, #'regression', 'classification', 'obd', 'clm'
     "hierarchy_method": const.MODELSTRUCTURE, #'use_ground_truth', 'None',
     "lw_modifier": False,
-    "lr_scheduler": True,
-    "fc_neurons": 1024,
+    #"lr_scheduler": True,
 }
 
 H_NET = {
     **global_config.global_config,
     **default_params,
-    "batch_size": 64,
-    "epochs": 12,
-    "learning_rate": 0.0001,
+    #"batch_size": 64,
+    #"epochs": 12,
+    "learning_rate": 0.00001,
     "optimizer": const.OPTI_ADAM,
     "coarse_eval_metric": const.EVAL_METRIC_ALL,
     "fine_eval_metric": const.EVAL_METRIC_ALL,
-    "project": const.PROJECT_MULTI_LABEL_FIXED,
+    "project": const.PROJECT_FINAL,
     "name": "HiearchyNet_classification",
     "level": const.HIERARCHICAL,
     "model": const.HNET,
     "head": const.CLASSIFICATION, #'regression', 'classification', 'obd', 'clm'
     "hierarchy_method": const.MODELSTRUCTURE, #'use_ground_truth', 'None',
     "lw_modifier": True,
-    "lr_scheduler": False,
+    #"lr_scheduler": False,
 }
 
 GH_CNN = {
     **global_config.global_config,
     **default_params,
-    "batch_size": 64,
-    "epochs": 12,
-    "learning_rate": 0.0001,
+    #"batch_size": 64,
+    #"epochs": 12,
+    "learning_rate": 0.00001,
     "optimizer": const.OPTI_ADAM,
     "coarse_eval_metric": const.EVAL_METRIC_ALL,
     "fine_eval_metric": const.EVAL_METRIC_ALL,
-    "project": const.PROJECT_MULTI_LABEL_FIXED,
+    "project": const.PROJECT_FINAL,
     "name": "GH_CNN_classification",
     "level": const.HIERARCHICAL,
     "model": const.GHCNN,
     "head": const.CLASSIFICATION, #'regression', 'classification', 'corn', 'clm', 'clm_kappa', 'classification_kappa',
     "hierarchy_method": const.MODELSTRUCTURE, #'use_ground_truth', 'use_condition_layer', 'b_cnn'
     "lw_modifier": True,
-    "lr_scheduler": True,    
+    #"lr_scheduler": True,    
 }
 
 

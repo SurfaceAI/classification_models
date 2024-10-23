@@ -122,6 +122,8 @@ PROJECT_MULTI_LABEL_SWEEP_REGRESSION = "sweep-road-surface-classification-multi-
 PROJECT_MULTI_LABEL_SWEEP_CORN = "sweep-road-surface-classification-multi-label-CORN"
 PROJECT_MULTI_LABEL_SWEEP_CLM = "sweep-road-surface-classification-multi-label-CLM"
 
+PROJECT_FINAL = "road-surface-classification-hierarchical-final"
+
 
 # model names
 EFFICIENTNET = "efficientNetV2SLogsoftmax"
