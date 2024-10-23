@@ -315,7 +315,7 @@ def create_train_validation_datasets(
                                           head,
                                           selected_classes=selected_classes)
     # surface or smoothness for surface type if level is not flatten
-    if level == const.ASPHALT:
+    elif level == const.ASPHALT:
         data_path = os.path.join(data_path, 'asphalt')
         complete_dataset = PartialImageFolder(
             data_path,
