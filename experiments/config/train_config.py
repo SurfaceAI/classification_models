@@ -332,8 +332,8 @@ vgg16_sweep_params = {
 vgg16_flatten = {
     **global_config.global_config,
     **default_params,
-    "project": const.PROJECT_MULTI_LABEL_FIXED,
-    "name": "flatten_model",
+    "project": const.PROJECT_FINAL,
+    "name": "fine_flatten",
     "level": const.FLATTEN,
     "model": const.VGG16,
     "head": const.CLASSIFICATION,
@@ -377,7 +377,7 @@ C_CNN = {
     "model": const.CCNN,
     "head": const.CLASSIFICATION, #'regression', 'classification', 'obd', 'clm'
     "hierarchy_method": const.MODELSTRUCTURE, #'use_ground_truth', 'None',
-    "lw_modifier": False,
+    "lw_modifier": True,
     #"lr_scheduler": True,
 }
 

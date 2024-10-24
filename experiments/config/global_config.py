@@ -51,5 +51,5 @@ global_config = dict(
     valid_batch_size = 64,
     checkpoint_top_n = 1,
     early_stop_thresh = 3, #constants.EARLY_STOPPING_DEFAULT,
-    save_state = True,
+    save_state = False,
 )   
