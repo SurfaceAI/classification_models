@@ -10,7 +10,7 @@ default_params = {
     #"max_class_size": None,
     "lr_scheduler": True,
     "freeze_convs": False,
-    "hierarchy_method": const.HIERARCHICAL, 
+    "hierarchy_method": const.CC, 
     "gamma": 0.5,
 }
 
@@ -77,7 +77,7 @@ default_search_params = {
 vgg16_surface_params = {
     **global_config.global_config,
     **default_params,
-    "project": const.PROJECT_MULTI_LABEL_FIXED,
+    "project": const.PROJECT_FINAL,
     "name": "CC_coarse",
     "level": const.SURFACE,
     "model": const.VGG16,
@@ -94,15 +94,15 @@ vgg16_surface_params = {
 vgg16_quality_params = {
     **global_config.global_config,
     **default_params,
-    "project": const.PROJECT_MULTI_LABEL_FIXED,
-    "name": "CC_fine_clm",
+    "project": const.PROJECT_FINAL,
+    "name": "CC_fine",
     "level": const.SMOOTHNESS,
     "model": const.VGG16,
-    "learning_rate": 0.01,
+    "learning_rate": 0.00056,
     #"dataset": "V1_0/train",
     #"metadata": "V1_0/metadata",
     #"train_valid_split_list": "train_valid_split.csv",
-    "head": const.CLM,
+    "head": const.CLASSIFICATION,
     "hierarchy_method": const.CC,
     "eval_metric": const.EVAL_METRIC_ALL,
     # "gpu_kernel": 0,
