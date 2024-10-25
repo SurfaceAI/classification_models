@@ -154,7 +154,7 @@ class GH_CNN(nn.Module):
         )
                 
     @ staticmethod
-    def get_class_probabilies(x):
+    def get_class_probabilities(x):
          return nn.functional.softmax(x, dim=1)
      
     def crop(self, x, dimension, start, end):

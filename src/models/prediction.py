@@ -171,10 +171,10 @@ def predict(model, data, batch_size, head, level, device, save_features):
             if level == const.HIERARCHICAL:
                 coarse_batch_outputs, fine_batch_outputs = model(batch_inputs)
                 
-                coarse_batch_outputs = model.get_class_probabilies(coarse_batch_outputs)
+                coarse_batch_outputs = model.get_class_probabilities(coarse_batch_outputs)
                 
                 if head == const.CLASSIFICATION:
-                    fine_batch_outputs = model.get_class_probabilies(fine_batch_outputs)
+                    fine_batch_outputs = model.get_class_probabilities(fine_batch_outputs)
                 elif head == const.REGRESSION:
                     fine_batch_outputs = fine_batch_outputs.flatten()
                 else:
@@ -188,7 +188,7 @@ def predict(model, data, batch_size, head, level, device, save_features):
                 batch_outputs = model(batch_inputs)
                 
                 if head == const.CLASSIFICATION:
-                    batch_outputs = model.get_class_probabilies(batch_outputs) 
+                    batch_outputs = model.get_class_probabilities(batch_outputs) 
                 elif head == const.REGRESSION:
                     batch_outputs = batch_outputs.flatten()
                 else:

@@ -2,7 +2,7 @@ from src import constants as const
 from experiments.config  import global_config
 
 default_params = {
-    "batch_size": 64, #16,  # 48
+    "batch_size": 16, #16,  # 48
     "epochs": 12,
     #"learning_rate": 0.01,
     "optimizer": const.OPTI_ADAM,
@@ -339,7 +339,7 @@ vgg16_flatten = {
     "model": const.VGG16Test,
     "head": const.CLASSIFICATION,
     "eval_metric": const.EVAL_METRIC_ALL,
-    "learning_rate": 0.001,
+    "learning_rate": 0.01,
     "hierarchy_method": const.FLATTEN,
     #"fc_neurons": 512,
 }

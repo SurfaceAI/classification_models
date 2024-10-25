@@ -124,7 +124,7 @@ class B_CNN(nn.Module):
         return layers
     
     @ staticmethod
-    def get_class_probabilies(x):
+    def get_class_probabilities(x):
          return nn.functional.softmax(x, dim=1)
     
     def forward(self, inputs):
@@ -135,7 +135,7 @@ class B_CNN(nn.Module):
         
         flat = x.reshape(x.size(0), -1) #[128, 262144])
         coarse_output = self.coarse_classifier(flat)
-        coarse_probs = self.get_class_probabilies(coarse_output)
+        coarse_probs = self.get_class_probabilities(coarse_output)
         
         x = self.features[17:](x) # [128, 512, 16, 16])
         

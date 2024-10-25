@@ -184,7 +184,7 @@ class C_CNN(nn.Module):
 
         
     @ staticmethod
-    def get_class_probabilies(x):
+    def get_class_probabilities(x):
          return nn.functional.softmax(x, dim=1)
     
     def forward(self, inputs):
@@ -197,7 +197,7 @@ class C_CNN(nn.Module):
         x_coarse = self.block5_coarse(x)
         coarse_flat = x_coarse.reshape(x_coarse.size(0), -1) #([128, 32768])
         coarse_output = self.coarse_classifier(coarse_flat)
-        coarse_probs = self.get_class_probabilies(coarse_output)
+        coarse_probs = self.get_class_probabilities(coarse_output)
         
         x_fine = self.block5_fine(x)
         fine_flat = x_fine.reshape(x_fine.size(0), -1)  

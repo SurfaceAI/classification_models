@@ -496,6 +496,10 @@ def train(
                                                     'train_mse', 'train_mae', 'val_loss', 'val_correct', 
                                                     'val_correct_one_off', 'val_mse', 'val_mae'])
 
+
+    trainable_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
+
+
     for epoch in range(epochs):
         #This is the case where we train only one model, e.g. for asphalt or the surface model only
         if hierarchy_method == const.FLATTEN:
@@ -960,7 +964,7 @@ def train_epoch(model, dataloader, optimizer, device, eval_metric, head, hierarc
                 elif head == 'corn':
                     predictions = corn_label_from_logits(outputs.long())    
                 else:
-                    probs = model.get_class_probabilies(outputs)
+                    probs = model.get_class_probabilities(outputs)
                     predictions = torch.argmax(probs, dim=1)
                 eval_metric_value += (predictions == labels).sum().item()
 
@@ -1072,7 +1076,7 @@ def validate_epoch(model, dataloader, device, eval_metric, head, hierarchy_metho
                     elif head == 'corn':
                         predictions = corn_label_from_logits(outputs.long())    
                     else:
-                        probs = model.get_class_probabilies(outputs)
+                        probs = model.get_class_probabilities(outputs)
                         predictions = torch.argmax(probs, dim=1)
                     eval_metric_value += (predictions == labels).sum().item()
 
@@ -1189,7 +1193,7 @@ def train_epoch_hierarchical(model, dataloader, optimizer, device, head, hierarc
             #added calculating the loss_v (greatest error on a prediction where coarse and subclass prediction dont match)
             else:
                 try:
-                    fine_probs = model.get_class_probabilies(fine_output)
+                    fine_probs = model.get_class_probabilities(fine_output)
                     fine_predictions = torch.argmax(fine_probs, dim=1)
                     mismatched_indices = (coarse_predictions != helper.parent[fine_predictions])
                     max_mismatched_coarse_loss = coarse_loss[mismatched_indices].max()
@@ -1220,14 +1224,14 @@ def train_epoch_hierarchical(model, dataloader, optimizer, device, head, hierarc
         else:
             fine_loss_total += fine_loss.item()
     
-        coarse_probs = model.get_class_probabilies(coarse_output)
+        coarse_probs = model.get_class_probabilities(coarse_output)
         coarse_predictions = torch.argmax(coarse_probs, dim=1)
         coarse_correct += (coarse_predictions == coarse_labels).sum().item()
 
         # TODO: metric as function, metric_name as input argument
 
         if head == const.CLASSIFICATION or head == const.CLASSIFICATION_QWK:
-            fine_output = model.get_class_probabilies(fine_output)
+            fine_output = model.get_class_probabilities(fine_output)
             
         (fine_correct_item, 
         fine_correct_one_off_item, 
@@ -1297,7 +1301,7 @@ def validate_epoch_hierarchical(model, dataloader, device, head, hierarchy_metho
         coarse_output, fine_output = model.forward(model_inputs)
         
         coarse_loss = coarse_criterion(coarse_output, coarse_labels)
-        val_coarse_probs = model.get_class_probabilies(coarse_output)
+        val_coarse_probs = model.get_class_probabilities(coarse_output)
         val_coarse_predictions = torch.argmax(val_coarse_probs, dim=1)
         val_coarse_correct += (val_coarse_predictions == coarse_labels).sum().item()
               
@@ -1316,7 +1320,7 @@ def validate_epoch_hierarchical(model, dataloader, device, head, hierarchy_metho
             val_fine_loss_total += fine_loss.item()
 
         if head == const.CLASSIFICATION or head == const.CLASSIFICATION_QWK:
-            fine_output = model.get_class_probabilies(fine_output)
+            fine_output = model.get_class_probabilities(fine_output)
             
         (val_fine_correct_item, 
         val_fine_correct_one_off_item, 

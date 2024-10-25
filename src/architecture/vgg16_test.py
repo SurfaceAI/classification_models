@@ -8,12 +8,11 @@ from multi_label.QWK import QWK_Loss
 
 
 class VGG_16_test(nn.Module):
-    def __init__(self, num_classes, head, hierarchy_method,):
+    def __init__(self, num_classes, head):
         super(VGG_16_test, self).__init__()
         
         self.num_classes = num_classes
         self.head = head     
-        self.hierarchy_method = hierarchy_method
            
         #Load pretrained weights
         model = models.vgg16(weights='VGG16_Weights.IMAGENET1K_V1')
@@ -38,13 +37,13 @@ class VGG_16_test(nn.Module):
             )
             
             if head == 'classification':
-                self.fine_criterion = nn.CrossEntropyLoss
+                self.criterion = nn.CrossEntropyLoss
             elif head == 'classification_qwk':
-                self.fine_criterion = QWK_Loss
+                self.criterion = QWK_Loss
             
     
     @ staticmethod
-    def get_class_probabilies(x):
+    def get_class_probabilities(x):
          return nn.functional.softmax(x, dim=1)
     
     def forward(self, inputs):

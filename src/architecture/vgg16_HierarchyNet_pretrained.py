@@ -134,7 +134,7 @@ class H_NET(nn.Module):
         return layers
     
     @ staticmethod
-    def get_class_probabilies(x):
+    def get_class_probabilities(x):
          return nn.functional.softmax(x, dim=1)
      
     def crop(self, x, dimension, start, end):
@@ -152,7 +152,7 @@ class H_NET(nn.Module):
         flat = x.reshape(x.size(0), -1) 
         
         coarse_output = self.coarse_classifier(flat)
-        coarse_probs = self.get_class_probabilies(coarse_output)
+        coarse_probs = self.get_class_probabilities(coarse_output)
         
         #cropping coarse outputs
         if self.head == 'clm' or self.head == 'clm_qwk':
