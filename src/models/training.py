@@ -610,6 +610,7 @@ def train(
                     "eval/mse/fine": val_mse,
                     "eval/mae/fine": val_mae,
                     "eval/qwk/fine": val_qwk,
+                    "trainable_params":trainable_params,
                     }
                 )
                 
@@ -910,8 +911,7 @@ def train_epoch(model, dataloader, optimizer, device, eval_metric, head, hierarc
     # second_moments = []
 
     for batch_idx, (inputs, labels) in enumerate(dataloader):
-        #
-        helper.multi_imshow(inputs, labels)
+        #helper.multi_imshow(inputs, labels)
         
 
         inputs, labels = inputs.to(device), labels.to(device)

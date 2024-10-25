@@ -2,7 +2,7 @@ from src import constants as const
 from experiments.config  import global_config
 
 default_params = {
-    "batch_size": 16, #16,  # 48
+    "batch_size": 64, #16,  # 48
     "epochs": 12,
     #"learning_rate": 0.01,
     "optimizer": const.OPTI_ADAM,
@@ -10,7 +10,7 @@ default_params = {
     #"max_class_size": None,
     "lr_scheduler": False,
     "freeze_convs": False,
-    "hierarchy_method": const.CC, 
+    "hierarchy_method": const.FLATTEN, 
     "gamma": 0.5,
 }
 
@@ -333,12 +333,13 @@ vgg16_flatten = {
     **global_config.global_config,
     **default_params,
     "project": const.PROJECT_FINAL,
+    "optimizer": const.OPTI_ADAM,
     "name": "fine_flatten",
     "level": const.FLATTEN,
     "model": const.VGG16,
     "head": const.CLASSIFICATION,
     "eval_metric": const.EVAL_METRIC_ALL,
-    "learning_rate": 0.00056,
+    "learning_rate": 0.001,
     "hierarchy_method": const.FLATTEN,
     #"fc_neurons": 512,
 }
