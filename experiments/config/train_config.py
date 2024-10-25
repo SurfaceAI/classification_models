@@ -7,6 +7,7 @@ default_params = {
     #"learning_rate": 0.01,
     "optimizer": const.OPTI_ADAM,
     "eval_metric": const.EVAL_METRIC_ALL,
+    'is_regression': False,
     #"max_class_size": None,
     "lr_scheduler": False,
     "freeze_convs": False,
@@ -73,6 +74,22 @@ default_search_params = {
 #     "level": const.FLATTEN,
 #     "model": const.RATEKE,
 # }
+
+vgg16_flatten = {
+    **global_config.global_config,
+    **default_params,
+    "project": const.PROJECT_FINAL,
+    "optimizer": const.OPTI_ADAM,
+    "name": "fine_flatten",
+    "level": const.FLATTEN,
+    "model": const.VGG16,
+    "head": const.CLASSIFICATION,
+    "eval_metric": const.EVAL_METRIC_ALL,
+    "learning_rate": 0.01,
+    "hierarchy_method": const.FLATTEN,
+    #"fc_neurons": 512,
+}
+
 
 vgg16_surface_params = {
     **global_config.global_config,
@@ -328,21 +345,6 @@ vgg16_sweep_params = {
 
 # }
 
-
-vgg16_flatten = {
-    **global_config.global_config,
-    **default_params,
-    "project": const.PROJECT_FINAL,
-    "optimizer": const.OPTI_ADAM,
-    "name": "fine_flatten",
-    "level": const.FLATTEN,
-    "model": const.VGG16Test,
-    "head": const.CLASSIFICATION,
-    "eval_metric": const.EVAL_METRIC_ALL,
-    "learning_rate": 0.01,
-    "hierarchy_method": const.FLATTEN,
-    #"fc_neurons": 512,
-}
 
 B_CNN = {
     **global_config.global_config,

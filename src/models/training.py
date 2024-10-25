@@ -566,26 +566,26 @@ def train(
             # Use pd.concat to append the new row to the existing DataFrame
             all_epoch_metrics_df = pd.concat([all_epoch_metrics_df, epoch_data], ignore_index=True)
                         
-        else:
-            train_loss, train_metric_value = train_epoch(
-                model,
-                trainloader,
-                optimizer,
-                device,
-                eval_metric,
-                head,
-                hierarchy_method,
-                wandb_on=wandb_on,
-            )
+        # else:
+        #     train_loss, train_metric_value = train_epoch(
+        #         model,
+        #         trainloader,
+        #         optimizer,
+        #         device,
+        #         eval_metric,
+        #         head,
+        #         hierarchy_method,
+        #         wandb_on=wandb_on,
+        #     )
 
-            val_loss, eval_metric_value = validate_epoch(
-                model,
-                validloader,
-                device,
-                eval_metric,
-                head,
-                hierarchy_method,
-            )
+        #     val_loss, eval_metric_value = validate_epoch(
+        #         model,
+        #         validloader,
+        #         device,
+        #         eval_metric,
+        #         head,
+        #         hierarchy_method,
+        #     )
         
         if lr_scheduler:
             scheduler.step()
@@ -635,25 +635,25 @@ def train(
             elif hierarchy_method == const.CC:
                 pass
             
-            else:
-                wandb.log(
-                    {
-                        "epoch": epoch + 1,
-                        "train/loss": train_loss,
-                        f"train/{eval_metric}": train_metric_value,
-                        "eval/loss": val_loss,
-                        f"eval/{eval_metric}": eval_metric_value,
-                    }
-                )
+            # else:
+            #     wandb.log(
+            #         {
+            #             "epoch": epoch + 1,
+            #             "train/loss": train_loss,
+            #             f"train/{eval_metric}": train_metric_value,
+            #             "eval/loss": val_loss,
+            #             f"eval/{eval_metric}": eval_metric_value,
+            #         }
+            #     )
                 
-                print(
-                    f"Epoch {epoch+1:>{len(str(epochs))}}/{epochs}.. ",
-                    f"Train loss: {train_loss:.3f}.. ",
-                    f"Test loss: {val_loss:.3f}.. ",
-                    f"Train {eval_metric}: {train_metric_value:.3f}.. ",
-                    f"Test {eval_metric}: {eval_metric_value:.3f}",
-                    f"Learning Rate: {scheduler.get_last_lr()[0]}"
-                    )
+                # print(
+                #     f"Epoch {epoch+1:>{len(str(epochs))}}/{epochs}.. ",
+                #     f"Train loss: {train_loss:.3f}.. ",
+                #     f"Test loss: {val_loss:.3f}.. ",
+                #     f"Train {eval_metric}: {train_metric_value:.3f}.. ",
+                #     f"Test {eval_metric}: {eval_metric_value:.3f}",
+                #     f"Learning Rate: {scheduler.get_last_lr()[0]}"
+                #     )
                 
     print("Done.")
 
@@ -666,11 +666,7 @@ def train(
         #     print(f"Early stopped training at epoch {epoch}")
         #     break
 
-    print("Done.")
-    if hierarchy_method == const.CC:
-        return model, all_epoch_metrics_df
-    else:
-        return model
+
 
 def train_hierarchical(
     model,
@@ -943,69 +939,68 @@ def train_epoch(model, dataloader, optimizer, device, eval_metric, head, hierarc
         running_loss += loss.item()
         
         #I put these together as this is what I need to compare the results with the hierarchical models
-        if eval_metric == const.EVAL_METRIC_ALL:
-            correct_item, correct_one_off_item, mse_item, mae_item, qwk_item = helper.compute_all_metrics(outputs, labels, head, model)
-            correct += correct_item
-            correct_one_off += correct_one_off_item
-            mse += mse_item
-            mae += mae_item
-            qwk += qwk_item
+        #if eval_metric == const.EVAL_METRIC_ALL:
+        correct_item, correct_one_off_item, mse_item, mae_item, qwk_item = helper.compute_all_metrics(outputs, labels, head, model)
+        correct += correct_item
+        correct_one_off += correct_one_off_item
+        mse += mse_item
+        mae += mae_item
+        qwk += qwk_item
         
-            # if batch_idx == 1:
-            #     break
+        if batch_idx == 1:
+            break
 
         # TODO: metric as function, metric_name as input argument
-        else:
-            if eval_metric == const.EVAL_METRIC_ACCURACY:
-                if head == 'regression': # compare with is_regression for generalization?
-                    predictions = outputs.round()
-                elif head == 'clm':
-                    predictions = torch.argmax(outputs, dim=1)
-                elif head == 'corn':
-                    predictions = corn_label_from_logits(outputs.long())    
-                else:
-                    probs = model.get_class_probabilities(outputs)
-                    predictions = torch.argmax(probs, dim=1)
-                eval_metric_value += (predictions == labels).sum().item()
+        # else:
+        #     if eval_metric == const.EVAL_METRIC_ACCURACY:
+        #         if head == 'regression': # compare with is_regression for generalization?
+        #             predictions = outputs.round()
+        #         elif head == 'clm':
+        #             predictions = torch.argmax(outputs, dim=1)
+        #         elif head == 'corn':
+        #             predictions = corn_label_from_logits(outputs.long())    
+        #         else:
+        #             probs = model.get_class_probabilities(outputs)
+        #             predictions = torch.argmax(probs, dim=1)
+        #         eval_metric_value += (predictions == labels).sum().item()
 
-            elif eval_metric == const.EVAL_METRIC_MSE:
-                if not isinstance(criterion, nn.MSELoss): # compare with is_regression for generalization?
-                    raise ValueError(
-                        f"Criterion must be nn.MSELoss for eval_metric {eval_metric}"
-                    )
-                eval_metric_value = running_loss
-            else:
-                raise ValueError(f"Unknown eval_metric: {eval_metric}")
+        #     elif eval_metric == const.EVAL_METRIC_MSE:
+        #         if not isinstance(criterion, nn.MSELoss): # compare with is_regression for generalization?
+        #             raise ValueError(
+        #                 f"Criterion must be nn.MSELoss for eval_metric {eval_metric}"
+        #             )
+        #         eval_metric_value = running_loss
+        #     else:
+        #         raise ValueError(f"Unknown eval_metric: {eval_metric}")
             
             #break
             
             
-    if eval_metric == const.EVAL_METRIC_ALL:
-        if hierarchy_method == const.CC:           
-            
-            epoch_metrics_df = pd.DataFrame({
-                'correct': [correct],
-                'correct_one_off': [correct_one_off],
-                'mse': [mse],  #
-                'mae': [mae],  
-                'loss': [running_loss], 
-                'qwk': [qwk], #TODO: I added this but have to continue adding qwk in the other parts
-            }) 
-            return epoch_metrics_df
-        
-        else:
-            epoch_accuracy = 100 * correct / len(dataloader.sampler)
-            epoch_accuracy_one_off = 100 * correct_one_off / len(dataloader.sampler)
-            epoch_mse = mse / len(dataloader.sampler)
-            epoch_mae = mae / len(dataloader.sampler)
-            epoch_loss = running_loss / len(dataloader.sampler)
-            epoch_qwk = qwk / len(dataloader)
-
-            return epoch_loss, epoch_accuracy, epoch_accuracy_one_off, epoch_mse, epoch_mae, epoch_qwk
+    #if eval_metric == const.EVAL_METRIC_ALL:
+    if hierarchy_method == const.CC:           
+        epoch_metrics_df = pd.DataFrame({
+            'correct': [correct],
+            'correct_one_off': [correct_one_off],
+            'mse': [mse],  #
+            'mae': [mae],  
+            'loss': [running_loss], 
+            'qwk': [qwk], #TODO: I added this but have to continue adding qwk in the other parts
+        }) 
+        return epoch_metrics_df
     
     else:
-        return running_loss / len(dataloader.sampler), eval_metric_value / len(
-            dataloader.sampler), 
+        epoch_accuracy = 100 * correct / len(dataloader.sampler)
+        epoch_accuracy_one_off = 100 * correct_one_off / len(dataloader.sampler)
+        epoch_mse = mse / len(dataloader.sampler)
+        epoch_mae = mae / len(dataloader.sampler)
+        epoch_loss = running_loss / len(dataloader.sampler)
+        epoch_qwk = qwk / len(dataloader)
+
+        return epoch_loss, epoch_accuracy, epoch_accuracy_one_off, epoch_mse, epoch_mae, epoch_qwk
+
+    # else:
+    #     return running_loss / len(dataloader.sampler), eval_metric_value / len(
+    #         dataloader.sampler), 
     #gradients, first_moments, second_moments
 
 
@@ -1062,8 +1057,8 @@ def validate_epoch(model, dataloader, device, eval_metric, head, hierarchy_metho
                 eval_mae += eval_mae_item
                 eval_qwk += eval_qwk_item
                 
-                # if batch_idx == 1:
-                #     break
+                if batch_idx == 1:
+                    break
                 
                 #break
                 
@@ -1378,6 +1373,7 @@ def extract_levels(level, selected_classes):
     to_train_list = []
     if level == const.FLATTEN or level == const.HIERARCHICAL:
         to_train_list.append({"level": level, "selected_classes": selected_classes})
+        
     elif level == const.SURFACE:
         to_train_list.append(
             {"level": level, "selected_classes": list(selected_classes.keys())}
