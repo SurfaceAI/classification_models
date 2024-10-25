@@ -597,20 +597,19 @@ def train(
             if eval_metric == const.EVAL_METRIC_ALL and hierarchy_method == const.FLATTEN:
                 
                 wandb.log(
-                    {
-                        "epoch": epoch + 1,
-                        "train/fine/loss": train_loss,
-                        "train/accuracy/fine": accuracy,
-                        "train/accuracy/fine_1_off": accuracy_one_off,
-                        "train/mse/fine": mse,
-                        "train/mae/fine": mae, #
-                        "train/qwk/fine": qwk,
-                        "eval/fine/loss": val_loss,
-                        "eval/accuracy/fine": val_accuracy,
-                        "eval/accuracy/fine_1_off":val_accuracy_one_off,
-                        "eval/mse/fine": val_mse,
-                        "eval/mae/fine": val_mae,
-                        "eval/qwk/fine": val_qwk,
+                    {"epoch": epoch + 1,
+                    "train/fine/loss": train_loss,
+                    "train/accuracy/fine": accuracy,
+                    "train/accuracy/fine_1_off": accuracy_one_off,
+                    "train/mse/fine": mse,
+                    "train/mae/fine": mae, #
+                    "train/qwk/fine": qwk,
+                    "eval/fine/loss": val_loss,
+                    "eval/accuracy/fine": val_accuracy,
+                    "eval/accuracy/fine_1_off":val_accuracy_one_off,
+                    "eval/mse/fine": val_mse,
+                    "eval/mae/fine": val_mae,
+                    "eval/qwk/fine": val_qwk,
                     }
                 )
                 
@@ -650,7 +649,14 @@ def train(
                     f"Test {eval_metric}: {eval_metric_value:.3f}",
                     f"Learning Rate: {scheduler.get_last_lr()[0]}"
                     )
+                
+    print("Done.")
 
+    if hierarchy_method == const.CC:
+        return model, all_epoch_metrics_df
+
+    else:
+        return model
         # if early_stop:
         #     print(f"Early stopped training at epoch {epoch}")
         #     break
@@ -904,7 +910,9 @@ def train_epoch(model, dataloader, optimizer, device, eval_metric, head, hierarc
     # second_moments = []
 
     for batch_idx, (inputs, labels) in enumerate(dataloader):
-        # helper.multi_imshow(inputs, labels)
+        #
+        helper.multi_imshow(inputs, labels)
+        
 
         inputs, labels = inputs.to(device), labels.to(device)
 
@@ -939,7 +947,7 @@ def train_epoch(model, dataloader, optimizer, device, eval_metric, head, hierarc
             mae += mae_item
             qwk += qwk_item
         
-            # if batch_idx == 0:
+            # if batch_idx == 1:
             #     break
 
         # TODO: metric as function, metric_name as input argument
@@ -1050,7 +1058,7 @@ def validate_epoch(model, dataloader, device, eval_metric, head, hierarchy_metho
                 eval_mae += eval_mae_item
                 eval_qwk += eval_qwk_item
                 
-                # if batch_idx == 0:
+                # if batch_idx == 1:
                 #     break
                 
                 #break
