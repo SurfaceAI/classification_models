@@ -656,8 +656,10 @@ def train(
         #     break
 
     print("Done.")
-
-    return model, all_epoch_metrics_df
+    if hierarchy_method == const.CC:
+        return model, all_epoch_metrics_df
+    else:
+        return model
 
 def train_hierarchical(
     model,

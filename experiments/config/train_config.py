@@ -8,7 +8,7 @@ default_params = {
     "optimizer": const.OPTI_ADAM,
     "eval_metric": const.EVAL_METRIC_ALL,
     #"max_class_size": None,
-    "lr_scheduler": True,
+    "lr_scheduler": False,
     "freeze_convs": False,
     "hierarchy_method": const.CC, 
     "gamma": 0.5,
