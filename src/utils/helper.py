@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 import torch
 from torch import optim
 from src import constants as const
-from src.architecture import efficientnet, vgg16, vgg16_C_CNN_pretrained, vgg16_B_CNN_pretrained, vgg16_GH_CNN_pretrained, vgg16_HierarchyNet_pretrained
+from src.architecture import efficientnet, vgg16, vgg16_C_CNN_pretrained, vgg16_B_CNN_pretrained, vgg16_GH_CNN_pretrained, vgg16_HierarchyNet_pretrained, vgg16_test
 import json
 import argparse
 from matplotlib.lines import Line2D
@@ -35,6 +35,7 @@ def string_to_object(string):
         const.BCNN: vgg16_B_CNN_pretrained.B_CNN,
         const.HNET: vgg16_HierarchyNet_pretrained.H_NET,
         const.GHCNN: vgg16_GH_CNN_pretrained.GH_CNN,
+        const.VGG16Test: vgg16_test.VGG_16_test,
 
     }
 

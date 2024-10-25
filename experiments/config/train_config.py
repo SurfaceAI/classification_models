@@ -336,7 +336,7 @@ vgg16_flatten = {
     "optimizer": const.OPTI_ADAM,
     "name": "fine_flatten",
     "level": const.FLATTEN,
-    "model": const.VGG16,
+    "model": const.VGG16Test,
     "head": const.CLASSIFICATION,
     "eval_metric": const.EVAL_METRIC_ALL,
     "learning_rate": 0.001,

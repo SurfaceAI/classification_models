@@ -129,6 +129,7 @@ PROJECT_FINAL = "road-surface-classification-hierarchical-final"
 EFFICIENTNET = "efficientNetV2SLogsoftmax"
 EFFNET_LINEAR = "efficientNetV2SLinear"
 VGG16 = "vgg16"
+VGG16Test = "vgg16_test"
 RATEKE = "rateke"
 VGG16_CLM = "vgg16_CLM"
 # temporay onla
