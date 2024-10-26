@@ -3,16 +3,15 @@ from experiments.config  import global_config
 
 default_params = {
     "batch_size": 16, #16,  # 48
-    "epochs": 2,
+    "epochs": 12,
     #"learning_rate": 0.01,
     "optimizer": const.OPTI_ADAM,
     "eval_metric": const.EVAL_METRIC_ALL,
     'is_regression': False,
     #"max_class_size": None,
-    "lr_scheduler": False,
+    "lr_scheduler": True,
     "freeze_convs": False,
-    "hierarchy_method": const.FLATTEN, 
-    "gamma": 0.5,
+    "gamma": 0.1,
 }
 
 default_search_params = {
@@ -115,7 +114,7 @@ vgg16_quality_params = {
     "name": "CC_fine",
     "level": const.SMOOTHNESS,
     "model": const.VGG16,
-    "learning_rate": 0.00056,
+    "learning_rate": 0.00001,
     #"dataset": "V1_0/train",
     #"metadata": "V1_0/metadata",
     #"train_valid_split_list": "train_valid_split.csv",
@@ -351,15 +350,15 @@ B_CNN = {
     **default_params,
     #"batch_size": 64,
     #"epochs": 12,
-    "learning_rate": 0.00001,
+    "learning_rate": 0.00005,
     "optimizer": const.OPTI_ADAM,
     "coarse_eval_metric": const.EVAL_METRIC_ALL,
     "fine_eval_metric": const.EVAL_METRIC_ALL,
     "project": const.PROJECT_FINAL,
-    "name": "B_CNN_classification",
+    "name": "B_CNN_CORN",
     "level": const.HIERARCHICAL,
     "model": const.BCNN,
-    "head": const.CLASSIFICATION, #'regression', 'classification', 'corn', 'clm'
+    "head": const.CORN, #'regression', 'classification', 'corn', 'clm'
     "hierarchy_method": const.MODELSTRUCTURE, #'use_ground_truth', 'use_condition_layer', 'b_cnn'
     "lw_modifier": True,
     #"lr_scheduler": True,
@@ -370,15 +369,15 @@ B_CNN = {
 C_CNN = {
     **global_config.global_config,
     **default_params,
-    "learning_rate": 0.00001,
+    "learning_rate": 0.00005,
     "optimizer": const.OPTI_ADAM,
     "coarse_eval_metric": const.EVAL_METRIC_ALL,
     "fine_eval_metric": const.EVAL_METRIC_ALL,
     "project": const.PROJECT_FINAL,
-    "name": "C_CNN_classification",
+    "name": "C_CNN_CORN",
     "level": const.HIERARCHICAL,
     "model": const.CCNN,
-    "head": const.CLASSIFICATION, #'regression', 'classification', 'obd', 'clm'
+    "head": const.CORN, #'regression', 'classification', 'obd', 'clm'
     "hierarchy_method": const.MODELSTRUCTURE, #'use_ground_truth', 'None',
     "lw_modifier": True,
     #"lr_scheduler": True,
@@ -389,15 +388,15 @@ H_NET = {
     **default_params,
     #"batch_size": 64,
     #"epochs": 12,
-    "learning_rate": 0.00001,
+    "learning_rate": 0.00005,
     "optimizer": const.OPTI_ADAM,
     "coarse_eval_metric": const.EVAL_METRIC_ALL,
     "fine_eval_metric": const.EVAL_METRIC_ALL,
     "project": const.PROJECT_FINAL,
-    "name": "HiearchyNet_classification",
+    "name": "HiearchyNet_CORN",
     "level": const.HIERARCHICAL,
     "model": const.HNET,
-    "head": const.CLASSIFICATION, #'regression', 'classification', 'obd', 'clm'
+    "head": const.CORN, #'regression', 'classification', 'obd', 'clm'
     "hierarchy_method": const.MODELSTRUCTURE, #'use_ground_truth', 'None',
     "lw_modifier": True,
     #"lr_scheduler": False,
@@ -408,15 +407,15 @@ GH_CNN = {
     **default_params,
     #"batch_size": 64,
     #"epochs": 12,
-    "learning_rate": 0.00001,
+    "learning_rate": 0.00005,
     "optimizer": const.OPTI_ADAM,
     "coarse_eval_metric": const.EVAL_METRIC_ALL,
     "fine_eval_metric": const.EVAL_METRIC_ALL,
     "project": const.PROJECT_FINAL,
-    "name": "GH_CNN_classification",
+    "name": "GH_CNN_CORN",
     "level": const.HIERARCHICAL,
     "model": const.GHCNN,
-    "head": const.CLASSIFICATION, #'regression', 'classification', 'corn', 'clm', 'clm_kappa', 'classification_kappa',
+    "head": const.CORN, #'regression', 'classification', 'corn', 'clm', 'clm_kappa', 'classification_kappa',
     "hierarchy_method": const.MODELSTRUCTURE, #'use_ground_truth', 'use_condition_layer', 'b_cnn'
     "lw_modifier": True,
     #"lr_scheduler": True,    
@@ -430,6 +429,7 @@ B_CNN_sweep_params = {
     **default_params,
     'model': const.BCNN,
     "method": "bayes",
+    "learning_rate": 0.00001,
     "metric": {"name": "eval/accuracy/fine", "goal": "maximize"},
     "search_params": {**default_search_params,                 
                      },
