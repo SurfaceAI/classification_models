@@ -503,7 +503,7 @@ def train(
     for epoch in range(epochs):
         #This is the case where we train only one model, e.g. for asphalt or the surface model only
         if hierarchy_method == const.FLATTEN:
-            train_loss, accuracy, accuracy_one_off, mse, mae, qwk  = train_epoch(
+            (train_loss, accuracy, accuracy_one_off, mse, mae, qwk)  = train_epoch(
                 model,
                 trainloader,
                 optimizer,
@@ -514,7 +514,7 @@ def train(
                 wandb_on=wandb_on,
             )
 
-            val_loss, val_accuracy, val_accuracy_one_off, val_mse, val_mae, val_qwk  = validate_epoch(
+            (val_loss, val_accuracy, val_accuracy_one_off, val_mse, val_mae, val_qwk)  = validate_epoch(
                 model,
                 validloader,
                 device,
@@ -634,7 +634,6 @@ def train(
                 
             elif hierarchy_method == const.CC:
                 pass
-            
             # else:
             #     wandb.log(
             #         {
@@ -947,8 +946,8 @@ def train_epoch(model, dataloader, optimizer, device, eval_metric, head, hierarc
         mae += mae_item
         qwk += qwk_item
         
-        if batch_idx == 1:
-            break
+        # if batch_idx == 1:
+        #     break
 
         # TODO: metric as function, metric_name as input argument
         # else:
@@ -1057,8 +1056,8 @@ def validate_epoch(model, dataloader, device, eval_metric, head, hierarchy_metho
                 eval_mae += eval_mae_item
                 eval_qwk += eval_qwk_item
                 
-                if batch_idx == 1:
-                    break
+                # if batch_idx == 1:
+                #     break
                 
                 #break
                 
