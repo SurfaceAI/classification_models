@@ -261,7 +261,6 @@ def predict(model, data, batch_size, head, level, device, save_features):
                 
                 coarse_batch_outputs = model.get_class_probabilities(coarse_batch_outputs)
                 
-                if hierarchy_method == const.MODELSTRUCTURE
                 if head == const.CLASSIFICATION:
                     fine_batch_outputs = model.get_class_probabilities(fine_batch_outputs)
                 elif head == const.REGRESSION:

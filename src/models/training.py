@@ -67,9 +67,10 @@ def run_training(config, is_sweep=False, seed=None):
             if inner_config.get("hierarchy_method") == const.CC:
                 _, all_epoch_metrics_df, trainloader, validloader = _run_training(
                     project=project,
-                    name=inner_config.get("name"),
+                    name=inner_config.get("name") + f"_seed_{seed}",
                     config=helper.format_config(inner_config),
                     wandb_on=inner_config.get("wandb_on"),
+                    seed=seed
                 )
                 
                 all_epoch_metrics_df['level'] = t['level']
@@ -82,9 +83,10 @@ def run_training(config, is_sweep=False, seed=None):
             else:
                 _run_training(
                 project=project,
-                name=inner_config.get("name"),
+                name=inner_config.get("name") + f"_seed_{seed}",
                 config=helper.format_config(inner_config),
                 wandb_on=inner_config.get("wandb_on"),
+                seed=seed
             )               
             
             print(f"Level {t} trained.")
@@ -102,8 +104,13 @@ def run_training(config, is_sweep=False, seed=None):
 
 
 # main for sweep and single training
-def _run_training(project=None, name=None, config=None, wandb_on=True):
+def _run_training(project=None, name=None, config=None, wandb_on=True, seed=None):
     # TODO: config sweep ...
+    if config.get("seed") is None:
+        helper.set_seed(seed)
+    else:
+        helper.set_seed(config.get("seed"))
+        seed = config.get("seed")
     if wandb_on:
         run = wandb.init(project=project, name=name, config=config)
         config = wandb.config #TODO: why do we need this and why does it overwrite my loop of t loop
@@ -128,7 +135,7 @@ def _run_training(project=None, name=None, config=None, wandb_on=True):
         "-".join(level) + "-" + config.get("model") + "-" + config.get("head") + "-" + config.get('hierarchy_method') + "-" + start_time + id + ".pt"
     )
 
-    helper.set_seed(config.get("seed"))
+    #helper.set_seed(config.get("seed"))
 
     # TODO: testing gpu_kernel = None
     device = torch.device(
@@ -150,7 +157,7 @@ def _run_training(project=None, name=None, config=None, wandb_on=True):
         batch_size=config.get("batch_size"),
         valid_batch_size=config.get("valid_batch_size"),
         learning_rate=config.get("learning_rate"),
-        random_seed=config.get("seed"),
+        random_seed=seed,
         head=config.get("head"),
         hierarchy_method=config.get("hierarchy_method"),
         max_class_size=config.get("max_class_size"),
@@ -1235,7 +1242,7 @@ def train_epoch_hierarchical(model, dataloader, optimizer, device, head, hierarc
         fine_qwk += fine_qwk_item
         fine_hv += fine_hv_item
         
-        #break
+        break
     
     epoch_loss = running_loss /  len(dataloader.sampler)
     epoch_coarse_accuracy = 100 * coarse_correct / len(dataloader.sampler)
@@ -1324,7 +1331,7 @@ def validate_epoch_hierarchical(model, dataloader, device, head, hierarchy_metho
             val_fine_qwk += val_fine_qwk_item
             val_fine_hv += val_fine_hv_item
             
-            #break
+            break
 
     val_epoch_loss = val_running_loss /  len(dataloader.sampler)
     val_epoch_coarse_accuracy = 100 * val_coarse_correct / len(dataloader.sampler)
