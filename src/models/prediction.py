@@ -12,7 +12,7 @@ import time
 from src.utils import helper
 from src import constants
 from experiments.config import global_config
-from Archive.architectures import Rateke_CNN
+#from Archive.architectures import Rateke_CNN
 from PIL import Image
 import pandas as pd
 import argparse
@@ -169,10 +169,12 @@ def predict(model, data, batch_size, head, level, device, save_features):
             batch_inputs = batch_inputs.to(device)
 
             if level == const.HIERARCHICAL:
+                model_inputs = (batch_inputs, None)
                 coarse_batch_outputs, fine_batch_outputs = model(batch_inputs)
                 
                 coarse_batch_outputs = model.get_class_probabilities(coarse_batch_outputs)
                 
+                if hierarchy_method == const.MODELSTRUCTURE
                 if head == const.CLASSIFICATION:
                     fine_batch_outputs = model.get_class_probabilities(fine_batch_outputs)
                 elif head == const.REGRESSION:

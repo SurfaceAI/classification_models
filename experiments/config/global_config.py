@@ -46,7 +46,7 @@ global_config = dict(
         random_rotation=10,
     ),
     dataset = "V1_0/annotated",
-    seed = 42,
+    seed = "multi",
     validation_size = 0.2,
     valid_batch_size = 64,
     checkpoint_top_n = 1,
