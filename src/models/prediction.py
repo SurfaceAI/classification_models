@@ -20,6 +20,7 @@ import pickle
 from collections import OrderedDict
 from src import constants as const
 from coral_pytorch.dataset import corn_label_from_logits
+import torch.nn.functional as F
 
 
 
@@ -43,7 +44,8 @@ def run_dataset_predict_csv(config):
                           batch_size=config.get("batch_size"), 
                           device=device, 
                           level=config.get('level'), 
-                          save_features=config.get('save_features'))
+                          hierarchy_method=config.get('hierarchy_method'),
+                          save_features=config.get('save_features'),)
 
     # save features
     features_save_name = config.get("name") + '-' + config.get("dataset").replace('/', '_')
@@ -57,8 +59,7 @@ def run_dataset_predict_csv(config):
 
     print(f'Images {config.get("dataset")} predicted and saved: {saving_path}')
 
-def recursive_predict_csv(model_dict, model_root, data, batch_size, device, level, save_features, level_no=None, pre_cls=None):
-
+def recursive_predict_csv(model_dict, model_root, data, batch_size, device, level, hierarchy_method, save_features, level_no=None, pre_cls=None):
     # base:
     if model_dict is None:
         # predictions = None
@@ -68,7 +69,10 @@ def recursive_predict_csv(model_dict, model_root, data, batch_size, device, leve
         model, classes, head, level_no, valid_dataset = load_model(model_path=model_path, device=device)
         
     
-        pred_outputs, image_ids, features = predict(model, data, batch_size, head, level, device, save_features) 
+        if save_features:
+            pred_outputs, image_ids, features = predict(model, data, batch_size, head, level, device, save_features) 
+        else:
+            pred_outputs, image_ids = predict(model, data, batch_size, head, level, device, save_features) 
         
         # compare valid dataset 
         # [image_id in valid_dataset ]
@@ -83,9 +87,92 @@ def recursive_predict_csv(model_dict, model_root, data, batch_size, device, leve
             pred_fine_outputs = pred_outputs[1]
             
             coarse_classes = classes[0]
-            fine_classes = classes[1]
+            fine_classes = sorted(classes[1], key=lambda x: const.FLATTENED_INT[x]) #ordered according to integer values
             
             pred_coarse_classes = [coarse_classes[idx.item()] for idx in torch.argmax(pred_coarse_outputs, dim=1)]
+            
+            if hierarchy_method == const.MODELSTRUCTURE:
+                if head == const.CLASSIFICATION:
+                    pred_fine_classes = [fine_classes[idx.item()] for idx in torch.argmax(pred_fine_outputs, dim=1)]
+                elif head == const.REGRESSION:
+                    pred_fine_classes = [fine_classes[idx.item()] for idx in pred_fine_outputs.round().int()]
+                elif head == const.CLM:
+                    pred_fine_classes = [fine_classes[idx.item()] for idx in torch.argmax(pred_fine_outputs, dim=1)]
+                elif head == const.CORN:
+                    pred_fine_classes = [fine_classes[idx.item()] for idx in corn_label_from_logits(pred_fine_outputs)]
+                    
+                coarse_probs, _ = torch.max(pred_coarse_outputs, dim=1)
+                fine_probs, _ = torch.max(pred_fine_outputs, dim=1)
+
+                for image_id, coarse_pred, coarse_prob, fine_pred, fine_prob, is_vd, in zip(image_ids, pred_coarse_classes, coarse_probs.tolist(), pred_fine_classes, fine_probs.tolist(), is_valid_data):
+                    i = df.shape[0]
+                    df.loc[i, columns] = [float(image_id), coarse_pred, coarse_prob, fine_pred, fine_prob, is_vd]
+                   
+            elif hierarchy_method == const.GROUNDTRUTH:
+                pred_fine_classes=torch.zeros_like(batch_size) #empty vector of zeros len bs
+                masks = [
+                    (pred_coarse_classes == 'asphalt'),
+                    (pred_coarse_classes == 'concrete'), 
+                    (pred_coarse_classes == 'paving_stones'),  
+                    (pred_coarse_classes == 'sett'), 
+                    (pred_coarse_classes == 'unpaved')  
+                    ]
+                # Separate the fine outputs based on the head
+                if head == 'regression':
+                    fine_output_asphalt = pred_fine_outputs[:, 0:1].float()
+                    fine_output_concrete = pred_fine_outputs[:, 1:2].float()
+                    fine_output_paving_stones = pred_fine_outputs[:, 2:3].float()
+                    fine_output_sett = pred_fine_outputs[:, 3:4].float()
+                    fine_output_unpaved = pred_fine_outputs[:, 4:5].float()
+                
+                elif head == 'corn':
+                    fine_output_asphalt = pred_fine_outputs[:, 0:3]
+                    fine_output_concrete = pred_fine_outputs[:, 3:6]
+                    fine_output_paving_stones = pred_fine_outputs[:, 6:9]
+                    fine_output_sett = pred_fine_outputs[:, 9:11]
+                    fine_output_unpaved = pred_fine_outputs[:, 11:13]
+                    
+                else:
+                    fine_output_asphalt = pred_fine_outputs[:, 0:4]
+                    fine_output_concrete = pred_fine_outputs[:, 4:8]
+                    fine_output_paving_stones = pred_fine_outputs[:, 8:12]
+                    fine_output_sett = pred_fine_outputs[:, 12:15]
+                    fine_output_unpaved = pred_fine_outputs[:, 15:18]
+                    
+                asphalt_mask, concrete_mask, paving_stones_mask, sett_mask, unpaved_mask = masks
+
+                def make_prediction(output, labels, mask, category):
+                    
+                    if mask.sum().item() > 0:
+                        if head == 'clm' or head == const.CLASSIFICATION or head == const.CLASSIFICATION_QWK:
+                            preds = torch.argmax(output[mask], dim=1)
+                        elif head == 'regression':
+                            preds = output[mask].round().long()
+                        elif head == 'corn':
+                            preds = corn_label_from_logits(output[mask]).long()
+                            
+                        pred_fine_classes[mask] = helper.map_predictions_to_quality(preds, category)
+
+                make_prediction(fine_output_asphalt, asphalt_mask, "asphalt")
+                make_prediction(fine_output_concrete, concrete_mask, "concrete")
+                make_prediction(fine_output_paving_stones, paving_stones_mask, "paving_stones")
+                make_prediction(fine_output_sett, sett_mask, "sett")
+                make_prediction(fine_output_unpaved, unpaved_mask, "unpaved")
+                
+                for image_id, coarse_pred, coarse_prob, fine_pred, fine_prob, is_vd, in zip(image_ids, pred_coarse_classes, pred_fine_classes, is_valid_data):
+                    i = df.shape[0]
+                    df.loc[i, columns] = [float(image_id), coarse_pred, fine_pred, is_vd]
+          
+          
+        #classifier chain  
+        elif level == const.FLATTEN:
+            columns =  ['Image', 'Fine_Prediction', 'Fine_Probability', 'is_in_validation']
+            #todo: add regression
+            
+            coarse_classes = classes[0]
+            fine_classes = sorted(classes[1], key=lambda x: const.FLATTENED_INT[x]) #ordered according to integer values
+            
+            pred_classes = [coarse_classes[idx.item()] for idx in torch.argmax(pred_outputs, dim=1)]
             
             if head == const.CLASSIFICATION:
                 pred_fine_classes = [fine_classes[idx.item()] for idx in torch.argmax(pred_fine_outputs, dim=1)]
@@ -96,15 +183,12 @@ def recursive_predict_csv(model_dict, model_root, data, batch_size, device, leve
             elif head == const.CORN:
                 pred_fine_classes = [fine_classes[idx.item()] for idx in corn_label_from_logits(pred_fine_outputs)]
                 
-            coarse_probs, _ = torch.max(pred_coarse_outputs, dim=1)
             fine_probs, _ = torch.max(pred_fine_outputs, dim=1)
 
-            for image_id, coarse_pred, coarse_prob, fine_pred, fine_prob, is_vd, in zip(image_ids, pred_coarse_classes, coarse_probs.tolist(), pred_fine_classes, fine_probs.tolist(), is_valid_data):
+            for image_id, fine_pred, fine_prob, is_vd, in zip(image_ids, pred_fine_classes, fine_probs.tolist(), is_valid_data):
                 i = df.shape[0]
-                df.loc[i, columns] = [float(image_id), coarse_pred, coarse_prob, fine_pred, fine_prob, is_vd]
-          
-          
-        #classifier chain  
+                df.loc[i, columns] = [float(image_id), fine_pred, fine_prob, is_vd]
+            
         else:
             level_no = 0
             columns = ['Image', 'Prediction', 'is_in_validation', f'Level_{level_no}'] # is_in_valid_dataset / join
@@ -132,8 +216,11 @@ def recursive_predict_csv(model_dict, model_root, data, batch_size, device, leve
                         continue
                     sub_data = Subset(data, sub_indices)
                     recursive_predict_csv(model_dict=sub_model_dict, model_root=model_root, data=sub_data, batch_size=batch_size, device=device, df=df, level_no=level_no+1, pre_cls=cls)
-                    
-        return df, pred_outputs, image_ids, features
+          
+        if save_features:          
+            return df, pred_outputs, image_ids, features
+        else:
+            return df, pred_outputs, image_ids, _
 
 
 def predict(model, data, batch_size, head, level, device, save_features):
@@ -169,7 +256,8 @@ def predict(model, data, batch_size, head, level, device, save_features):
             batch_inputs = batch_inputs.to(device)
 
             if level == const.HIERARCHICAL:
-                coarse_batch_outputs, fine_batch_outputs = model(batch_inputs)
+                model_inputs = (batch_inputs, None)
+                coarse_batch_outputs, fine_batch_outputs = model(model_inputs)
                 
                 coarse_batch_outputs = model.get_class_probabilities(coarse_batch_outputs)
                 
@@ -182,8 +270,9 @@ def predict(model, data, batch_size, head, level, device, save_features):
                  
                 coarse_outputs.append(coarse_batch_outputs)
                 fine_outputs.append(fine_batch_outputs)
-             
-            #Classifier Chain   
+                
+            
+            #Classifier Chain  or FLatten
             else:
                 batch_outputs = model(batch_inputs)
                 
@@ -206,22 +295,24 @@ def predict(model, data, batch_size, head, level, device, save_features):
                 all_coarse_features.append(feature_dict['h1_features'])
                 all_fine_features.append(feature_dict['h2_features'])
               
-            # if index == 1:
-            #     break 
+            if index == 1:
+                break 
     # h_1.remove()
     # h_2.remove()
     
     if level == const.HIERARCHICAL:
         pred_coarse_outputs = torch.cat(coarse_outputs, dim=0)
         pred_fine_outputs = torch.cat(fine_outputs, dim=0)
-        all_coarse_features = torch.cat(all_coarse_features, dim=0)
-        all_fine_features = torch.cat(all_fine_features, dim=0)
         
         if save_features: 
+            all_coarse_features = torch.cat(all_coarse_features, dim=0)
+            all_fine_features = torch.cat(all_fine_features, dim=0)
             h_1.remove()
             h_2.remove()
             all_features = [all_coarse_features, all_fine_features]
             return (pred_coarse_outputs, pred_fine_outputs), ids, all_features
+        else:
+            return (pred_coarse_outputs, pred_fine_outputs), ids
 
     else:
         pred_outputs = torch.cat(outputs, dim=0)
@@ -230,7 +321,7 @@ def predict(model, data, batch_size, head, level, device, save_features):
             h_2.remove()
             return pred_outputs, ids, feature_dict
         else:
-            return pred_outputs, ids,
+            return pred_outputs, ids
 
 def prepare_data(data_root, dataset, transform):
 

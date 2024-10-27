@@ -3,7 +3,7 @@ from experiments.config  import global_config
 
 default_params = {
     "batch_size": 16, #16,  # 48
-    "epochs": 12,
+    "epochs": 1,
     #"learning_rate": 0.01,
     "optimizer": const.OPTI_ADAM,
     "eval_metric": const.EVAL_METRIC_ALL,
@@ -355,11 +355,11 @@ B_CNN = {
     "coarse_eval_metric": const.EVAL_METRIC_ALL,
     "fine_eval_metric": const.EVAL_METRIC_ALL,
     "project": const.PROJECT_FINAL,
-    "name": "B_CNN_CORN",
+    "name": "B_CNN_Regression",
     "level": const.HIERARCHICAL,
     "model": const.BCNN,
-    "head": const.CORN, #'regression', 'classification', 'corn', 'clm'
-    "hierarchy_method": const.MODELSTRUCTURE, #'use_ground_truth', 'use_condition_layer', 'b_cnn'
+    "head": const.REGRESSION, #'regression', 'classification', 'corn', 'clm'
+    "hierarchy_method": const.GROUNDTRUTH, #'use_ground_truth', 'use_condition_layer', 'b_cnn'
     "lw_modifier": True,
     #"lr_scheduler": True,
 }

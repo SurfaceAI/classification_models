@@ -40,7 +40,7 @@ vgg16_surface = {
 B_CNN = {
     **global_config.global_config,
     "name": "multi_label_prediction",
-    "model_dict": {"trained_model": "hierarchical-B_CNN-20241023_223221_epoch0.pt"},
+    "model_dict": {"trained_model": "hierarchical-B_CNN-classification-use_model_structure20241027_124835_epoch0.pt"},
     #"model_dict": {"trained_model": "multilabel-BCNN-20240504_141652-jzr601kb_epoch39.pt"}, 
     "dataset": "V5_c1\predicted",
     "transform": {
@@ -49,7 +49,10 @@ B_CNN = {
         "normalize": (const.V12_ANNOTATED_MEAN, const.V12_ANNOTATED_SD),
     },
     "batch_size": 96,
-    "save_features": False
+    "save_features": False,
+    "level": const.HIERARCHICAL,
+    #"head": const.CLASSIFICATION, #'regression', 'classification', 'obd', 'clm'
+    #"hierarchy_method": const.MODELSTRUCTURE,
 }
 
 # B_CNN = {

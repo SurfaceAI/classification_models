@@ -125,7 +125,7 @@ def _run_training(project=None, name=None, config=None, wandb_on=True):
     ).strftime("%Y%m%d_%H%M%S")
     id = "" if not wandb_on else "-" + run.id
     saving_name = (
-        "-".join(level) + "-" + config.get("model") + "-" + start_time + id + ".pt"
+        "-".join(level) + "-" + config.get("model") + "-" + config.get("head") + "-" + config.get('hierarchy_method') + "-" + start_time + id + ".pt"
     )
 
     helper.set_seed(config.get("seed"))
@@ -1206,7 +1206,7 @@ def train_epoch_hierarchical(model, dataloader, optimizer, device, head, hierarc
         
         running_loss += loss.item()
         coarse_loss_total += coarse_loss.item()
-        if head == const.CLASSIFICATION_QWK or head == const.CLM_QWK or head == const.CORN:
+        if head == const.CLASSIFICATION_QWK or head == const.CLM_QWK:
             fine_loss_total += fine_loss
         else:
             fine_loss_total += fine_loss.item()

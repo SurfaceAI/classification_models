@@ -504,6 +504,7 @@ def compute_fine_metrics_hierarchical(fine_output, fine_labels, coarse_filter, h
     all_labels = []
 
     if hierarchy_method == 'use_ground_truth':
+        
         masks = [
             (coarse_filter == 0),
             (coarse_filter == 1), 
