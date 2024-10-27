@@ -40,21 +40,31 @@ vgg16_surface = {
 B_CNN = {
     **global_config.global_config,
     "name": "multi_label_prediction",
-    "model_dict": {"trained_model": "hierarchical-B_CNN-classification-use_model_structure20241027_124835_epoch0.pt"},
+    "model_dict": {"trained_model": "hierarchical-B_CNN-20241023_223839-0tnfbvqx_epoch3.pt"},
     #"model_dict": {"trained_model": "multilabel-BCNN-20240504_141652-jzr601kb_epoch39.pt"}, 
-    "dataset": "V5_c1\predicted",
+    "dataset": "V1_0/test",
     "transform": {
         "resize": const.H256_W256,
         "crop": const.CROP_LOWER_MIDDLE_THIRD,
         "normalize": (const.V12_ANNOTATED_MEAN, const.V12_ANNOTATED_SD),
     },
     "batch_size": 96,
-    "save_features": False,
-    "level": const.HIERARCHICAL,
-    #"head": const.CLASSIFICATION, #'regression', 'classification', 'obd', 'clm'
-    #"hierarchy_method": const.MODELSTRUCTURE,
+    "save_features": False
 }
 
+# B_CNN = {
+#     **global_config.global_config,
+#     "name": "B_CNN_prediction",
+#     "model_dict": {"trained_model": "multilabel-BCNN_pretrained-20240505_133427-c549if0b_epoch39.pt"}, 
+#     "dataset": "V11/annotated", #V5_c5/unsorted_images",
+#     "transform": {
+#         "resize": const.H256_W256,
+#         "crop": const.CROP_LOWER_MIDDLE_THIRD,
+#         "normalize": (const.V6_ANNOTATED_MEAN, const.V6_ANNOTATED_SD),
+#     },
+#     "batch_size": 96,
+#     "save_features": True
+# }
 # B_CNN = {
 #     **global_config.global_config,
 #     "name": "B_CNN_prediction",

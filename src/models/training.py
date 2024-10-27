@@ -32,7 +32,7 @@ from sklearn.metrics import cohen_kappa_score
 
 
 
-def run_training(config, is_sweep=False):
+def run_training(config, is_sweep=False, seed=None):
     os.environ["WANDB_MODE"] = config.get("wandb_mode", const.WANDB_MODE_OFF)
 
     project = config.get("project")
@@ -1235,7 +1235,7 @@ def train_epoch_hierarchical(model, dataloader, optimizer, device, head, hierarc
         fine_qwk += fine_qwk_item
         fine_hv += fine_hv_item
         
-        break
+        #break
     
     epoch_loss = running_loss /  len(dataloader.sampler)
     epoch_coarse_accuracy = 100 * coarse_correct / len(dataloader.sampler)
@@ -1276,54 +1276,55 @@ def validate_epoch_hierarchical(model, dataloader, device, head, hierarchy_metho
     val_fine_qwk = 0
     val_fine_hv = 0
 
-    for batch_idx, (inputs, fine_labels) in enumerate(dataloader):
-        # helper.multi_imshow(inputs, labels)
+    with torch.no_grad():
+        for batch_idx, (inputs, fine_labels) in enumerate(dataloader):
+            # helper.multi_imshow(inputs, labels)
 
-        inputs, fine_labels = inputs.to(device), fine_labels.to(device)
-        
-        coarse_labels = helper.parent[fine_labels]
-        coarse_one_hot = helper.to_one_hot_tensor(coarse_labels, model.num_c).to(device)
-        
-        model_inputs = (inputs, coarse_one_hot)
-        coarse_output, fine_output = model.forward(model_inputs)
-        
-        coarse_loss = coarse_criterion(coarse_output, coarse_labels)
-        val_coarse_probs = model.get_class_probabilities(coarse_output)
-        val_coarse_predictions = torch.argmax(val_coarse_probs, dim=1)
-        val_coarse_correct += (val_coarse_predictions == coarse_labels).sum().item()
-              
-        fine_loss = helper.compute_fine_losses(model, fine_criterion, fine_output, fine_labels, device, val_coarse_predictions, hierarchy_method, head)        
-           
-        if lw_modifier:
-            loss = alpha * coarse_loss + beta * fine_loss
-        else:
-            loss = coarse_loss + fine_loss  #weighted loss functions for different levels
-        
-        val_running_loss += loss.item()
-        val_coarse_loss_total += coarse_loss.item()
-        if head == const.CLASSIFICATION_QWK or head == const.CLM_QWK or head == const.CORN:
-            val_fine_loss_total += fine_loss
-        else:
-            val_fine_loss_total += fine_loss.item()
-
-        if head == const.CLASSIFICATION or head == const.CLASSIFICATION_QWK:
-            fine_output = model.get_class_probabilities(fine_output)
+            inputs, fine_labels = inputs.to(device), fine_labels.to(device)
             
-        (val_fine_correct_item, 
-        val_fine_correct_one_off_item, 
-        val_fine_mse_item, 
-        val_fine_mae_item, 
-        val_fine_qwk_item,
-        val_fine_hv_item) = helper.compute_fine_metrics_hierarchical(fine_output, fine_labels, val_coarse_predictions, hierarchy_method, head)
-        
-        val_fine_correct += val_fine_correct_item
-        val_fine_correct_one_off += val_fine_correct_one_off_item
-        val_fine_mse += val_fine_mse_item
-        val_fine_mae += val_fine_mae_item
-        val_fine_qwk += val_fine_qwk_item
-        val_fine_hv += val_fine_hv_item
-        
-        break
+            coarse_labels = helper.parent[fine_labels]
+            coarse_one_hot = helper.to_one_hot_tensor(coarse_labels, model.num_c).to(device)
+            
+            model_inputs = (inputs, coarse_one_hot)
+            coarse_output, fine_output = model.forward(model_inputs)
+            
+            coarse_loss = coarse_criterion(coarse_output, coarse_labels)
+            val_coarse_probs = model.get_class_probabilities(coarse_output)
+            val_coarse_predictions = torch.argmax(val_coarse_probs, dim=1)
+            val_coarse_correct += (val_coarse_predictions == coarse_labels).sum().item()
+                
+            fine_loss = helper.compute_fine_losses(model, fine_criterion, fine_output, fine_labels, device, val_coarse_predictions, hierarchy_method, head)        
+            
+            if lw_modifier:
+                loss = alpha * coarse_loss + beta * fine_loss
+            else:
+                loss = coarse_loss + fine_loss  #weighted loss functions for different levels
+            
+            val_running_loss += loss.item()
+            val_coarse_loss_total += coarse_loss.item()
+            if head == const.CLASSIFICATION_QWK or head == const.CLM_QWK or head == const.CORN:
+                val_fine_loss_total += fine_loss
+            else:
+                val_fine_loss_total += fine_loss.item()
+
+            if head == const.CLASSIFICATION or head == const.CLASSIFICATION_QWK:
+                fine_output = model.get_class_probabilities(fine_output)
+                
+            (val_fine_correct_item, 
+            val_fine_correct_one_off_item, 
+            val_fine_mse_item, 
+            val_fine_mae_item, 
+            val_fine_qwk_item,
+            val_fine_hv_item) = helper.compute_fine_metrics_hierarchical(fine_output, fine_labels, val_coarse_predictions, hierarchy_method, head)
+            
+            val_fine_correct += val_fine_correct_item
+            val_fine_correct_one_off += val_fine_correct_one_off_item
+            val_fine_mse += val_fine_mse_item
+            val_fine_mae += val_fine_mae_item
+            val_fine_qwk += val_fine_qwk_item
+            val_fine_hv += val_fine_hv_item
+            
+            #break
 
     val_epoch_loss = val_running_loss /  len(dataloader.sampler)
     val_epoch_coarse_accuracy = 100 * val_coarse_correct / len(dataloader.sampler)
