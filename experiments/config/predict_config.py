@@ -52,7 +52,7 @@ B_CNN = {
     "save_features": True
 }
 
-B_CNN_PRE = {
+B_CNN = {
     **global_config.global_config,
     "name": "B_CNN_prediction",
     "model_dict": {"trained_model": "multilabel-BCNN_pretrained-20240505_133427-c549if0b_epoch39.pt"}, 
