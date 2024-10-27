@@ -243,6 +243,7 @@ def prepare_data(data_root, dataset, transform):
 def load_model(model_path, device):
     model_state = torch.load(model_path, map_location=device)
     model_cls = helper.string_to_object(model_state['config']['model'])
+    hierarchy_method = model_state['config']["hierarchy_method"]
     head = model_state['config']["head"]
     level = model_state['config']["level"]
     valid_dataset = model_state['dataset']
@@ -253,7 +254,7 @@ def load_model(model_path, device):
         coarse_classes = list(OrderedDict.fromkeys(class_name.split('__')[0] for class_name in fine_classes))
         num_c = len(coarse_classes)
         num_classes = len(fine_classes) 
-        model = model_cls(num_c = num_c, num_classes=num_classes, head=head) 
+        model = model_cls(num_c = num_c, num_classes=num_classes, head=head, hierarchy_method=hierarchy_method) 
         model.load_state_dict(model_state['model_state_dict'])
         
         return model, (coarse_classes, fine_classes), head, level, valid_dataset
