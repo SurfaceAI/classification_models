@@ -46,12 +46,25 @@ B_CNN = {
     "transform": {
         "resize": const.H256_W256,
         "crop": const.CROP_LOWER_MIDDLE_THIRD,
-        "normalize": (const.V6_ANNOTATED_MEAN, const.V6_ANNOTATED_SD),
+        "normalize": (const.V12_ANNOTATED_MEAN, const.V12_ANNOTATED_SD),
     },
     "batch_size": 96,
-    "save_features": True
+    "save_features": False
 }
 
+# B_CNN = {
+#     **global_config.global_config,
+#     "name": "B_CNN_prediction",
+#     "model_dict": {"trained_model": "multilabel-BCNN_pretrained-20240505_133427-c549if0b_epoch39.pt"}, 
+#     "dataset": "V11/annotated", #V5_c5/unsorted_images",
+#     "transform": {
+#         "resize": const.H256_W256,
+#         "crop": const.CROP_LOWER_MIDDLE_THIRD,
+#         "normalize": (const.V6_ANNOTATED_MEAN, const.V6_ANNOTATED_SD),
+#     },
+#     "batch_size": 96,
+#     "save_features": True
+# }
 # B_CNN = {
 #     **global_config.global_config,
 #     "name": "B_CNN_prediction",
