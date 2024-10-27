@@ -350,15 +350,15 @@ B_CNN = {
     **default_params,
     #"batch_size": 64,
     #"epochs": 12,
-    "learning_rate": 0.00005,
+    "learning_rate": 0.00001,
     "optimizer": const.OPTI_ADAM,
     "coarse_eval_metric": const.EVAL_METRIC_ALL,
     "fine_eval_metric": const.EVAL_METRIC_ALL,
     "project": const.PROJECT_FINAL,
-    "name": "B_CNN_CORN",
+    "name": "B_CNN",
     "level": const.HIERARCHICAL,
     "model": const.BCNN,
-    "head": const.CORN, #'regression', 'classification', 'corn', 'clm'
+    "head": const.CLASSIFICATION, #'regression', 'classification', 'corn', 'clm'
     "hierarchy_method": const.MODELSTRUCTURE, #'use_ground_truth', 'use_condition_layer', 'b_cnn'
     "lw_modifier": True,
     #"lr_scheduler": True,

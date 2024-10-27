@@ -45,7 +45,7 @@ global_config = dict(
         random_horizontal_flip=True,
         random_rotation=10,
     ),
-    dataset = "V12/annotated",
+    dataset = "V1_0/annotated",
     seed = 42,
     validation_size = 0.2,
     valid_batch_size = 64,
