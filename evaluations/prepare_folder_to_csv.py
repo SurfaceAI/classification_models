@@ -11,9 +11,15 @@ from torchvision import datasets
 from PIL import Image
 
 data_path = global_config.global_config.get('data_path')
-dataset = "road_scenery_experiment/classified_images"
+# dataset = "road_scenery_experiment/classified_images_add_on_c"
+dataset_list = [
+    "road_scenery_experiment/classified_images",
+    "road_scenery_experiment/classified_images_add_on",
+    "road_scenery_experiment/classified_images_add_on_b",
+    "road_scenery_experiment/classified_images_add_on_c",
+]
 metadata = "road_scenery_experiment/metadata"
-file_name = 'annotations_scenery_v3.csv'
+file_name = 'annotations_scenery_v4.csv'
 
 selected_classes = {
         '1_1_road': [
@@ -33,7 +39,8 @@ selected_classes = {
             '1_4_path_unspecified',
         ],
         '2_1_no_focus_no_street': [
-            '2_1_all'
+            '2_1_all',
+            '2_1_surface_covered',
         ],
     }
 
@@ -46,29 +53,57 @@ for key, values in selected_classes.items():
 columns = ['image_id', 'road_scenery']
 df = pd.DataFrame(columns=columns)
 
-directory = os.path.join(data_path, dataset)
+# directory = os.path.join(data_path, dataset)
 
-extensions = datasets.folder.IMG_EXTENSIONS
-def is_valid_file(x):
-    return datasets.folder.has_file_allowed_extension(x, extensions)
+# extensions = datasets.folder.IMG_EXTENSIONS
+# def is_valid_file(x):
+#     return datasets.folder.has_file_allowed_extension(x, extensions)
 
-for root, _, fnames in sorted(os.walk(directory, followlinks=True)):
-    for fname in sorted(fnames):
-        path = os.path.join(root, fname)
-        if is_valid_file(path):
-            try:
-                Image.open(path)
-            except:
-                print(f'Corrupted image: {path}')
-                continue
-            else:
-                image_id = os.path.splitext(fname)[0]
-                folders = os.path.relpath(root, directory)
-                label = folders.replace("/", "__")
-                if label not in valid_labels:
+# for root, _, fnames in sorted(os.walk(directory, followlinks=True)):
+#     for fname in sorted(fnames):
+#         path = os.path.join(root, fname)
+#         if is_valid_file(path):
+#             try:
+#                 Image.open(path)
+#             except:
+#                 print(f'Corrupted image: {path}')
+#                 continue
+#             else:
+#                 image_id = os.path.splitext(fname)[0]
+#                 folders = os.path.relpath(root, directory)
+#                 label = folders.replace("/", "__")
+#                 if label not in valid_labels:
+#                     continue
+#                 i = df.shape[0]
+#                 df.loc[i, columns] = [image_id, label]
+
+for dataset in dataset_list:
+    directory = os.path.join(data_path, dataset)
+
+    extensions = datasets.folder.IMG_EXTENSIONS
+    def is_valid_file(x):
+        return datasets.folder.has_file_allowed_extension(x, extensions)
+
+    for root, _, fnames in sorted(os.walk(directory, followlinks=True)):
+        for fname in sorted(fnames):
+            path = os.path.join(root, fname)
+            if is_valid_file(path):
+                try:
+                    Image.open(path)
+                except:
+                    print(f'Corrupted image: {path}')
                     continue
-                i = df.shape[0]
-                df.loc[i, columns] = [image_id, label]
+                else:
+                    image_id = os.path.splitext(fname)[0]
+                    folders = os.path.relpath(root, directory)
+                    label = folders.replace("/", "__")
+                    if label not in valid_labels:
+                        continue
+                    i = df.shape[0]
+                    df.loc[i, columns] = [image_id, label]
+
+# renaming and combinations
+df.replace(to_replace="1_3_pedestrian__1_3_pedestrian_area", value="1_4_path__1_4_path_unspecified", inplace=True)
 
 df.to_csv(os.path.join(data_path, metadata, file_name))
 

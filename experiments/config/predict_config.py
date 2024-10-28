@@ -86,19 +86,19 @@ CC_V1_0 = {
     "root_data": str(global_config.ROOT_DIR / "data"),
     # "dataset": "weseraue/imgs_2048",
     # "dataset": "weseraue/original",
-    "dataset": "weseraue/paving_stones",
-    # "dataset": "V1_0/s_1024",
+    # "dataset": "weseraue/paving_stones",
+    "dataset": "V1_0/s_1024",
     # "dataset": "lndw",
     # "dataset": "berlin",
     "transform": {
         "resize": (384, 384),
         # "crop": const.CROP_LOWER_MIDDLE_HALF_PANO,
-        # "crop": const.CROP_LOWER_MIDDLE_HALF,
-        "crop": "small_pano",
+        "crop": const.CROP_LOWER_MIDDLE_HALF,
+        # "crop": "small_pano",
         "normalize": (const.V1_0_ANNOTATED_MEAN, const.V1_0_ANNOTATED_SD),
     },
     "gpu_kernel": 0,
-    "batch_size": 16,
+    "batch_size": 48,
 }
 
 blur_V1_0 = {
