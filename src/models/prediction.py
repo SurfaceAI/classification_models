@@ -100,7 +100,7 @@ def run_dataset_predict_csv(config):
 
     # save predictions
     start_time = datetime.fromtimestamp(time.time()).strftime("%Y%m%d_%H%M%S")
-    saving_name = config.get("name") + '-' + config.get("dataset").replace('\\', '_') + '-' + start_time + '.csv'
+    saving_name = config.get("model_dict")['trained_model'] + '-' + config.get("dataset").replace('\\', '_') + '-' + start_time + '.csv'
 
     saving_path = save_predictions_csv(df=df, saving_dir=os.path.join(config.get("root_predict")), saving_name=saving_name)
 

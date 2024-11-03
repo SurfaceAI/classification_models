@@ -47,7 +47,6 @@ global_config = dict(
     ),
     dataset = "V12/annotated",
     seed = 42,
-    seed = 42,
     validation_size = 0.2,
     valid_batch_size = 64,
     checkpoint_top_n = 1,
