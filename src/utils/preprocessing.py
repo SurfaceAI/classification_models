@@ -18,6 +18,7 @@ from tqdm import tqdm
 
 from experiments.config import global_config
 from src import constants as const
+import pandas as pd
 
 
 class PartialImageFolder(datasets.ImageFolder):
@@ -201,21 +202,42 @@ class FlattenFolders(datasets.ImageFolder):
         return make_flatten_dataset(directory, class_to_idx, extensions=extensions, is_valid_file=is_valid_file)
 
 # VisionDataset instead of Dataset only used due to __repr__
+
 class PredictImageFolder(datasets.VisionDataset):
     def __init__(
         self,
         root: str,
+        csv_file: str,
         loader: Callable[[str], Any] = datasets.folder.default_loader,
         transform: Optional[Callable] = None,
         is_valid_file: Optional[Callable[[str], bool]] = None,
     ) -> None:
+        """
+        Initializes the dataset, filtering based on CSV file where "train" column is False.
+
+        Parameters:
+        - root: str, root directory containing the images.
+        - csv_file: str, path to the CSV file with image names and "train" column.
+        - loader: Callable, function to load an image given its path.
+        - transform: Optional[Callable], transformations to apply to the images.
+        - is_valid_file: Optional[Callable], function to check if a file is valid.
+        """
         super().__init__(root, transform=transform)
         extensions = datasets.folder.IMG_EXTENSIONS if is_valid_file is None else None
-        samples = self.make_dataset(self.root, extensions, is_valid_file)
+        
+        # Load CSV and filter for test images only
+        df = pd.read_csv(csv_file)
+        self.test_imgs = df[df['train'] == False]['mapillary_image_id'].tolist()  # List of image IDs to load
+        self.test_imgs = [str(img_id) for img_id in self.test_imgs]
+
+        # Filter samples based on test images
+        self.samples = self.make_dataset(self.root, extensions, is_valid_file)
+
+        # Only keep samples in self.samples that match the test image IDs
+        self.samples = [s for s in self.samples if os.path.splitext(os.path.basename(s))[0] in self.test_imgs]
 
         self.loader = loader
         self.extensions = extensions
-        self.samples = samples
 
     @staticmethod
     def make_dataset(
@@ -223,7 +245,7 @@ class PredictImageFolder(datasets.VisionDataset):
         extensions: Optional[Union[str, Tuple[str, ...]]] = None,
         is_valid_file: Optional[Callable[[str], bool]] = None,
     ) -> List[str]:
-        """Generates a list of samples of a form "path_to_sample" """
+        """Generates a list of samples in the form "path_to_sample" """
         directory = os.path.expanduser(directory)
 
         both_none = extensions is None and is_valid_file is None
@@ -255,7 +277,7 @@ class PredictImageFolder(datasets.VisionDataset):
             index (int): Index
 
         Returns:
-            tuple: (sample, id) where id is file name w/o extension.
+            tuple: (sample, id) where id is the file name without extension.
         """
         path = self.samples[index]
         sample = self.loader(path)
@@ -267,29 +289,135 @@ class PredictImageFolder(datasets.VisionDataset):
 
     def __len__(self) -> int:
         return len(self.samples)
+# class PredictImageFolder(datasets.VisionDataset):
+#     def __init__(
+#         self,
+#         root: str,
+#         loader: Callable[[str], Any] = datasets.folder.default_loader,
+#         transform: Optional[Callable] = None,
+#         is_valid_file: Optional[Callable[[str], bool]] = None,
+#     ) -> None:
+#         super().__init__(root, transform=transform)
+#         extensions = datasets.folder.IMG_EXTENSIONS if is_valid_file is None else None
+#         samples = self.make_dataset(self.root, extensions, is_valid_file)
+
+#         self.loader = loader
+#         self.extensions = extensions
+#         self.samples = samples
+
+#     @staticmethod
+#     def make_dataset(
+#         directory: str,
+#         extensions: Optional[Union[str, Tuple[str, ...]]] = None,
+#         is_valid_file: Optional[Callable[[str], bool]] = None,
+#     ) -> List[str]:
+#         """Generates a list of samples of a form "path_to_sample" """
+#         directory = os.path.expanduser(directory)
+
+#         both_none = extensions is None and is_valid_file is None
+#         both_something = extensions is not None and is_valid_file is not None
+#         if both_none or both_something:
+#             raise ValueError(
+#                 "Both extensions and is_valid_file cannot be None or not None at the same time"
+#             )
+
+#         if extensions is not None:
+
+#             def is_valid_file(x: str) -> bool:
+#                 return datasets.folder.has_file_allowed_extension(x, extensions)  # type: ignore[arg-type]
+
+#         is_valid_file = cast(Callable[[str], bool], is_valid_file)
+
+#         instances = []
+#         for root, _, fnames in sorted(os.walk(directory, followlinks=True)):
+#             for fname in sorted(fnames):
+#                 path = os.path.join(root, fname)
+#                 if is_valid_file(path):
+#                     instances.append(path)
+
+#         return instances
+
+#     def __getitem__(self, index: int) -> Tuple[Any, Any]:
+#         """
+#         Args:
+#             index (int): Index
+
+#         Returns:
+#             tuple: (sample, id) where id is file name w/o extension.
+#         """
+#         path = self.samples[index]
+#         sample = self.loader(path)
+#         if self.transform is not None:
+#             sample = self.transform(sample)
+#         id = os.path.splitext(os.path.split(path)[-1])[0]
+
+#         return sample, id
+
+#     def __len__(self) -> int:
+#         return len(self.samples)
 
 
 # Here we read images that are not sorted in subfolders
 class TestImages(Dataset):
-    def __init__(self, data_path, transform):
+    def __init__(self, data_path, csv_file, transform=None):
+        """
+        Initializes the dataset by reading the CSV file and filtering for test images only.
+        
+        Parameters:
+        - data_path: str, the directory path where images are stored.
+        - csv_file: str, the path to the CSV file containing image names and "train" column.
+        - transform: callable, the transformations to apply to each image.
+        """
         self.data_path = data_path
         self.transform = transform
-        self.total_imgs = os.listdir(data_path)
+
+        # Load the CSV file and filter for test images
+        df = pd.read_csv(csv_file)
+        self.test_imgs = df[df['train'] == False]['mapillary_image_id'].tolist()  # List of test image filenames
 
     def __len__(self):
-        return len(self.total_imgs)
+        return len(self.test_imgs)
 
     def __getitem__(self, idx):
-        img_path = os.path.join(self.data_path, self.total_imgs[idx])
+        """
+        Loads and returns an image at the specified index with transformations applied.
+        
+        Parameters:
+        - idx: int, index of the image to load.
+        
+        Returns:
+        - Transformed image tensor.
+        """
+        img_path = os.path.join(self.data_path, self.test_imgs[idx])
 
-        # Using PIL to read the image
+        # Load the image using PIL
         image = Image.open(img_path).convert("RGB")
 
-        # Apply transformations
+        # Apply transformations if any
         if self.transform is not None:
             image = self.transform(image)
 
         return image
+# class TestImages(Dataset):
+#     def __init__(self, data_path, transform):
+#         self.data_path = data_path
+#         self.transform = transform
+#         self.total_imgs = os.listdir(data_path)
+
+#     def __len__(self):
+#         return len(self.total_imgs)
+
+#     def __getitem__(self, idx):
+#         img_path = os.path.join(self.data_path, self.total_imgs[idx])
+
+#         # Using PIL to read the image
+#         image = Image.open(img_path).convert("RGB")
+
+#         # Apply transformations
+#         if self.transform is not None:
+#             image = self.transform(image)
+
+#         return image
 
 
 def create_train_validation_datasets(

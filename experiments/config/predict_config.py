@@ -1,28 +1,11 @@
 from src import constants as const
 from experiments.config import global_config
 
-rateke_CC = {
-    **global_config.global_config,
-    "name": "test_RatekeCNN_VGG16_prediction",
-    "model_dict": {
-        "trained_model": "surface-rateke-20240207_202104-gnzhpn11_epoch0.pt",
-        "submodels": {
-            const.ASPHALT: {
-                "trained_model": "smoothness-asphalt-vgg16-20240207_202414-krno5gva_epoch0.pt"
-            },
-            const.CONCRETE: {
-                "trained_model": "smoothness-concrete-vgg16-20240207_202524-jqetza3o_epoch0.pt"
-            },
-        },
-    },
-    "dataset": "V0/predicted",
-    "transform": {
-        "resize": const.H256_W256,
-        # "crop": const.CROP_LOWER_MIDDLE_THIRD,
-        "normalize": (const.V4_ANNOTATED_MEAN, const.V4_ANNOTATED_SD),
-    },
-    "batch_size": 48,
-}
+
+
+# Models:
+# B_CNN_CORN_GT: hierarchical-B_CNN-corn-use_ground_truth-20241031_005138-32tlqlfa_epoch11.pt
+
 
 vgg16_surface = {
     **global_config.global_config,
@@ -32,7 +15,7 @@ vgg16_surface = {
     "transform": {
         "resize": const.H256_W256,
         "crop": const.CROP_LOWER_MIDDLE_THIRD,
-        "normalize": (const.V6_ANNOTATED_MEAN, const.V6_ANNOTATED_SD),
+        "normalize": (const.V1_0_ANNOTATED_MEAN, const.V1_0_ANNOTATED_SD),
     },
     "batch_size": 96,
 }
@@ -40,17 +23,70 @@ vgg16_surface = {
 B_CNN = {
     **global_config.global_config,
     "name": "multi_label_prediction",
-    "model_dict": {"trained_model": "hierarchical-B_CNN-20241023_223839-0tnfbvqx_epoch3.pt"},
+    "model_dict": {"trained_model": "hierarchical-B_CNN-classification-use_model_structure20241027_124835_epoch0.pt"},
     #"model_dict": {"trained_model": "multilabel-BCNN-20240504_141652-jzr601kb_epoch39.pt"}, 
-    "dataset": "V1_0/test",
+    "dataset": "V1_0",
+    "metadata": "V1_0\\streetSurfaceVis_v1_0.csv",
     "transform": {
         "resize": const.H256_W256,
         "crop": const.CROP_LOWER_MIDDLE_THIRD,
-        "normalize": (const.V12_ANNOTATED_MEAN, const.V12_ANNOTATED_SD),
+        "normalize": (const.V1_0_ANNOTATED_MEAN, const.V1_0_ANNOTATED_SD),
     },
     "batch_size": 96,
-    "save_features": False
+    "save_features": False,
 }
+
+B_CNN_CORN_GT = {
+    **global_config.global_config,
+    "name": "B_CNN_CORN_GT_prediction",
+    "model_dict": {"trained_model": "final\\hierarchical-B_CNN-corn-use_ground_truth-20241031_005138-32tlqlfa_epoch11.pt"},
+    #"model_dict": {"trained_model": "multilabel-BCNN-20240504_141652-jzr601kb_epoch39.pt"}, 
+    "dataset": "V1_0",
+    "metadata": "V1_0\\streetSurfaceVis_v1_0.csv",
+    "transform": {
+        "resize": const.H256_W256,
+        "crop": const.CROP_LOWER_MIDDLE_THIRD,
+        "normalize": (const.V1_0_ANNOTATED_MEAN, const.V1_0_ANNOTATED_SD),
+    },
+    "batch_size": 96,
+    "save_features": True,
+}
+
+CC = {
+    **global_config.global_config,
+    "name": "CC_Classification_prediction",
+    "model_dict": {
+        "trained_model": "surface-vgg16-classification-CC-20241103_102134_epoch0.pt",
+        "submodels": {
+            const.ASPHALT: {
+                "trained_model": "smoothness-asphalt-vgg16-classification-CC-20241103_102236_epoch0.pt"
+            },
+            const.CONCRETE: {
+                "trained_model": "smoothness-concrete-vgg16-classification-CC-20241103_102330_epoch0.pt"
+            },
+            const.PAVING_STONES: {
+                "trained_model": "smoothness-paving_stones-vgg16-classification-CC-20241103_102422_epoch0.pt"
+            },
+            const.SETT: {
+                "trained_model": "smoothness-sett-vgg16-classification-CC-20241103_102514_epoch0.pt"
+            },
+            const.UNPAVED: {
+                "trained_model": "smoothness-unpaved-vgg16-classification-CC-20241103_102612_epoch0.pt"
+            },
+        },
+    },
+    "dataset": "V1_0",
+    "metadata": "V1_0\\streetSurfaceVis_v1_0.csv",
+    "transform": {
+        "resize": const.H256_W256,
+        # "crop": const.CROP_LOWER_MIDDLE_THIRD,
+        "normalize": (const.V1_0_ANNOTATED_MEAN, const.V1_0_ANNOTATED_SD),
+    },
+    "batch_size": 96,
+    "save_features": False,
+}
+
+
 
 # B_CNN = {
 #     **global_config.global_config,

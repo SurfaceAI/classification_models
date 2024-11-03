@@ -46,10 +46,10 @@ global_config = dict(
         random_rotation=10,
     ),
     dataset = "V12/annotated",
-    seed = None,
+    seed = 42,
     validation_size = 0.2,
     valid_batch_size = 64,
     checkpoint_top_n = 1,
     early_stop_thresh = 3, #constants.EARLY_STOPPING_DEFAULT,
-    save_state = True,
+    save_state = False,
 )   

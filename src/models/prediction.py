@@ -21,7 +21,37 @@ from collections import OrderedDict
 from src import constants as const
 from coral_pytorch.dataset import corn_label_from_logits
 import torch.nn.functional as F
+import matplotlib.pyplot as plt
+from torchvision import transforms
+from torchvision.transforms import ToPILImage
+from tqdm import tqdm
 
+
+def cam_prediction(config):
+    # load device
+    device = torch.device(
+        f"cuda:{config.get('gpu_kernel')}" if torch.cuda.is_available() else "cpu"
+    )
+
+    # prepare data
+    normalize_transform = transforms.Normalize(*config.get("transform")['normalize'])
+    non_normalize_transform = {
+        **config.get("transform"),
+        'normalize': None,
+    }
+    predict_data = prepare_data(config.get("root_data"), config.get("dataset"), config.get("metadata"), non_normalize_transform)
+
+    model_path = os.path.join(config.get("root_model"), config.get("model_dict")['trained_model'])
+    model, classes, head, level, valid_dataset, hierarchy_method = load_model(model_path=model_path, device=device)
+    image_folder = os.path.join(config.get("root_predict"), config.get("dataset"))
+    os.makedirs(image_folder, exist_ok=True)
+        
+    cam_subfolder = os.path.join(image_folder, 'cam', os.path.splitext(os.path.basename(model_path))[0])
+    os.makedirs(cam_subfolder, exist_ok=True)
+    
+    save_cam(model, predict_data, normalize_transform, classes, valid_dataset, head, level, hierarchy_method, device, cam_subfolder)
+
+    print(f'Images {config.get("dataset")} predicted and saved with CAM: {image_folder}')
 
 
 def run_dataset_predict_csv(config):
@@ -31,44 +61,60 @@ def run_dataset_predict_csv(config):
     )
 
     # prepare data
-    predict_data = prepare_data(config.get("root_data"), config.get("dataset"), config.get("transform"))
+    predict_data = prepare_data(config.get("root_data"), config.get("dataset"), config.get("metadata"), config.get("transform"))
 
+    
+    level_no = 0
+    columns = ['Image', 'Prediction', 'Level', f'Level_{level_no}']
+    df = pd.DataFrame(columns=columns)
     # if config.get('level') is not "hierarchical":
     #     level_no = 0
     #     columns = ['Image', 'Prediction', f'Level_{level_no}']
         #df = pd.DataFrame(columns=columns)
-
-    df, pred_outputs, image_ids, features = recursive_predict_csv(model_dict=config.get("model_dict"), 
-                          model_root=config.get("root_model"), 
-                          data=predict_data, 
-                          batch_size=config.get("batch_size"), 
-                          device=device, 
-                          level=config.get('level'), 
-                          hierarchy_method=config.get('hierarchy_method'),
-                          save_features=config.get('save_features'),)
+    if config.get('save_features'):
+        df, pred_outputs, image_ids, features = recursive_predict_csv(model_dict=config.get("model_dict"), 
+                            model_root=config.get("root_model"), 
+                            data=predict_data, 
+                            batch_size=config.get("batch_size"), 
+                            device=device, 
+                            level=config.get('level'), 
+                            hierarchy_method=config.get('hierarchy_method'),
+                            save_features=config.get('save_features'),
+                            level_no=level_no,)
+    else: 
+        df, pred_outputs, image_ids = recursive_predict_csv(model_dict=config.get("model_dict"), 
+                            model_root=config.get("root_model"), 
+                            data=predict_data, 
+                            batch_size=config.get("batch_size"), 
+                            device=device, 
+                            level=config.get('level'),  
+                            hierarchy_method=config.get('hierarchy_method'),
+                            save_features=config.get('save_features'),
+                            level_no=level_no)
+        
 
     # save features
-    features_save_name = config.get("name") + '-' + config.get("dataset").replace('/', '_')
-    save_features(features, os.path.join(config.get("evaluation_path"), 'feature_maps'), features_save_name)
+    if config.get('save_features'):
+        features_save_name = config.get("name") + '-' + config.get("dataset").replace('\\', '_')
+        save_features(features, os.path.join(config.get("evaluation_path"), 'feature_maps'), features_save_name)
 
     # save predictions
     start_time = datetime.fromtimestamp(time.time()).strftime("%Y%m%d_%H%M%S")
-    saving_name = config.get("name") + '-' + config.get("dataset").replace('/', '_') + '-' + start_time + '.csv'
+    saving_name = config.get("name") + '-' + config.get("dataset").replace('\\', '_') + '-' + start_time + '.csv'
 
-    saving_path = save_predictions_csv(df=df, saving_dir=config.get("root_predict"), saving_name=saving_name)
+    saving_path = save_predictions_csv(df=df, saving_dir=os.path.join(config.get("root_predict"), config.get("dataset")), saving_name=saving_name)
 
     print(f'Images {config.get("dataset")} predicted and saved: {saving_path}')
 
-def recursive_predict_csv(model_dict, model_root, data, batch_size, device, level, hierarchy_method, save_features, level_no=None, pre_cls=None):
+def recursive_predict_csv(model_dict, model_root, data, batch_size, device, level, hierarchy_method, save_features, df=None, level_no=None, pre_cls=None):
     # base:
     if model_dict is None:
         # predictions = None
         pass
     else:
         model_path = os.path.join(model_root, model_dict['trained_model'])
-        model, classes, head, level_no, valid_dataset = load_model(model_path=model_path, device=device)
-        
-    
+        model, classes, head, level, valid_dataset, hierarchy_method = load_model(model_path=model_path, device=device)
+
         if save_features:
             pred_outputs, image_ids, features = predict(model, data, batch_size, head, level, device, save_features) 
         else:
@@ -79,10 +125,7 @@ def recursive_predict_csv(model_dict, model_root, data, batch_size, device, leve
         valid_dataset_ids = [os.path.splitext(os.path.split(id[0])[-1])[0] for id in valid_dataset.samples]
         is_valid_data = [1 if image_id in valid_dataset_ids else 0 for image_id in image_ids]
         
-        df = pd.DataFrame()        
-        if level == const.HIERARCHICAL: 
-            columns =  ['Image', 'Coarse_Prediction', 'Coarse_Probability', 'Fine_Prediction', 'Fine_Probability', 'is_in_validation']
-            #todo: add regression
+        if level == const.HIERARCHICAL:             #todo: add regression
             pred_coarse_outputs = pred_outputs[0]
             pred_fine_outputs = pred_outputs[1]
             
@@ -92,6 +135,7 @@ def recursive_predict_csv(model_dict, model_root, data, batch_size, device, leve
             pred_coarse_classes = [coarse_classes[idx.item()] for idx in torch.argmax(pred_coarse_outputs, dim=1)]
             
             if hierarchy_method == const.MODELSTRUCTURE:
+                columns =  ['Image', 'Coarse_Prediction', 'Coarse_Probability', 'Fine_Prediction', 'Fine_Probability', 'is_in_validation']            
                 if head == const.CLASSIFICATION:
                     pred_fine_classes = [fine_classes[idx.item()] for idx in torch.argmax(pred_fine_outputs, dim=1)]
                 elif head == const.REGRESSION:
@@ -109,61 +153,19 @@ def recursive_predict_csv(model_dict, model_root, data, batch_size, device, leve
                     df.loc[i, columns] = [float(image_id), coarse_pred, coarse_prob, fine_pred, fine_prob, is_vd]
                    
             elif hierarchy_method == const.GROUNDTRUTH:
-                pred_fine_classes=torch.zeros_like(batch_size) #empty vector of zeros len bs
-                masks = [
-                    (pred_coarse_classes == 'asphalt'),
-                    (pred_coarse_classes == 'concrete'), 
-                    (pred_coarse_classes == 'paving_stones'),  
-                    (pred_coarse_classes == 'sett'), 
-                    (pred_coarse_classes == 'unpaved')  
-                    ]
-                # Separate the fine outputs based on the head
-                if head == 'regression':
-                    fine_output_asphalt = pred_fine_outputs[:, 0:1].float()
-                    fine_output_concrete = pred_fine_outputs[:, 1:2].float()
-                    fine_output_paving_stones = pred_fine_outputs[:, 2:3].float()
-                    fine_output_sett = pred_fine_outputs[:, 3:4].float()
-                    fine_output_unpaved = pred_fine_outputs[:, 4:5].float()
-                
-                elif head == 'corn':
-                    fine_output_asphalt = pred_fine_outputs[:, 0:3]
-                    fine_output_concrete = pred_fine_outputs[:, 3:6]
-                    fine_output_paving_stones = pred_fine_outputs[:, 6:9]
-                    fine_output_sett = pred_fine_outputs[:, 9:11]
-                    fine_output_unpaved = pred_fine_outputs[:, 11:13]
-                    
-                else:
-                    fine_output_asphalt = pred_fine_outputs[:, 0:4]
-                    fine_output_concrete = pred_fine_outputs[:, 4:8]
-                    fine_output_paving_stones = pred_fine_outputs[:, 8:12]
-                    fine_output_sett = pred_fine_outputs[:, 12:15]
-                    fine_output_unpaved = pred_fine_outputs[:, 15:18]
-                    
-                asphalt_mask, concrete_mask, paving_stones_mask, sett_mask, unpaved_mask = masks
+                columns =  ['Image', 'Coarse_Prediction', 'Fine_Prediction', 'is_in_validation']
 
-                def make_prediction(output, labels, mask, category):
-                    
-                    if mask.sum().item() > 0:
-                        if head == 'clm' or head == const.CLASSIFICATION or head == const.CLASSIFICATION_QWK:
-                            preds = torch.argmax(output[mask], dim=1)
-                        elif head == 'regression':
-                            preds = output[mask].round().long()
-                        elif head == 'corn':
-                            preds = corn_label_from_logits(output[mask]).long()
-                            
-                        pred_fine_classes[mask] = helper.map_predictions_to_quality(preds, category)
-
-                make_prediction(fine_output_asphalt, asphalt_mask, "asphalt")
-                make_prediction(fine_output_concrete, concrete_mask, "concrete")
-                make_prediction(fine_output_paving_stones, paving_stones_mask, "paving_stones")
-                make_prediction(fine_output_sett, sett_mask, "sett")
-                make_prediction(fine_output_unpaved, unpaved_mask, "unpaved")
+                pred_fine_classes = helper.compute_fine_prediction_hierarchical_GT(pred_fine_outputs, pred_coarse_classes, hierarchy_method, head, fine_classes)
                 
-                for image_id, coarse_pred, coarse_prob, fine_pred, fine_prob, is_vd, in zip(image_ids, pred_coarse_classes, pred_fine_classes, is_valid_data):
+                for image_id, coarse_pred, fine_pred, is_vd, in zip(image_ids, pred_coarse_classes, pred_fine_classes, is_valid_data):
                     i = df.shape[0]
                     df.loc[i, columns] = [float(image_id), coarse_pred, fine_pred, is_vd]
-          
-          
+                    
+            if save_features:          
+                return df, pred_outputs, image_ids, features
+            else:
+                return df, pred_outputs, image_ids, _
+            
         #classifier chain  
         elif level == const.FLATTEN:
             columns =  ['Image', 'Fine_Prediction', 'Fine_Probability', 'is_in_validation']
@@ -188,10 +190,16 @@ def recursive_predict_csv(model_dict, model_root, data, batch_size, device, leve
             for image_id, fine_pred, fine_prob, is_vd, in zip(image_ids, pred_fine_classes, fine_probs.tolist(), is_valid_data):
                 i = df.shape[0]
                 df.loc[i, columns] = [float(image_id), fine_pred, fine_prob, is_vd]
-            
+                
+            if save_features:          
+                return df, pred_outputs, image_ids, features
+            else:
+                return df, pred_outputs, image_ids, _
+         
+        #CC   
         else:
-            level_no = 0
-            columns = ['Image', 'Prediction', 'is_in_validation', f'Level_{level_no}'] # is_in_valid_dataset / join
+            level_name = model_dict.get('level', '')
+            columns = ['Image', 'Prediction', 'Level', 'is_in_validation', f'Level_{level_no}'] # is_in_valid_dataset / join
             pre_cls_entry = []
             if pre_cls is not None:
                 columns = columns + [f'Level_{level_no-1}']
@@ -199,15 +207,48 @@ def recursive_predict_csv(model_dict, model_root, data, batch_size, device, leve
                 
             if head == const.REGRESSION:
                 pred_classes = ["outside" if str(pred.item()) not in classes.keys() else classes[str(pred.item())] for pred in pred_outputs.round().int()]
-                for image_id, pred, is_vd, cls in zip(image_ids, pred_outputs, is_valid_data, pred_classes):
-                    i = df.shape[0]
-                    df.loc[i, columns] = [image_id, pred.item(), is_vd, cls] + pre_cls_entry
+                df_tmp = pd.DataFrame(columns=columns, index=range(pred_outputs.shape[0]))
+                i = 0
+                for image_id, pred, is_vd, cls in tqdm(zip(image_ids, pred_outputs, is_valid_data, pred_classes), desc="write df"):
+                    df_tmp.iloc[i] = [image_id, pred.item(), level_name, is_vd, cls] + pre_cls_entry
+                    i += 1
+                print(df_tmp.shape)
+                df = pd.concat([df, df_tmp], ignore_index=True)
+                print(df.shape)
+                
+            elif head == const.CORN:
+                pred_classes = [classes[idx.item()] for idx in corn_label_from_logits(pred_outputs)]
+                df_tmp = pd.DataFrame(columns=columns, index=range(pred_outputs.shape[0]))
+                i = 0
+                for image_id, pred, is_vd, cls in tqdm(zip(image_ids, pred_outputs, is_valid_data, pred_classes), desc="write df"):
+                    df_tmp.iloc[i] = [image_id, pred.item(), level_name, is_vd, cls] + pre_cls_entry
+                    i += 1
+                print(df_tmp.shape)
+                df = pd.concat([df, df_tmp], ignore_index=True)
+                print(df.shape)                
+                
+                # for image_id, pred, is_vd, cls in zip(image_ids, pred_outputs, is_valid_data, pred_classes):
+                #     i = df.shape[0]
+                #     df.loc[i, columns] = [image_id, pred.item(), is_vd, cls] + pre_cls_entry
+                # for cls in classes:
+                #     sub_indices = [idx for idx, pred_cls in enumerate(pred_classes) if pred_cls == cls]
+                #     sub_model_dict = model_dict.get('submodels', {}).get(cls)
+                #     if not sub_indices or sub_model_dict is None:
+                #         continue
+                #     sub_data = Subset(data, sub_indices)
+                #     recursive_predict_csv(model_dict=sub_model_dict, model_root=model_root, data=sub_data, batch_size=batch_size, device=device, level=const.SMOOTHNESS, 
+                #                           hierarchy_method=hierarchy_method, save_features=save_features, df=df, level_no=level_no+1, pre_cls=cls)
             else:
                 pred_classes = [classes[idx.item()] for idx in torch.argmax(pred_outputs, dim=1)]
-                for image_id, pred, is_vd in zip(image_ids, pred_outputs, is_valid_data):
+                df_tmp = pd.DataFrame(columns=columns, index=range(pred_outputs.shape[0] * pred_outputs.shape[1]))
+                i = 0
+                for image_id, pred, is_vd in tqdm(zip(image_ids, pred_outputs, is_valid_data), desc="write df"):
                     for cls, prob in zip(classes, pred.tolist()):
-                        i = df.shape[0]
-                        df.loc[i, columns] = [image_id, prob, is_vd, cls] + pre_cls_entry
+                        df_tmp.iloc[i] = [image_id, prob, level_name, is_vd, cls] + pre_cls_entry
+                        i += 1
+                print(df_tmp.shape)
+                df = pd.concat([df, df_tmp], ignore_index=True)
+                print(df.shape)
                 # subclasses not for regression implemented
                 for cls in classes:
                     sub_indices = [idx for idx, pred_cls in enumerate(pred_classes) if pred_cls == cls]
@@ -215,12 +256,35 @@ def recursive_predict_csv(model_dict, model_root, data, batch_size, device, leve
                     if not sub_indices or sub_model_dict is None:
                         continue
                     sub_data = Subset(data, sub_indices)
-                    recursive_predict_csv(model_dict=sub_model_dict, model_root=model_root, data=sub_data, batch_size=batch_size, device=device, df=df, level_no=level_no+1, pre_cls=cls)
-          
-        if save_features:          
-            return df, pred_outputs, image_ids, features
-        else:
-            return df, pred_outputs, image_ids, _
+                    #TODO: unterscheidung save features
+                    df,_ ,_ , = recursive_predict_csv(model_dict=sub_model_dict, 
+                                               model_root=model_root, 
+                                               data=sub_data, 
+                                               batch_size=batch_size, 
+                                               device=device, 
+                                               level=const.SMOOTHNESS,
+                                               hierarchy_method=hierarchy_method, 
+                                               save_features=save_features, 
+                                               df=df, 
+                                               level_no=level_no+1, 
+                                               pre_cls=cls)
+                # for image_id, pred, is_vd in zip(image_ids, pred_outputs, is_valid_data):
+                #     for cls, prob in zip(classes, pred.tolist()):
+                #         i = df.shape[0]
+                #         df.loc[i, columns] = [image_id, prob, is_vd, cls] + pre_cls_entry
+                # # subclasses not for regression implemented
+                # for cls in classes:
+                #     sub_indices = [idx for idx, pred_cls in enumerate(pred_classes) if pred_cls == cls]
+                #     sub_model_dict = model_dict.get('submodels', {}).get(cls)
+                #     if not sub_indices or sub_model_dict is None:
+                #         continue
+                #     sub_data = Subset(data, sub_indices)
+                #     recursive_predict_csv(model_dict=sub_model_dict, model_root=model_root, data=sub_data, batch_size=batch_size, device=device, level=const.SMOOTHNESS, 
+                #                           hierarchy_method=hierarchy_method, save_features=save_features, df=df, level_no=level_no+1, pre_cls=cls)
+            if save_features:          
+                return df, pred_outputs, image_ids, features
+            else:
+                return df, pred_outputs, image_ids
 
 
 def predict(model, data, batch_size, head, level, device, save_features):
@@ -234,21 +298,48 @@ def predict(model, data, batch_size, head, level, device, save_features):
     if level ==  const.HIERARCHICAL:
         coarse_outputs = []
         fine_outputs = []
+        
+        if save_features is True:
+            feature_dict = {}
+            
+            #das alles nochmal überprüfen
+            
+            if 'B_CNN' in model.__module__:            
+                h_1 = model.features[17].register_forward_hook(helper.make_hook("h1_features", feature_dict))
+                h_2 = model.features[30].register_forward_hook(helper.make_hook("h2_features", feature_dict))
+                
+            elif 'C_CNN' in model.__module__:
+                h_1 = model.block5_coarse.register_forward_hook(helper.make_hook("h1_features", feature_dict))
+                h_2 = model.block5_fine.register_forward_hook(helper.make_hook("h2_features", feature_dict))
+                
+            elif 'GH_CNN' or 'H_NET' in model.__module__:
+                h_1 = model.features[30].register_forward_hook(helper.make_hook("h1_features", feature_dict))
+                h_2 = model.features[30].register_forward_hook(helper.make_hook("h2_features", feature_dict))
+                
+            else:
+                print('No hooks for this model implemented')
+                
+        all_coarse_features = []
+        all_fine_features = []
+    
+        
     else:
         outputs = []
+        if save_features is True:
+            feature_dict = {}
+            if 'CustomVGG16' in model.__module__:
+                h_1 = model.features[-30].register_forward_hook(helper.make_hook("h1_features", feature_dict))
+                
+        all_features = []
+            
         
     ids = []
     
     #where we store intermediate outputs 
-    if save_features is True:
-        
-        feature_dict = {}
+   
 
-        h_1 = model.block3_layer2.register_forward_hook(helper.make_hook("h1_features", feature_dict))
-        h_2 = model.block4_layer2.register_forward_hook(helper.make_hook("h2_features", feature_dict))
-
-        all_coarse_features = []
-        all_fine_features = []
+        #h_1 = model.block3_layer2.register_forward_hook(helper.make_hook("h1_features", feature_dict))
+        #h_2 = model.block4_layer2.register_forward_hook(helper.make_hook("h2_features", feature_dict))
     
     with torch.no_grad():
         
@@ -289,11 +380,18 @@ def predict(model, data, batch_size, head, level, device, save_features):
             
             if save_features:
                 #flatten to vector
-                for feature in feature_dict:
-                    feature_dict[feature] = feature_dict[feature].view(feature_dict[feature].size(0), -1)
-                    
-                all_coarse_features.append(feature_dict['h1_features'])
-                all_fine_features.append(feature_dict['h2_features'])
+                if level == const.HIERARCHICAL:
+                    for feature in feature_dict:
+                        feature_dict[feature] = feature_dict[feature].view(feature_dict[feature].size(0), -1)
+                        
+                    all_coarse_features.append(feature_dict['h1_features'])
+                    all_fine_features.append(feature_dict['h2_features'])
+                
+                else: 
+                    for feature in feature_dict:
+                        feature_dict[feature] = feature_dict[feature].view(feature_dict[feature].size(0), -1)
+                        
+                    all_features.append(feature_dict['h1_features'])
               
             if index == 1:
                 break 
@@ -318,17 +416,21 @@ def predict(model, data, batch_size, head, level, device, save_features):
         pred_outputs = torch.cat(outputs, dim=0)
         if save_features:
             h_1.remove()
-            h_2.remove()
             return pred_outputs, ids, feature_dict
         else:
             return pred_outputs, ids
 
-def prepare_data(data_root, dataset, transform):
+def prepare_data(data_root, dataset, metadata, transform):
 
     data_path = os.path.join(data_root, dataset)
     transform = preprocessing.transform(**transform)
-    predict_data = preprocessing.PredictImageFolder(root=data_path, transform=transform)
-
+    metadata_path = os.path.join(data_root, metadata)
+    predict_data = preprocessing.PredictImageFolder(
+        root=data_path,
+        csv_file=metadata_path,
+        transform=transform
+    )
+    
     return predict_data
 
 def load_model(model_path, device):
@@ -348,7 +450,7 @@ def load_model(model_path, device):
         model = model_cls(num_c = num_c, num_classes=num_classes, head=head, hierarchy_method=hierarchy_method) 
         model.load_state_dict(model_state['model_state_dict'])
         
-        return model, (coarse_classes, fine_classes), head, level, valid_dataset
+        return model, (coarse_classes, fine_classes), head, level, valid_dataset, hierarchy_method, 
     
     #CC    
     else:
@@ -360,10 +462,10 @@ def load_model(model_path, device):
         else:
             classes = valid_dataset.classes  
             num_classes = len(classes)
-        model = model_cls(num_classes=num_classes) 
+        model = model_cls(num_classes=num_classes, head=head) 
         model.load_state_dict(model_state['model_state_dict'])
         
-        return model, classes, head, level, valid_dataset
+        return model, classes, head, level, valid_dataset, hierarchy_method
 
 def save_predictions_json(predictions, saving_dir, saving_name):
     
@@ -393,6 +495,153 @@ def save_features(features_dict, saving_dir, saving_name):
 
     saving_path = os.path.join(saving_dir, saving_name)
     torch.save(features_dict, saving_path)
+    
+    
+def save_cam(model, data, normalize_transform, classes, valid_dataset, head, level, hierarchy_method, device, cam_folder):
+
+    #feature_layer = model.fine_classifier[-4]
+    feature_layer = model.features[-3]
+    #out_weights_coarse = model.coarse_classifier[-1].weight #TODO adapt for multiple heads 
+    out_weights_fine_reduced = helper.get_fine_weights(model, level, head)
+    
+    model.to(device)
+    model.eval()
+   
+    coarse_classes, fine_classes = classes
+    fine_classes = sorted(fine_classes, key=lambda x: const.FLATTENED_INT[x])
+
+    valid_dataset_ids = [os.path.splitext(os.path.split(id[0])[-1])[0] for id in valid_dataset.samples]
+    
+    with torch.no_grad():
+        with helper.ActivationHook(feature_layer) as activation_hook:
+        
+            for image, image_id in data:
+                input = normalize_transform(image).unsqueeze(0).to(device)
+                model_inputs = (input, None)
+                
+                coarse_output, fine_output = model(model_inputs)
+                coarse_output = model.get_class_probabilities(coarse_output).squeeze(0)
+                coarse_pred_value = torch.max(coarse_output, dim=0).values.item()
+                coarse_idx = torch.argmax(coarse_output, dim=0).item()
+                coarse_pred_class = coarse_classes[coarse_idx]
+                # TODO: wie sinnvoll ist class activation map bei regression?
+                #if head == const.REGRESSION:                    
+                    # fine_output = fine_output.flatten().squeeze(0)
+                    # fine_pred_value = fine_output.item()
+                    # fine_idx = 0
+                    # fine_pred_class = "outside" if str(round(fine_pred_value)) not in fine_classes.keys() else fine_classes[str(round(fine_pred_value))]
+                    
+                #elif head == const.CORN TODO: add corn
+                #elif head == const.CLM:
+                if head == const.CLASSIFICATION:                  
+                    fine_output = model.get_class_probabilities(fine_output).squeeze(0)
+                
+                fine_idx, fine_pred_class = helper.compute_fine_prediction_hierarchical(fine_output=fine_output, 
+                                                                                                             coarse_filter=coarse_idx, 
+                                                                                                             hierarchy_method=hierarchy_method, 
+                                                                                                             head=head,
+                                                                                                             fine_classes=fine_classes)
+
+                # create cam
+                activations = activation_hook.activation[0]
+                cam_maps = {}
+                if head == const.CLASSIFICATION:
+                    cam_map_fine = torch.einsum('ck,kij->cij', out_weights_fine_reduced, activations)
+                    cam_maps["combined"] = cam_map_fine
+                else:
+                    # Store each CAM in the dictionary
+                    cam_maps["asphalt"] = helper.generate_cam(activations, out_weights_fine_asphalt)
+                    cam_maps["concrete"] = helper.generate_cam(activations, out_weights_fine_concrete)
+                    cam_maps["paving_stones"] = helper.generate_cam(activations, out_weights_fine_paving_stones)
+                    cam_maps["sett"] = helper.generate_cam(activations, out_weights_fine_sett)
+                    cam_maps["unpaved"] = helper.generate_cam(activations, out_weights_fine_unpaved)
+
+                #coarse_text = 'validation_data: {}\nprediction: {}\nvalue: {:.3f}'.format('True' if image_id in valid_dataset_ids else 'False', coarse_pred_class, coarse_pred_value)
+                #fine_text = 'validation_data: {}\nprediction: {}\nvalue: {:.3f}'.format('True' if image_id in valid_dataset_ids else 'False', fine_pred_class, fine_pred_value)
+
+                #n_coarse_classes = len(coarse_classes)
+                if head == const.REGRESSION:
+                    n_fine_classes = 1 
+                elif head == const.CORN:
+                    if coarse_idx == 0 or coarse_idx == 1 or coarse_idx == 2:
+                        n_fine_classes = 3
+                    else:
+                        n_fine_classes = 2
+                
+                else:
+                    n_fine_classes = len(fine_classes)
+                
+                to_pil = ToPILImage()  # Initialize the transform
+                original_pil_image = to_pil(image.cpu())  
+                original_image_path = os.path.join(cam_folder, f"{image_id}_original.jpg")
+                original_pil_image.save(original_image_path)
+                print(f"Original image saved at {original_image_path}")
+                 
+                for class_key, cam_map in cam_maps.items():
+                    for i in range(n_fine_classes):
+                        class_name = fine_classes[i]
+
+                        # Create a figure for each CAM
+                        fig, ax = plt.subplots()
+                        
+                        # Show the CAM for the specific class and fine class
+                        ax.imshow(cam_map[i].detach().cpu(), alpha=1.0, extent=(0, 48, 48, 0), interpolation='bicubic', cmap='magma')
+                        ax.axis('off')
+                        
+                        # Save with different filenames for predicted vs non-predicted classes
+                        if i == fine_idx:
+                            class_image_path = os.path.join(cam_folder, f"{image_id}_{class_key}_{class_name}_predicted_cam.jpg")
+                            ax.set_title(f"Predicted: {class_name}")
+                        else:
+                            class_image_path = os.path.join(cam_folder, f"{image_id}_{class_key}_{class_name}_cam.jpg")
+                        
+                        plt.savefig(class_image_path, bbox_inches='tight', pad_inches=0)
+                        plt.close()
+
+                print(f"CAM images saved in {cam_folder}")  
+                
+                break
+                
+                
+                
+                #fine cam
+                # fig, ax = plt.subplots(1, n_fine_classes+1, figsize=((n_fine_classes+1)*2.5, 2.5))
+
+                # ax[0].imshow(image.permute(1, 2, 0))
+                # ax[0].axis('off')
+
+                # for i in range(1, n_fine_classes+1):
+                    
+                #     # merge original image with cam
+                    
+                #     ax[i].imshow(image.permute(1, 2, 0))
+
+                #     #ax[i].imshow(cam_map_coarse[i-1].detach(), alpha=0.75, extent=(0, image.shape[2], image.shape[1], 0),
+                #             #interpolation='bicubic', cmap='magma')
+                    
+                #     ax[i].imshow(cam_map_fine[i-1].detach(), alpha=0.75, extent=(0, image.shape[2], image.shape[1], 0),
+                #             interpolation='bicubic', cmap='magma')
+
+                #     ax[i].axis('off')
+
+                    # if i - 1 == idx:
+                    #     # draw prediction on image
+                    #     ax[i].text(10, 80, text, color='white', fontsize=6)
+                    # else:
+                    #     t = '\n\nprediction: {}\nvalue: {:.3f}'.format(classes[i - 1], output[i - 1].item())
+                    #     ax[i].text(10, 80, t, color='white', fontsize=6)
+
+                #     t = '\n\nprediction: {}\nvalue: {:.3f}'.format(classes[i - 1], fine_output[i - 1].item())
+                #     ax[i].fine_text(10, 60, t, color='white', fontsize=6)
+
+                #     # save image
+                #     # image_path = os.path.join(image_folder, "{}_cam.png".format(image_id))
+                #     # plt.savefig(image_path)
+
+                #     # show image
+                # plt.show()
+                # plt.close()
+        
 
 
 # def run_dataset_prediction_json(name, data_root, dataset, transform, model_root, model_dict, predict_dir, gpu_kernel, batch_size):

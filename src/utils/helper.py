@@ -468,11 +468,13 @@ def compute_fine_losses(model, fine_criterion, fine_output, fine_labels, device,
         fine_loss_sett = torch.nan_to_num(fine_loss_sett, nan=0.0)
         fine_loss_unpaved = torch.nan_to_num(fine_loss_unpaved, nan=0.0)
         
-        fine_loss += fine_loss_asphalt
-        fine_loss += fine_loss_concrete
-        fine_loss += fine_loss_paving_stones
-        fine_loss += fine_loss_sett
-        fine_loss += fine_loss_unpaved
+        fine_loss += (1/5 * fine_loss_asphalt + 1/5 * fine_loss_concrete + 1/5 * fine_loss_paving_stones + 1/5 * fine_loss_sett + 1/5 * fine_loss_unpaved)
+        
+        # fine_loss += fine_loss_asphalt
+        # fine_loss += fine_loss_concrete
+        # fine_loss += fine_loss_paving_stones
+        # fine_loss += fine_loss_sett
+        # fine_loss += fine_loss_unpaved
 
     elif hierarchy_method == 'use_model_structure':
         
@@ -744,4 +746,266 @@ def compute_one_off_accuracy_within_groups(predictions, labels, parent):
                     ).sum().item()
 
     return correct_1_off
+
+class ActivationHook:
+    def __init__(self, module):
+        self.module = module
+        self.hook = None
+        self.activation = None
+
+    def __enter__(self):
+        self.hook = self.module.register_forward_hook(self.hook_func)
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        self.close()
+
+    def hook_func(self, module, input, output):
+        self.activation = output.detach()
+
+    def close(self):
+        if self.hook is not None:
+            self.hook.remove()
+            
+            
+def generate_cam(activation, classifier_weights):
+    # Calculate CAM based on activation map and classifier weights
+    cam = torch.einsum("ck,kij->cij", classifier_weights, activation)
+    return cam
+
+def compute_fine_prediction_hierarchical(fine_output, coarse_filter, hierarchy_method, head, fine_classes):
+
+
+    if hierarchy_method == 'use_ground_truth':
+    
+        # Separate the fine outputs based on the head
+        if head == const.REGRESSION:
+            fine_output_asphalt = fine_output[:, 0:1].float()
+            fine_output_concrete = fine_output[:, 1:2].float()
+            fine_output_paving_stones = fine_output[:, 2:3].float()
+            fine_output_sett = fine_output[:, 3:4].float()
+            fine_output_unpaved = fine_output[:, 4:5].float()
+        
+        elif head == const.CORN:
+            fine_output_asphalt = fine_output[:, 0:3]
+            fine_output_concrete = fine_output[:, 3:6]
+            fine_output_paving_stones = fine_output[:, 6:9]
+            fine_output_sett = fine_output[:, 9:11]
+            fine_output_unpaved = fine_output[:, 11:13]
+            
+        else:
+            fine_output_asphalt = fine_output[:, 0:4]
+            fine_output_concrete = fine_output[:, 4:8]
+            fine_output_paving_stones = fine_output[:, 8:12]
+            fine_output_sett = fine_output[:, 12:15]
+            fine_output_unpaved = fine_output[:, 15:18]
+        
+
+        def compute_prediction(output, category):            
+            if head == 'clm' or head == const.CLASSIFICATION or head == const.CLASSIFICATION_QWK:
+                preds = torch.argmax(output, dim=1)
+            elif head == 'regression':
+                preds = output.round().long()
+            elif head == 'corn':
+                preds = corn_label_from_logits(output).long()
+                    
+                fine_idx = map_predictions_to_quality(preds, category)
+                fine_pred_class = fine_classes[fine_idx]
+                
+                return fine_idx, fine_pred_class
+
+        if coarse_filter == 0:
+            fine_idx, fine_pred_class = compute_prediction(fine_output_asphalt, "asphalt")
+        elif coarse_filter == 1:
+            fine_idx, fine_pred_class = compute_prediction(fine_output_concrete, "concrete")
+        elif coarse_filter == 2:
+            fine_idx, fine_pred_class = compute_prediction(fine_output_paving_stones, "paving_stones")
+        elif coarse_filter == 3:
+            fine_idx, fine_pred_class = compute_prediction(fine_output_sett, "sett")
+        elif coarse_filter == 4:
+            fine_idx, fine_pred_class = compute_prediction(fine_output_unpaved, "unpaved")
+        
+        
+    else:
+        if head == const.CLASSIFICATION or head == const.CLM:
+            fine_idx = torch.argmax(fine_output, dim=0).item()
+            fine_pred_class = fine_classes[fine_idx]
+ 
+        elif head == const.REGRESSION:
+            fine_idx = fine_output.round().long()
+            fine_pred_class = fine_classes[fine_idx]
+            
+        elif head == const.CORN:
+            fine_idx = corn_label_from_logits(fine_output).long()
+            fine_pred_class = fine_classes[fine_idx]
+            
+            
+    return fine_idx, fine_pred_class
+
+
+
+def get_reduced_out_weights(model, head):
+    """
+    Generates reduced weights for each classifier head in the model based on the head type.
+    
+    Parameters:
+    - model: The model containing classifier heads for each surface type.
+    - head: Type of the head (e.g., `const.CORN`, `const.REGRESSION`, `const.CLM`).
+    
+    Returns:
+    - Dictionary of reduced weights for each classifier head.
+    """
+    # Define the number of classes for each head type
+    head_config = {
+        const.CORN: {'asphalt': 3, 'concrete': 3, 'paving_stones': 3, 'sett': 2, 'unpaved': 2},
+        const.REGRESSION: {'asphalt': 1, 'concrete': 1, 'paving_stones': 1, 'sett': 1, 'unpaved': 1},
+        const.CLM: {'asphalt': 4, 'concrete': 4, 'paving_stones': 4, 'sett': 3, 'unpaved': 3}
+    }
+
+    # Initialize a dictionary to hold the reduced weights
+    out_weights_fine = {}
+
+    # Loop over each surface type to compute reduced weights
+    for surface_type, num_classes in head_config[head].items():
+        classifier_attr = f"classifier_{surface_type}"  # Dynamically get the attribute name
+        classifier_weight = getattr(model, classifier_attr)[-1].weight  # Access the weight
+        # Reshape and reduce the weights as specified
+        reduced_weight = classifier_weight.view(num_classes, 512, 2).sum(dim=2)
+        out_weights_fine[surface_type] = reduced_weight
+    
+    return out_weights_fine
+
+def reduce_weights(weight, num_classes, channels=512, reduction_dim=2):
+    """
+    Reshapes and reduces the weights to match CAM requirements.
+    """
+    return weight.view(num_classes, channels, reduction_dim).sum(dim=reduction_dim)
+
+def get_fine_weights(model, level, head):
+    """
+    Returns reduced weights for fine classifiers based on the level and head.
+    """
+    if level == const.HIERARCHICAL:
+        if head == const.CLASSIFICATION:
+            out_weights_fine = model.fine_classifier[-1].weight
+            return reduce_weights(out_weights_fine, num_classes=18)
+        else:
+            return get_reduced_out_weights(model, head)
+    
+    elif level == const.FLATTEN:
+        out_weights = model.classifier[-1].weight
+        num_classes = {
+            const.CORN: 17,
+            const.REGRESSION: 1
+        }.get(head, 18)  # Default to 18 if head is not CORN or REGRESSION
+        return reduce_weights(out_weights, num_classes=num_classes)
+    
+    elif level == const.SMOOTHNESS:
+        out_weights = model.classifier[-1].weight
+        surface_classes = {
+            (const.ASPHALT, const.CONCRETE, const.PAVING_STONES): {
+                const.CORN: 3,
+                const.REGRESSION: 1
+            },
+            (const.SETT, const.UNPAVED): {
+                const.CORN: 2,
+                const.REGRESSION: 1
+            }
+        }
+        
+        # Determine the number of classes for the surface type and head type
+        for surface_types, head_config in surface_classes.items():
+            if model.surface_type in surface_types:
+                num_classes = head_config.get(head, 4 if model.surface_type in (const.ASPHALT, const.CONCRETE, const.PAVING_STONES) else 3)
+                return reduce_weights(out_weights, num_classes=num_classes)
+        
+    return None  # Return None if level doesn't match expected configurations
+
+
+def compute_fine_prediction_hierarchical_GT(fine_output, coarse_filter, hierarchy_method, head, fine_classes):
+    """
+    Computes fine-grained predictions for each image based on coarse filter and head type.
+    
+    Parameters:
+    - fine_output: Tensor containing fine output predictions for each image.
+    - coarse_filter: List or tensor of coarse class predictions for each image.
+    - hierarchy_method: Method for hierarchical prediction.
+    - head: Model head type (e.g., 'regression', 'corn', 'classification').
+    - fine_classes: List of fine classes.
+
+    Returns:
+    - pred_fine_classes: List of fine predictions for each image.
+    """
+    # Initialize list to store predictions for each image
+    pred_fine_classes = []
+
+    # Define the fine outputs structure based on the head type
+    if head == 'regression':
+        fine_slices = {
+            "asphalt": fine_output[:, 0:1].float(),
+            "concrete": fine_output[:, 1:2].float(),
+            "paving_stones": fine_output[:, 2:3].float(),
+            "sett": fine_output[:, 3:4].float(),
+            "unpaved": fine_output[:, 4:5].float()
+        }
+    elif head == 'corn':
+        fine_slices = {
+            "asphalt": fine_output[:, 0:3],
+            "concrete": fine_output[:, 3:6],
+            "paving_stones": fine_output[:, 6:9],
+            "sett": fine_output[:, 9:11],
+            "unpaved": fine_output[:, 11:13]
+        }
+    else:  # For classification or other types
+        fine_slices = {
+            "asphalt": fine_output[:, 0:4],
+            "concrete": fine_output[:, 4:8],
+            "paving_stones": fine_output[:, 8:12],
+            "sett": fine_output[:, 12:15],
+            "unpaved": fine_output[:, 15:18]
+        }
+
+    # Iterate over each image and compute the fine predictions
+    for i in range(fine_output.size(0)):
+        # Get the coarse prediction for this image
+        coarse_class = coarse_filter[i]
+        
+        # Get the corresponding fine output slice for this coarse class
+        output_slice = fine_slices[coarse_class]
+
+        # Compute predictions based on the head type
+        if head in ['clm', const.CLASSIFICATION, const.CLASSIFICATION_QWK]:
+            preds = torch.argmax(output_slice[i], dim=0, keepdim=True)
+        elif head == 'regression':
+            preds = output_slice[i].round().long()
+        elif head == 'corn':
+            preds = corn_label_from_logits(output_slice[i].unsqueeze(0)).long()
+
+        # Map predictions to quality and append to results
+        quality_pred = map_predictions_to_quality(preds, coarse_class)
+        pred_fine_classes.append(quality_pred.item())
+
+    return pred_fine_classes
+
+
+flattened_mapping_true = {
+    ("asphalt", "excellent"): 0,
+    ("asphalt", "good"): 1,
+    ("asphalt", "intermediate"): 2,
+    ("asphalt", "bad"): 3,
+    ("concrete", "excellent"): 4,
+    ("concrete", "good"): 5,
+    ("concrete", "intermediate"): 6,
+    ("concrete", "bad"): 7,
+    ("paving_stones", "excellent"): 8,
+    ("paving_stones", "good"): 9,
+    ("paving_stones", "intermediate"): 10,
+    ("paving_stones", "bad"): 11,
+    ("sett", "good"): 12,
+    ("sett", "intermediate"): 13,
+    ("sett", "bad"): 14,
+    ("unpaved", "intermediate"): 15,
+    ("unpaved", "bad"): 16,
+    ("unpaved", "very_bad"): 17
+}
 
