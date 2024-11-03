@@ -22,18 +22,18 @@ vgg16_surface = {
 
 B_CNN = {
     **global_config.global_config,
-    "name": "multi_label_prediction",
+    "name": "B_CNN_CLASSIFICATION_prediction",
     "model_dict": {"trained_model": "hierarchical-B_CNN-classification-use_model_structure20241027_124835_epoch0.pt"},
     #"model_dict": {"trained_model": "multilabel-BCNN-20240504_141652-jzr601kb_epoch39.pt"}, 
-    "dataset": "V1_0",
-    "metadata": "V1_0\\streetSurfaceVis_v1_0.csv",
+    "dataset": r"V1_0",
+    "metadata": r"streetSurfaceVis_v1_0.csv",
     "transform": {
         "resize": const.H256_W256,
         "crop": const.CROP_LOWER_MIDDLE_THIRD,
         "normalize": (const.V1_0_ANNOTATED_MEAN, const.V1_0_ANNOTATED_SD),
     },
     "batch_size": 96,
-    "save_features": False,
+    "save_features": True,
 }
 
 B_CNN_CORN_GT = {

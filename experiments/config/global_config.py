@@ -10,10 +10,10 @@ global_config = dict(
     wandb_on=False,
     root_data = str(ROOT_DIR / "data" / "training"),
     root_model = str(ROOT_DIR / "trained_models"),
-    root_predict = str(ROOT_DIR / "data" / "training" / "prediction"),
+    root_predict = str(ROOT_DIR / "data" / "training" / "prediction" / "Esther_MA"),
     data_testing_path = str(ROOT_DIR / "data" / "testing"),
     data_path = str(ROOT_DIR / "data"),
-    evaluation_path = str(ROOT_DIR / "evaluations"),
+    evaluation_path = str(ROOT_DIR / "evaluations" / "Esther_MA"),
     selected_classes = {
         constants.ASPHALT: [
             constants.EXCELLENT,

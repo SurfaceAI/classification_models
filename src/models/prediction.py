@@ -102,7 +102,7 @@ def run_dataset_predict_csv(config):
     start_time = datetime.fromtimestamp(time.time()).strftime("%Y%m%d_%H%M%S")
     saving_name = config.get("name") + '-' + config.get("dataset").replace('\\', '_') + '-' + start_time + '.csv'
 
-    saving_path = save_predictions_csv(df=df, saving_dir=os.path.join(config.get("root_predict"), config.get("dataset")), saving_name=saving_name)
+    saving_path = save_predictions_csv(df=df, saving_dir=os.path.join(config.get("root_predict")), saving_name=saving_name)
 
     print(f'Images {config.get("dataset")} predicted and saved: {saving_path}')
 
@@ -125,6 +125,7 @@ def recursive_predict_csv(model_dict, model_root, data, batch_size, device, leve
         valid_dataset_ids = [os.path.splitext(os.path.split(id[0])[-1])[0] for id in valid_dataset.samples]
         is_valid_data = [1 if image_id in valid_dataset_ids else 0 for image_id in image_ids]
         
+        df = pd.DataFrame()   
         if level == const.HIERARCHICAL:             #todo: add regression
             pred_coarse_outputs = pred_outputs[0]
             pred_fine_outputs = pred_outputs[1]
@@ -164,7 +165,7 @@ def recursive_predict_csv(model_dict, model_root, data, batch_size, device, leve
             if save_features:          
                 return df, pred_outputs, image_ids, features
             else:
-                return df, pred_outputs, image_ids, _
+                return df, pred_outputs, image_ids
             
         #classifier chain  
         elif level == const.FLATTEN:
@@ -194,7 +195,7 @@ def recursive_predict_csv(model_dict, model_root, data, batch_size, device, leve
             if save_features:          
                 return df, pred_outputs, image_ids, features
             else:
-                return df, pred_outputs, image_ids, _
+                return df, pred_outputs, image_ids
          
         #CC   
         else:
@@ -422,9 +423,9 @@ def predict(model, data, batch_size, head, level, device, save_features):
 
 def prepare_data(data_root, dataset, metadata, transform):
 
-    data_path = os.path.join(data_root, dataset)
+    data_path = os.path.join(data_root, dataset, "s_1024")
     transform = preprocessing.transform(**transform)
-    metadata_path = os.path.join(data_root, metadata)
+    metadata_path = os.path.join(data_root, dataset, "metadata", metadata)
     predict_data = preprocessing.PredictImageFolder(
         root=data_path,
         csv_file=metadata_path,
