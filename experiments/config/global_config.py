@@ -7,7 +7,7 @@ ROOT_DIR = Path(__file__).parent.parent.parent
 global_config = dict(
     gpu_kernel = 1,
     wandb_mode = constants.WANDB_MODE_ON,
-    wandb_on=False,
+    wandb_on=True,
     root_data = str(ROOT_DIR / "data" / "training"),
     root_model = str(ROOT_DIR / "trained_models"),
     root_predict = str(ROOT_DIR / "data" / "training" / "prediction"),
@@ -46,10 +46,10 @@ global_config = dict(
         random_rotation=10,
     ),
     dataset = "V12/annotated",
-    seed = None,
+    seed = 42,
     validation_size = 0.2,
     valid_batch_size = 64,
     checkpoint_top_n = 1,
-    early_stop_thresh = 3, #constants.EARLY_STOPPING_DEFAULT,
-    save_state = True,
+    early_stop_thresh = 5, #constants.EARLY_STOPPING_DEFAULT,
+    save_state = False,
 )   

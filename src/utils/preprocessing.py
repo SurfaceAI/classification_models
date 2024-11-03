@@ -349,7 +349,6 @@ def create_train_validation_datasets(
         valid_transform,
         random_state,
     )
-
     return train_dataset, valid_dataset
 
 
