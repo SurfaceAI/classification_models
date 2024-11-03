@@ -3,7 +3,7 @@ from experiments.config  import global_config
 
 default_params = {
     "batch_size": 16, #16,  # 48
-    "epochs": 1,
+    "epochs": 12,
     #"learning_rate": 0.01,
     "optimizer": const.OPTI_ADAM,
     "eval_metric": const.EVAL_METRIC_ALL,
@@ -17,7 +17,7 @@ default_params = {
 default_search_params = {
     #"batch_size": {"values": [16, 48, 64]},
     "epochs": {"value": 12},
-    "learning_rate": {"values": [1e-05, 1e-04, 1e-03]},
+    "learning_rate": {"values": [0.001, 0.01, 0.1]},
     "gamma": {"values": [0.1, 0.5, 0.9]},
     #"learning_rate": {"distribution": "log_uniform_values", "min": 1e-05, "max": 0.001},
     #"optimizer": {"value": const.OPTI_ADAM},
@@ -79,12 +79,12 @@ vgg16_flatten = {
     **default_params,
     "project": const.PROJECT_FINAL,
     "optimizer": const.OPTI_ADAM,
-    "name": "fine_flatten_CLM",
+    "name": "fine_flatten_CORN",
     "level": const.FLATTEN,
     "model": const.VGG16,
-    "head": const.CLM,
+    "head": const.CORN,
     "eval_metric": const.EVAL_METRIC_ALL,
-    "learning_rate": 0.01,
+    "learning_rate": 0.00005,
     "hierarchy_method": const.FLATTEN,
     #"fc_neurons": 512,
 }
@@ -111,84 +111,19 @@ vgg16_quality_params = {
     **global_config.global_config,
     **default_params,
     "project": const.PROJECT_FINAL,
-    "name": "CC_fine_CLM",
+    "name": "CC_fine_CORN",
     "level": const.SMOOTHNESS,
     "model": const.VGG16,
-    "learning_rate": 0.01,
+    "learning_rate": 0.00005,
     #"dataset": "V1_0/train",
     #"metadata": "V1_0/metadata",
     #"train_valid_split_list": "train_valid_split.csv",
-    "head": const.CLM,
+    "head": const.CORN,
     "hierarchy_method": const.CC,
     "eval_metric": const.EVAL_METRIC_ALL,
     # "gpu_kernel": 0,
 }
 
-# efficientnet_surface_params = {
-#     **global_config.global_config,
-#     **default_params,
-#     "project": const.PROJECT_MULTI_LABEL_FIXED,
-#     "name": "efficientnet",
-#     "level": const.SURFACE,
-#     "model": const.EFFNET_LINEAR,
-#     "is_regression": False,
-#     "eval_metric": const.EVAL_METRIC_ACCURACY,
-#     "learning_rate": 0.00056,
-#     "dataset": "V1_0/train",
-#     "metadata": "V1_0/metadata",
-#     "train_valid_split_list": "train_valid_split.csv",
-#     # "gpu_kernel": 0,
-# }
-
-# efficientnet_quality_params = {
-#     **global_config.global_config,
-#     **default_params,
-#     "project": const.PROJECT_MULTI_LABEL_FIXED,
-#     "name": "efficientnet",
-#     "level": const.SMOOTHNESS,
-#     "model": const.EFFNET_LINEAR,
-#     "learning_rate": 0.0006,
-#     "dataset": "V1_0/train",
-#     "metadata": "V1_0/metadata",
-#     "train_valid_split_list": "train_valid_split.csv",
-#     "is_regression": True,
-#     "eval_metric": const.EVAL_METRIC_MSE,
-#     # "gpu_kernel": 0,
-# }
-
-# efficientnet_params = {
-#     **global_config.global_config,
-#     **default_params,
-#     "project": const.PROJECT_SURFACE_FIXED,
-#     "name": "efficientnet",
-#     "level": const.SURFACE,
-#     "model": const.EFFICIENTNET,
-#     # "max_class_size": 2,
-# }
-
-# efficientnet_flatten_params = {
-#     **global_config.global_config,
-#     **default_params,
-#     "project": const.PROJECT_FLATTEN_FIXED,
-#     "name": "efficientnet",
-#     "level": const.FLATTEN,
-#     "model": const.EFFICIENTNET,
-# }
-
-# sweep_params = {
-#     **global_config.global_config,
-#     **default_params,
-#     "method": "bayes",
-#     "metric": {"name": "eval/acc", "goal": "maximize"},
-#     "search_params": {**default_search_params,
-#                       "model": {"values": [const.VGG16, const.EFFICIENTNET]},                 
-#                      },
-#     "project": const.PROJECT_SURFACE_SWEEP,
-#     "name": "VGG16-efficientnet",
-#     "level": const.SURFACE,
-#     "sweep_counts": 30,
-#     "save_state": False,
-# }
 
 vgg16_sweep_params = {
     **global_config.global_config,
@@ -204,182 +139,41 @@ vgg16_sweep_params = {
     "sweep_counts": 10,
 }
 
-# efficientnet_sweep_params = {
-#     **global_config.global_config,
-#     **default_params,
-#     'model': const.EFFICIENTNET,
-#     "method": "bayes",
-#     "metric": {"name": "eval/acc", "goal": "maximize"},
-#     "search_params": {**default_search_params,                 
-#                      },
-#     "project": const.PROJECT_SURFACE_SWEEP,
-#     "name": "efficientnet",
-#     "level": const.SURFACE,
-#     "sweep_counts": 10,
-# }
-
-# rateke_sweep_params = {
-#     **global_config.global_config,
-#     **default_params,
-#     'model': const.RATEKE,
-#     "method": "bayes",
-#     "metric": {"name": "eval/acc", "goal": "maximize"},
-#     "search_params": {**default_search_params,                 
-#                      },
-#     "project": const.PROJECT_SURFACE_SWEEP,
-#     "name": "rateke",
-#     "level": const.SURFACE,
-#     "sweep_counts": 10,
-# }
-
-# vgg16_regression_params = {
-#     **global_config.global_config,
-#     "batch_size": 16,
-#     "epochs": 10,
-#     "learning_rate": 0.0001,
-#     "optimizer": const.OPTI_ADAM,
-#     "is_regression": True,
-#     "eval_metric": const.EVAL_METRIC_MSE,
-#     "project": const.PROJECT_SMOOTHNESS_FIXED,
-#     "name": "VGG16_Regression",
-#     "level": const.SMOOTHNESS,
-#     "model": const.VGG16,
-
-# }
-
-# vgg16_asphalt_regression_params = {
-#     **global_config.global_config,
-#     **default_params,
-#     "batch_size": 16,
-#     "epochs": 30,
-#     "learning_rate": 0.00003,
-#     "is_regression": True,
-#     "eval_metric": const.EVAL_METRIC_ACCURACY,
-#     "clm": False,
-#     "project": const.PROJECT_ORDINAL_REGRESSION_FIXED,
-#     "name": "VGG16_regression_asphalt",
-#     "level": const.ASPHALT,
-#     "selected_classes": global_config.global_config.get("selected_classes")[const.ASPHALT],
-#     "dataset": "V12/annotated/asphalt",
-#     "model": const.VGG16,
-
-# }
-
-
-
-# vgg16_asphalt_CLM_params = {
-#     **global_config.global_config,
-#     **default_params,
-#     "batch_size": 64,
-#     "epochs": 20,
-#     "learning_rate": 0.01,
-#     "is_regression": False,
-#     "eval_metric": const.EVAL_METRIC_ACCURACY,
-#     "clm": True,
-#     "project": const.PROJECT_ORDINAL_REGRESSION_FIXED,
-#     "name": "VGG16_CLM_asphalt",
-#     "level": const.ASPHALT,
-#     "selected_classes": global_config.global_config.get("selected_classes")[const.ASPHALT],
-#     "dataset": "V12/annotated/asphalt",
-#     "model": const.VGG16_CLM,
-# }
-
-# vgg16_asphalt_Rosati_params = {
-#     **global_config.global_config,
-#     **default_params,
-#     "batch_size": 64,
-#     "epochs": 30,
-#     "learning_rate": 0.0001,
-#     "is_regression": False,
-#     "eval_metric": const.EVAL_METRIC_ACCURACY,
-#     "clm": True,
-#     "two_optimizers":False,
-#     "project": const.PROJECT_ORDINAL_REGRESSION_FIXED,
-#     "name": "VGG16_CLM_asphalt",
-#     "level": const.ASPHALT,
-#     "selected_classes": global_config.global_config.get("selected_classes")[const.ASPHALT],
-#     "dataset": "V12/annotated/asphalt",
-#     "model": const.VGG16_CLM,
-# }
-
-# vgg16_asphalt_crophalf_regression_params = {
-#     **global_config.global_config,
-#     **default_params,
-#     "transform": 
-#         {"resize": const.H256_W256,
-#         "crop": const.CROP_LOWER_MIDDLE_HALF,
-#         "normalize": const.NORM_DATA,},
-#     "batch_size": 96,
-#     "epochs": 20,
-#     "learning_rate": 0.00003,
-#     "is_regression": True,
-#     "eval_metric": const.EVAL_METRIC_MSE,
-#     "project": const.PROJECT_SMOOTHNESS_FIXED,
-#     "name": "VGG16_Regression",
-#     "level": const.ASPHALT,
-#     "selected_classes": global_config.global_config.get("selected_classes")[const.ASPHALT],
-#     "dataset": "V12/annotated/asphalt",
-#     "model": const.VGG16,
-
-# }
-
-# effnet_asphalt_crophalf_regression_params = {
-#     **global_config.global_config,
-#     **default_params,
-#     "transform": 
-#         {"resize": const.H256_W256,
-#         "crop": const.CROP_LOWER_MIDDLE_HALF,
-#         "normalize": const.NORM_DATA,},
-#     "batch_size": 96,
-#     "epochs": 20,
-#     "learning_rate": 0.0001,
-#     "is_regression": True,
-#     "eval_metric": const.EVAL_METRIC_MSE,
-#     "project": const.PROJECT_SMOOTHNESS_FIXED,
-#     "name": "effnet_Regression",
-#     "level": const.ASPHALT,
-#     "selected_classes": global_config.global_config.get("selected_classes")[const.ASPHALT],
-#     "dataset": "V12/annotated/asphalt",
-#     "model": const.EFFNET_LINEAR,
-
-# }
-
 
 B_CNN = {
     **global_config.global_config,
     **default_params,
     #"batch_size": 64,
     #"epochs": 12,
-    "learning_rate": 0.00001,
+    "learning_rate": 0.005,
     "optimizer": const.OPTI_ADAM,
     "coarse_eval_metric": const.EVAL_METRIC_ALL,
     "fine_eval_metric": const.EVAL_METRIC_ALL,
     "project": const.PROJECT_FINAL,
-    "name": "B_CNN",
+    "name": "B_CNN_CLM",
     "level": const.HIERARCHICAL,
     "model": const.BCNN,
-    "head": const.CLASSIFICATION, #'regression', 'classification', 'corn', 'clm'
+    "head": const.CLM, #'regression', 'classification', 'corn', 'clm'
     "hierarchy_method": const.MODELSTRUCTURE, #'use_ground_truth', 'use_condition_layer', 'b_cnn'
     "lw_modifier": True,
     #"lr_scheduler": True,
 }
 
 
-
 C_CNN = {
     **global_config.global_config,
     **default_params,
-    "learning_rate": 0.00005,
+    "learning_rate": 0.01, 
     "optimizer": const.OPTI_ADAM,
     "coarse_eval_metric": const.EVAL_METRIC_ALL,
     "fine_eval_metric": const.EVAL_METRIC_ALL,
     "project": const.PROJECT_FINAL,
-    "name": "C_CNN_CORN",
+    "name": "C_CNN_CLM_GT",
     "level": const.HIERARCHICAL,
     "model": const.CCNN,
-    "head": const.CORN, #'regression', 'classification', 'obd', 'clm'
-    "hierarchy_method": const.MODELSTRUCTURE, #'use_ground_truth', 'None',
-    "lw_modifier": True,
+    "head": const.CLM, #'regression', 'classification', 'obd', 'clm'
+    "hierarchy_method": const.GROUNDTRUTH, #'use_ground_truth', 'None',
+    "lw_modifier": False,
     #"lr_scheduler": True,
 }
 
@@ -388,17 +182,17 @@ H_NET = {
     **default_params,
     #"batch_size": 64,
     #"epochs": 12,
-    "learning_rate": 0.00005,
+    "learning_rate": 0.01,
     "optimizer": const.OPTI_ADAM,
     "coarse_eval_metric": const.EVAL_METRIC_ALL,
     "fine_eval_metric": const.EVAL_METRIC_ALL,
     "project": const.PROJECT_FINAL,
-    "name": "HiearchyNet_CORN",
+    "name": "HiearchyNet_CLM",
     "level": const.HIERARCHICAL,
     "model": const.HNET,
-    "head": const.CORN, #'regression', 'classification', 'obd', 'clm'
+    "head": const.CLM, #'regression', 'classification', 'obd', 'clm'
     "hierarchy_method": const.MODELSTRUCTURE, #'use_ground_truth', 'None',
-    "lw_modifier": True,
+    "lw_modifier": False,
     #"lr_scheduler": False,
 }
 
@@ -407,15 +201,15 @@ GH_CNN = {
     **default_params,
     #"batch_size": 64,
     #"epochs": 12,
-    "learning_rate": 0.00005,
+    "learning_rate": 0.001,
     "optimizer": const.OPTI_ADAM,
     "coarse_eval_metric": const.EVAL_METRIC_ALL,
     "fine_eval_metric": const.EVAL_METRIC_ALL,
     "project": const.PROJECT_FINAL,
-    "name": "GH_CNN_CORN",
+    "name": "GH_CNN_CLM",
     "level": const.HIERARCHICAL,
     "model": const.GHCNN,
-    "head": const.CORN, #'regression', 'classification', 'corn', 'clm', 'clm_kappa', 'classification_kappa',
+    "head": const.CLM, #'regression', 'classification', 'corn', 'clm', 'clm_kappa', 'classification_kappa',
     "hierarchy_method": const.MODELSTRUCTURE, #'use_ground_truth', 'use_condition_layer', 'b_cnn'
     "lw_modifier": True,
     #"lr_scheduler": True,    
@@ -453,7 +247,7 @@ C_CNN_sweep_params = {
     "project": const.PROJECT_MULTI_LABEL_SWEEP_CCNN,
     "name": "C_CNN_CLASSIFICATION",
     "level": const.HIERARCHICAL,
-    "head": const.CLASSIFICATION,
+    "head": const.CLM,
     "hierarchy_method": const.MODELSTRUCTURE,  
     "lw_modifier": True,
     "sweep_counts": 10,

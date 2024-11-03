@@ -53,6 +53,12 @@ def run_training(config, is_sweep=False, seed=None):
             **t,
         }
         
+        if config.get("seed") is None:
+            helper.set_seed(seed)
+        else:
+            helper.set_seed(config.get("seed"))
+            seed = config.get("seed")
+            
         if is_sweep:
             print("Sweep config:", inner_config)
             sweep_id = wandb.sweep(
@@ -106,11 +112,6 @@ def run_training(config, is_sweep=False, seed=None):
 # main for sweep and single training
 def _run_training(project=None, name=None, config=None, wandb_on=True, seed=None):
     # TODO: config sweep ...
-    if config.get("seed") is None:
-        helper.set_seed(seed)
-    else:
-        helper.set_seed(config.get("seed"))
-        seed = config.get("seed")
     if wandb_on:
         run = wandb.init(project=project, name=name, config=config)
         config = wandb.config #TODO: why do we need this and why does it overwrite my loop of t loop
@@ -723,6 +724,8 @@ def train_hierarchical(
             loss_weights_modifier = helper.LossWeightsModifier_GH(alpha, beta)
         else:
             loss_weights_modifier = helper.LossWeightsModifier(alpha, beta)
+    else:
+        alpha, beta = None, None
         
     trainable_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
 
@@ -1213,7 +1216,7 @@ def train_epoch_hierarchical(model, dataloader, optimizer, device, head, hierarc
         
         running_loss += loss.item()
         coarse_loss_total += coarse_loss.item()
-        if head == const.CLASSIFICATION_QWK or head == const.CLM_QWK:
+        if head == const.CLASSIFICATION_QWK or head == const.CLM_QWK or head == const.CLM:
             fine_loss_total += fine_loss
         else:
             fine_loss_total += fine_loss.item()
@@ -1309,7 +1312,7 @@ def validate_epoch_hierarchical(model, dataloader, device, head, hierarchy_metho
             
             val_running_loss += loss.item()
             val_coarse_loss_total += coarse_loss.item()
-            if head == const.CLASSIFICATION_QWK or head == const.CLM_QWK or head == const.CORN:
+            if head == const.CLASSIFICATION_QWK or head == const.CLM_QWK or head == const.CLM:
                 val_fine_loss_total += fine_loss
             else:
                 val_fine_loss_total += fine_loss.item()

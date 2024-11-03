@@ -41,25 +41,7 @@ class C_CNN(nn.Module):
         for param in model.features.parameters():
             param.requires_grad = True
                 
-        self.block1_to_4 = model.features[:24]
-        self.block5_coarse = nn.Sequential(
-            copy.deepcopy(model.features[24]),
-            nn.BatchNorm2d(512),
-            copy.deepcopy(model.features[25]),
-            nn.BatchNorm2d(512),
-            copy.deepcopy(model.features[26]),
-            nn.BatchNorm2d(512)
-        )
-        
-        # Adding BatchNorm layers to block5_fine
-        self.block5_fine = nn.Sequential(
-            copy.deepcopy(model.features[24]),
-            nn.BatchNorm2d(512),
-            copy.deepcopy(model.features[25]),
-            nn.BatchNorm2d(512),
-            copy.deepcopy(model.features[26]),
-            nn.BatchNorm2d(512)
-        )
+        self.block1_to_5 = model.features[:24]
 
 
         #Coarse prediction branch
@@ -191,16 +173,15 @@ class C_CNN(nn.Module):
         
         images, true_coarse = inputs
         
-        x = self.block1_to_4(images) 
+        x = self.block1_to_5(images) 
         #x = self.avgpool(x)
         
-        x_coarse = self.block5_coarse(x)
-        coarse_flat = x_coarse.reshape(x_coarse.size(0), -1) #([128, 32768])
+        coarse_flat = x.reshape(x.size(0), -1) #([128, 32768])
         coarse_output = self.coarse_classifier(coarse_flat)
         coarse_probs = self.get_class_probabilities(coarse_output)
         
-        x_fine = self.block5_fine(x)
-        fine_flat = x_fine.reshape(x_fine.size(0), -1)  
+        fine_flat = x.reshape(x.size(0), -1)  
+        
         if self.head == 'clm' or self.head == 'clm_qwk' or self.head == 'regression' or self.head == 'corn':
             fine_output_asphalt = self.classifier_asphalt(fine_flat) #([batch_size, 1024])  
             fine_output_concrete = self.classifier_concrete(fine_flat)
@@ -217,25 +198,24 @@ class C_CNN(nn.Module):
         
         elif self.head == const.CLASSIFICATION or self.head == const.CLASSIFICATION_QWK:
             fine_output = self.fine_classifier(fine_flat)
-                
-            
-        if self.hierarchy_method == const.MODELSTRUCTURE:
     
-            if self.training:
-                coarse_condition = self.coarse_condition(true_coarse)  
-            else:
-                coarse_condition = self.coarse_condition(coarse_probs) 
-            
+        if self.training:
+            coarse_condition = self.coarse_condition(true_coarse)  
+        else:
+            coarse_condition = self.coarse_condition(coarse_probs) 
+        
+        if self.hierarchy_method == const.MODELSTRUCTURE:   
             if self.head == 'regression' or self.head == 'corn':    
                 fine_output = torch.sum(fine_output * coarse_condition, dim=1)
             else:
                 fine_output = coarse_condition + fine_output
-            
+                self.coarse_condition.weight.data = self.constraint(self.coarse_condition.weight.data)
+                
         return coarse_output, fine_output     
                
     
     def get_optimizer_layers(self):
         if self.head == const.CLASSIFICATION or self.head == const.CLASSIFICATION_QWK or self.head == 'single':
-            return self.block1_to_4, self.block5_coarse, self.block5_fine, self.coarse_classifier, self.fine_classifier, self.coarse_condition
+            return self.block1_to_5, self.coarse_classifier, self.fine_classifier, self.coarse_condition
         else:
-            return self.block1_to_4, self.block5_coarse, self.block5_fine, self.coarse_classifier, self.classifier_asphalt, self.classifier_concrete, self.classifier_paving_stones, self.classifier_sett, self.classifier_unpaved, self.coarse_condition
+            return self.block1_to_5, self.coarse_classifier, self.classifier_asphalt, self.classifier_concrete, self.classifier_paving_stones, self.classifier_sett, self.classifier_unpaved, self.coarse_condition

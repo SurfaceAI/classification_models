@@ -442,39 +442,58 @@ def compute_fine_losses(model, fine_criterion, fine_output, fine_labels, device,
         three_mask_unpaved = (fine_labels_mapped_unpaved != 3)
         fine_labels_mapped_unpaved = fine_labels_mapped_unpaved[three_mask_unpaved]
         
-        # Compute the loss for each surface type
+        fine_loss_asphalt = 0.0
+        fine_loss_concrete = 0.0
+        fine_loss_paving_stones = 0.0
+        fine_loss_sett = 0.0
+        fine_loss_unpaved = 0.0
+
         if head == 'clm':
-            fine_loss_asphalt = fine_criterion(torch.log(fine_output_asphalt[asphalt_mask] + 1e-9), fine_labels_mapped_asphalt) #TODO: check if that works 
-            fine_loss_concrete = fine_criterion(torch.log(fine_output_concrete[concrete_mask] + 1e-9), fine_labels_mapped_concrete)
-            fine_loss_paving_stones = fine_criterion(torch.log(fine_output_paving_stones[paving_stones_mask] + 1e-9), fine_labels_mapped_paving_stones)
-            fine_loss_sett = fine_criterion(torch.log(fine_output_sett[sett_mask][three_mask_sett] + 1e-9), fine_labels_mapped_sett)
-            fine_loss_unpaved = fine_criterion(torch.log(fine_output_unpaved[unpaved_mask][three_mask_unpaved] + 1e-9), fine_labels_mapped_unpaved)
+            if asphalt_mask.sum().item() > 0:
+                fine_loss_asphalt = fine_criterion(torch.log(fine_output_asphalt[asphalt_mask] + 1e-9), fine_labels_mapped_asphalt)
+            if concrete_mask.sum().item() > 0:
+                fine_loss_concrete = fine_criterion(torch.log(fine_output_concrete[concrete_mask] + 1e-9), fine_labels_mapped_concrete)
+            if paving_stones_mask.sum().item() > 0:
+                fine_loss_paving_stones = fine_criterion(torch.log(fine_output_paving_stones[paving_stones_mask] + 1e-9), fine_labels_mapped_paving_stones)
+            if sett_mask.sum().item() > 0 and three_mask_sett.sum().item() > 0:
+                fine_loss_sett = fine_criterion(torch.log(fine_output_sett[sett_mask][three_mask_sett] + 1e-9), fine_labels_mapped_sett)
+            if unpaved_mask.sum().item() > 0 and three_mask_unpaved.sum().item() > 0:
+                fine_loss_unpaved = fine_criterion(torch.log(fine_output_unpaved[unpaved_mask][three_mask_unpaved] + 1e-9), fine_labels_mapped_unpaved)
+
         elif head == 'corn':
-            fine_loss_asphalt = fine_criterion(fine_output_asphalt[asphalt_mask], fine_labels_mapped_asphalt, 4)
-            fine_loss_concrete = fine_criterion(fine_output_concrete[concrete_mask], fine_labels_mapped_concrete, 4)
-            fine_loss_paving_stones = fine_criterion(fine_output_paving_stones[paving_stones_mask], fine_labels_mapped_paving_stones, 4) #TODO: hard coding num_classes vermeiden
-            fine_loss_sett = fine_criterion(fine_output_sett[sett_mask][three_mask_sett], fine_labels_mapped_sett, 3)
-            fine_loss_unpaved = fine_criterion(fine_output_unpaved[unpaved_mask][three_mask_unpaved], fine_labels_mapped_unpaved, 3)
+            if asphalt_mask.sum().item() > 0:
+                fine_loss_asphalt = fine_criterion(fine_output_asphalt[asphalt_mask], fine_labels_mapped_asphalt, 4)
+            if concrete_mask.sum().item() > 0:
+                fine_loss_concrete = fine_criterion(fine_output_concrete[concrete_mask], fine_labels_mapped_concrete, 4)
+            if paving_stones_mask.sum().item() > 0:
+                fine_loss_paving_stones = fine_criterion(fine_output_paving_stones[paving_stones_mask], fine_labels_mapped_paving_stones, 4)
+            if sett_mask.sum().item() > 0 and three_mask_sett.sum().item() > 0:
+                fine_loss_sett = fine_criterion(fine_output_sett[sett_mask][three_mask_sett], fine_labels_mapped_sett, 3)
+            if unpaved_mask.sum().item() > 0 and three_mask_unpaved.sum().item() > 0:
+                fine_loss_unpaved = fine_criterion(fine_output_unpaved[unpaved_mask][three_mask_unpaved], fine_labels_mapped_unpaved, 3)
+
         elif head == 'regression':
-            fine_loss_asphalt = fine_criterion(fine_output_asphalt[asphalt_mask].flatten(), fine_labels_mapped_asphalt.float())
-            fine_loss_concrete = fine_criterion(fine_output_concrete[concrete_mask].flatten(), fine_labels_mapped_concrete.float())
-            fine_loss_paving_stones = fine_criterion(fine_output_paving_stones[paving_stones_mask].flatten(), fine_labels_mapped_paving_stones.float())
-            fine_loss_sett = fine_criterion(fine_output_sett[sett_mask][three_mask_sett].flatten(), fine_labels_mapped_sett.float())
-            fine_loss_unpaved = fine_criterion(fine_output_unpaved[unpaved_mask][three_mask_unpaved].flatten(), fine_labels_mapped_unpaved.float())
+            if asphalt_mask.sum().item() > 0:
+                fine_loss_asphalt = fine_criterion(fine_output_asphalt[asphalt_mask].flatten(), fine_labels_mapped_asphalt.float())
+            if concrete_mask.sum().item() > 0:
+                fine_loss_concrete = fine_criterion(fine_output_concrete[concrete_mask].flatten(), fine_labels_mapped_concrete.float())
+            if paving_stones_mask.sum().item() > 0:
+                fine_loss_paving_stones = fine_criterion(fine_output_paving_stones[paving_stones_mask].flatten(), fine_labels_mapped_paving_stones.float())
+            if sett_mask.sum().item() > 0 and three_mask_sett.sum().item() > 0:
+                fine_loss_sett = fine_criterion(fine_output_sett[sett_mask][three_mask_sett].flatten(), fine_labels_mapped_sett.float())
+            if unpaved_mask.sum().item() > 0 and three_mask_unpaved.sum().item() > 0:
+                fine_loss_unpaved = fine_criterion(fine_output_unpaved[unpaved_mask][three_mask_unpaved].flatten(), fine_labels_mapped_unpaved.float())
+                fine_loss_asphalt = torch.nan_to_num(fine_loss_asphalt, nan=0.0)
+                fine_loss_concrete = torch.nan_to_num(fine_loss_concrete, nan=0.0)
+                fine_loss_paving_stones = torch.nan_to_num(fine_loss_paving_stones, nan=0.0)
+                fine_loss_sett = torch.nan_to_num(fine_loss_sett, nan=0.0)
+                fine_loss_unpaved = torch.nan_to_num(fine_loss_unpaved, nan=0.0)
                 
-        fine_loss_asphalt = torch.nan_to_num(fine_loss_asphalt, nan=0.0)
-        fine_loss_concrete = torch.nan_to_num(fine_loss_concrete, nan=0.0)
-        fine_loss_paving_stones = torch.nan_to_num(fine_loss_paving_stones, nan=0.0)
-        fine_loss_sett = torch.nan_to_num(fine_loss_sett, nan=0.0)
-        fine_loss_unpaved = torch.nan_to_num(fine_loss_unpaved, nan=0.0)
-        
-        fine_loss += (1/5 * fine_loss_asphalt + 1/5 * fine_loss_concrete + 1/5 * fine_loss_paving_stones + 1/5 * fine_loss_sett + 1/5 * fine_loss_unpaved)
-        
-        # fine_loss += fine_loss_asphalt
-        # fine_loss += fine_loss_concrete
-        # fine_loss += fine_loss_paving_stones
-        # fine_loss += fine_loss_sett
-        # fine_loss += fine_loss_unpaved
+        fine_loss += fine_loss_asphalt
+        fine_loss += fine_loss_concrete
+        fine_loss += fine_loss_paving_stones
+        fine_loss += fine_loss_sett
+        fine_loss += fine_loss_unpaved
 
     elif hierarchy_method == 'use_model_structure':
         
