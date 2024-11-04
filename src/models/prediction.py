@@ -95,7 +95,7 @@ def run_dataset_predict_csv(config):
 
     # save features
     if config.get('save_features'):
-        features_save_name = config.get("name") + '-' + config.get("dataset").replace('\\', '_')
+        features_save_name = config.get("model_dict")['trained_model'] + '-' + config.get("dataset").replace('\\', '_')
         save_features(features, os.path.join(config.get("evaluation_path"), 'feature_maps'), features_save_name)
 
     # save predictions
@@ -394,8 +394,8 @@ def predict(model, data, batch_size, head, level, device, save_features):
                         
                     all_features.append(feature_dict['h1_features'])
               
-            if index == 1:
-                break 
+            # if index == 1:
+            #     break 
     # h_1.remove()
     # h_2.remove()
     
