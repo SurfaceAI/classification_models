@@ -26,6 +26,7 @@ B_CNN = {
     "model_dict": {"trained_model": "hierarchical-B_CNN-classification-use_model_structure-20241027_161111-xu274wad_epoch2.pt"},
     #"model_dict": {"trained_model": "multilabel-BCNN-20240504_141652-jzr601kb_epoch39.pt"}, 
     "dataset": r"V1_0",
+    "ds_type": "test",
     "metadata": r"streetSurfaceVis_v1_0.csv",
     "transform": {
         "resize": const.H256_W256,
@@ -38,10 +39,11 @@ B_CNN = {
 
 C_CNN = {
     **global_config.global_config,
-    "name": "B_CNN_CLASSIFICATION_prediction",
+    "name": "C_CNN_CLASSIFICATION_prediction",
     "model_dict": {"trained_model": "hierarchical-Condition_CNN-classification-use_model_structure-20241027_180014-ymnv1106_epoch11.pt"},
     #"model_dict": {"trained_model": "multilabel-BCNN-20240504_141652-jzr601kb_epoch39.pt"}, 
     "dataset": r"V1_0",
+    "ds_type": "test",
     "metadata": r"streetSurfaceVis_v1_0.csv",
     "transform": {
         "resize": const.H256_W256,
@@ -54,10 +56,11 @@ C_CNN = {
 
 H_NET = {
     **global_config.global_config,
-    "name": "B_CNN_CLASSIFICATION_prediction",
+    "name": "H_NET_CLASSIFICATION_prediction",
     "model_dict": {"trained_model": "hierarchical-HiearchyNet-classification-use_model_structure-20241027_180036-ob5xv766_epoch8.pt"},
     #"model_dict": {"trained_model": "multilabel-BCNN-20240504_141652-jzr601kb_epoch39.pt"}, 
     "dataset": r"V1_0",
+    "ds_type": "test",
     "metadata": r"streetSurfaceVis_v1_0.csv",
     "transform": {
         "resize": const.H256_W256,
@@ -70,11 +73,11 @@ H_NET = {
 
 GH_CNN = {
     **global_config.global_config,
-    "name": "B_CNN_CLASSIFICATION_prediction",
+    "name": "GH_CNN_CLASSIFICATION_prediction",
     "model_dict": {"trained_model": "hierarchical-GH_CNN-classification-use_model_structure-20241027_180609-qc6an27g_epoch1.pt"},
     #"model_dict": {"trained_model": "multilabel-BCNN-20240504_141652-jzr601kb_epoch39.pt"}, 
     "dataset": r"V1_0",
-    "ds_type": "train",
+    "ds_type": "test",
     "metadata": r"streetSurfaceVis_v1_0.csv",
     "transform": {
         "resize": const.H256_W256,
