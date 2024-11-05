@@ -74,6 +74,7 @@ GH_CNN = {
     "model_dict": {"trained_model": "hierarchical-GH_CNN-classification-use_model_structure-20241027_180609-qc6an27g_epoch1.pt"},
     #"model_dict": {"trained_model": "multilabel-BCNN-20240504_141652-jzr601kb_epoch39.pt"}, 
     "dataset": r"V1_0",
+    "ds_type": "train",
     "metadata": r"streetSurfaceVis_v1_0.csv",
     "transform": {
         "resize": const.H256_W256,
