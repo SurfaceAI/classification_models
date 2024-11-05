@@ -26,6 +26,7 @@ B_CNN = {
     "model_dict": {"trained_model": "hierarchical-B_CNN-classification-use_model_structure20241027_124835_epoch0.pt"},
     #"model_dict": {"trained_model": "multilabel-BCNN-20240504_141652-jzr601kb_epoch39.pt"}, 
     "dataset": r"V1_0",
+    "ds_type": "train",
     "metadata": r"streetSurfaceVis_v1_0.csv",
     "transform": {
         "resize": const.H256_W256,

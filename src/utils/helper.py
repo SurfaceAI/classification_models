@@ -271,7 +271,8 @@ class Custom_Subset(Dataset):
 
 
 def set_seed(seed):
-    random.seed(seed)
+    np.random.seed(seed)
+    #random.seed(seed)
     torch.manual_seed(seed)
     torch.cuda.manual_seed_all(seed)
     torch.backends.cudnn.deterministic = True
@@ -733,6 +734,20 @@ def compute_and_log_CC_metrics(df, trainloaders, validloaders, wandb_on):
                     }
                 )
 
+
+def is_hierarchy_violation_batch(true_labels, predicted_labels, parent):
+    """
+    Check if each pair of true and predicted labels violates the hierarchy given the true labels.
+
+    Parameters:
+    - true_labels: Array of ground truth labels.
+    - predicted_labels: Array of predicted labels.
+    - parent: A tensor where each index represents a class, and its value represents the parent class.
+
+    Returns:
+    - Array of booleans, where True indicates a hierarchy violation.
+    """
+    return [parent[true] != parent[pred] for true, pred in zip(true_labels, predicted_labels)]
 
 
 def is_hierarchy_violation(true_label, predicted_label, parent):

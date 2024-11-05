@@ -25,6 +25,7 @@ import matplotlib.pyplot as plt
 from torchvision import transforms
 from torchvision.transforms import ToPILImage
 from tqdm import tqdm
+from torch.utils.data import DataLoader
 
 
 def cam_prediction(config):
@@ -40,6 +41,7 @@ def cam_prediction(config):
         'normalize': None,
     }
     predict_data = prepare_data(config.get("root_data"), config.get("dataset"), config.get("metadata"), non_normalize_transform)
+    
 
     model_path = os.path.join(config.get("root_model"), config.get("model_dict")['trained_model'])
     model, classes, head, level, valid_dataset, hierarchy_method = load_model(model_path=model_path, device=device)
@@ -61,8 +63,9 @@ def run_dataset_predict_csv(config):
     )
 
     # prepare data
-    predict_data = prepare_data(config.get("root_data"), config.get("dataset"), config.get("metadata"), config.get("transform"))
-
+    predict_data = prepare_data(config.get("root_data"), config.get("dataset"), config.get("metadata"), config.get("transform"), seed=config["seed"], ds_type=config.get("ds_type"))
+    
+    #Filter data 
     
     level_no = 0
     columns = ['Image', 'Prediction', 'Level', f'Level_{level_no}']
@@ -80,7 +83,8 @@ def run_dataset_predict_csv(config):
                             level=config.get('level'), 
                             hierarchy_method=config.get('hierarchy_method'),
                             save_features=config.get('save_features'),
-                            level_no=level_no,)
+                            level_no=level_no,
+                            seed=config["seed"],)
     else: 
         df, pred_outputs, image_ids = recursive_predict_csv(model_dict=config.get("model_dict"), 
                             model_root=config.get("root_model"), 
@@ -90,23 +94,25 @@ def run_dataset_predict_csv(config):
                             level=config.get('level'),  
                             hierarchy_method=config.get('hierarchy_method'),
                             save_features=config.get('save_features'),
-                            level_no=level_no)
+                            level_no=level_no,
+                            seed=config["seed"])
         
 
     # save features
-    if config.get('save_features'):
+    if config.get('save_features') and config.get('seed') == 42:
         features_save_name = config.get("model_dict")['trained_model'] + '-' + config.get("dataset").replace('\\', '_')
         save_features(features, os.path.join(config.get("root_predict"), 'feature_maps'), features_save_name)
 
+    df['Seed'] = config.get('seed')
     # save predictions
     start_time = datetime.fromtimestamp(time.time()).strftime("%Y%m%d_%H%M%S")
-    saving_name = config.get("model_dict")['trained_model'] + '-' + config.get("dataset").replace('\\', '_') + '-' + start_time + '.csv'
+    saving_name = config.get("model_dict")['trained_model'] + '-' + config.get("dataset").replace('\\', '_') + '-' + config.get('ds_type') + '-' + start_time + '-'+ str(config.get('seed')) + '.csv'
 
     saving_path = save_predictions_csv(df=df, saving_dir=os.path.join(config.get("root_predict")), saving_name=saving_name)
 
     print(f'Images {config.get("dataset")} predicted and saved: {saving_path}')
 
-def recursive_predict_csv(model_dict, model_root, data, batch_size, device, level, hierarchy_method, save_features, df=None, level_no=None, pre_cls=None):
+def recursive_predict_csv(model_dict, model_root, data, batch_size, device, level, hierarchy_method, save_features, df=None, level_no=None, pre_cls=None, seed=None):
     # base:
     if model_dict is None:
         # predictions = None
@@ -116,9 +122,9 @@ def recursive_predict_csv(model_dict, model_root, data, batch_size, device, leve
         model, classes, head, level, valid_dataset, hierarchy_method = load_model(model_path=model_path, device=device)
 
         if save_features:
-            pred_outputs, image_ids, features = predict(model, data, batch_size, head, level, device, save_features) 
+            pred_outputs, image_ids, features = predict(model, data, batch_size, head, level, device, save_features, seed) 
         else:
-            pred_outputs, image_ids = predict(model, data, batch_size, head, level, device, save_features) 
+            pred_outputs, image_ids = predict(model, data, batch_size, head, level, device, save_features, seed) 
         
         # compare valid dataset 
         # [image_id in valid_dataset ]
@@ -288,12 +294,17 @@ def recursive_predict_csv(model_dict, model_root, data, batch_size, device, leve
                 return df, pred_outputs, image_ids
 
 
-def predict(model, data, batch_size, head, level, device, save_features):
+def predict(model, data, batch_size, head, level, device, save_features, seed):
+    
+    helper.set_seed(seed)
+    
     model.to(device)
     model.eval()
 
     loader = DataLoader(
-        data, batch_size=batch_size
+        data, 
+        batch_size=batch_size, 
+        shuffle = True,
     )
     
     if level ==  const.HIERARCHICAL:
@@ -394,8 +405,8 @@ def predict(model, data, batch_size, head, level, device, save_features):
                         
                     all_features.append(feature_dict['h1_features'])
               
-            if index == 0:
-                break 
+            # if index == 0:
+            #     break 
     # h_1.remove()
     # h_2.remove()
     
@@ -421,7 +432,10 @@ def predict(model, data, batch_size, head, level, device, save_features):
         else:
             return pred_outputs, ids
 
-def prepare_data(data_root, dataset, metadata, transform):
+def prepare_data(data_root, dataset, metadata, transform, seed=None, ds_type=None):
+    
+    if seed is not None:
+        helper.set_seed(seed)
 
     data_path = os.path.join(data_root, dataset, "s_1024")
     transform = preprocessing.transform(**transform)
@@ -429,10 +443,19 @@ def prepare_data(data_root, dataset, metadata, transform):
     predict_data = preprocessing.PredictImageFolder(
         root=data_path,
         csv_file=metadata_path,
-        transform=transform
+        transform=transform,
+        ds_type=ds_type,
     )
     
     return predict_data
+
+def create_dataloader(predict_data, batch_size, seed=None):
+    return DataLoader(
+        predict_data,
+        batch_size=batch_size,
+        shuffle=True,  # Enable shuffle for randomness, or set to False if not needed
+        worker_init_fn=lambda _: helper.set_seed(seed) if seed is not None else None
+    )
 
 def load_model(model_path, device):
     model_state = torch.load(model_path, map_location=device)
