@@ -133,7 +133,7 @@ def _run_training(project=None, name=None, config=None, wandb_on=True, seed=None
     ).strftime("%Y%m%d_%H%M%S")
     id = "" if not wandb_on else "-" + run.id
     saving_name = (
-        "-".join(level) + "-" + config.get("model") + "-" + config.get("head") + "-" + config.get('hierarchy_method') + "-" + start_time + id + ".pt"
+        "-".join(level) + "-" + config.get("model") + "-" + config.get("head") + "-" + config.get('hierarchy_method') + "-" + start_time + id + str(seed) + ".pt"
     )
 
     #helper.set_seed(config.get("seed"))
@@ -484,7 +484,7 @@ def train(
     checkpointer = checkpointing.CheckpointSaver(
         dirpath=model_saving_path,
         saving_name=model_saving_name,
-        decreasing=False,
+        decreasing=True,
         config=config,
         dataset=validloader.dataset,
         top_n=checkpoint_top_n,
@@ -782,7 +782,7 @@ def train_hierarchical(
 
         # checkpoint saving with early stopping
         early_stop = checkpointer(
-            model=model, epoch=epoch, metric_val=val_epoch_loss, optimizer=optimizer
+            model=model, epoch=epoch, metric_val=val_fine_epoch_loss, optimizer=optimizer
         )
 
         if wandb_on:
@@ -956,8 +956,8 @@ def train_epoch(model, dataloader, optimizer, device, eval_metric, head, hierarc
         mae += mae_item
         qwk += qwk_item
         
-        if batch_idx == 1:
-            break
+        # if batch_idx == 1:
+        #     break
 
         # TODO: metric as function, metric_name as input argument
         # else:
@@ -1063,8 +1063,8 @@ def validate_epoch(model, dataloader, device, eval_metric, head, hierarchy_metho
             eval_mae += eval_mae_item
             eval_qwk += eval_qwk_item
                 
-            if batch_idx == 1:
-                break
+            # if batch_idx == 1:
+            #     break
                 
                 #break
                 
@@ -1245,7 +1245,7 @@ def train_epoch_hierarchical(model, dataloader, optimizer, device, head, hierarc
         fine_qwk += fine_qwk_item
         fine_hv += fine_hv_item
         
-        break
+        # break
     
     epoch_loss = running_loss /  len(dataloader.sampler)
     epoch_coarse_accuracy = 100 * coarse_correct / len(dataloader.sampler)
@@ -1334,7 +1334,7 @@ def validate_epoch_hierarchical(model, dataloader, device, head, hierarchy_metho
             val_fine_qwk += val_fine_qwk_item
             val_fine_hv += val_fine_hv_item
             
-            break
+            # break
 
     val_epoch_loss = val_running_loss /  len(dataloader.sampler)
     val_epoch_coarse_accuracy = 100 * val_coarse_correct / len(dataloader.sampler)
