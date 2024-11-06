@@ -178,25 +178,25 @@ def recursive_predict_csv(model_dict, model_root, data, batch_size, device, leve
             columns =  ['Image', 'Fine_Prediction', 'Fine_Probability', 'is_in_validation']
             #todo: add regression
             
-            coarse_classes = classes[0]
-            fine_classes = sorted(classes[1], key=lambda x: const.FLATTENED_INT[x]) #ordered according to integer values
-            
-            pred_classes = [coarse_classes[idx.item()] for idx in torch.argmax(pred_outputs, dim=1)]
+            #coarse_classes = classes[0]
+            #fine_classes = sorted(classes[1], key=lambda x: const.FLATTENED_INT[x]) #ordered according to integer values
+
+            #pred_classes = [coarse_classes[idx.item()] for idx in torch.argmax(pred_outputs, dim=1)]
             
             if head == const.CLASSIFICATION:
-                pred_fine_classes = [fine_classes[idx.item()] for idx in torch.argmax(pred_fine_outputs, dim=1)]
+                pred_classes = [classes[idx.item()] for idx in torch.argmax(pred_outputs, dim=1)]
             elif head == const.REGRESSION:
-                pred_fine_classes = [fine_classes[idx.item()] for idx in pred_fine_outputs.round().int()]
+                pred_classes = [classes[idx.item()] for idx in pred_outputs.round().int()]
             elif head == const.CLM:
-                pred_fine_classes = [fine_classes[idx.item()] for idx in torch.argmax(pred_fine_outputs, dim=1)]
+                pred_classes = [classes[idx.item()] for idx in torch.argmax(pred_outputs, dim=1)]
             elif head == const.CORN:
-                pred_fine_classes = [fine_classes[idx.item()] for idx in corn_label_from_logits(pred_fine_outputs)]
+                pred_classes = [classes[idx.item()] for idx in corn_label_from_logits(pred_outputs)]
                 
-            fine_probs, _ = torch.max(pred_fine_outputs, dim=1)
+            probs, _ = torch.max(pred_outputs, dim=1)
 
-            for image_id, fine_pred, fine_prob, is_vd, in zip(image_ids, pred_fine_classes, fine_probs.tolist(), is_valid_data):
+            for image_id, pred, prob, is_vd, in zip(image_ids, pred_classes, probs.tolist(), is_valid_data):
                 i = df.shape[0]
-                df.loc[i, columns] = [float(image_id), fine_pred, fine_prob, is_vd]
+                df.loc[i, columns] = [float(image_id), pred, prob, is_vd]
                 
             if save_features:          
                 return df, pred_outputs, image_ids, features
@@ -339,8 +339,8 @@ def predict(model, data, batch_size, head, level, device, save_features, seed):
         outputs = []
         if save_features is True:
             feature_dict = {}
-            if 'CustomVGG16' in model.__module__:
-                h_1 = model.features[-30].register_forward_hook(helper.make_hook("h1_features", feature_dict))
+            if 'vgg16' in model.__module__:
+                h_1 = model.features[30].register_forward_hook(helper.make_hook("h1_features", feature_dict))
                 
         all_features = []
             
@@ -405,8 +405,8 @@ def predict(model, data, batch_size, head, level, device, save_features, seed):
                         
                     all_features.append(feature_dict['h1_features'])
               
-            # if index == 0:
-            #     break 
+            if index == 0:
+                break 
     # h_1.remove()
     # h_2.remove()
     
@@ -427,8 +427,9 @@ def predict(model, data, batch_size, head, level, device, save_features, seed):
     else:
         pred_outputs = torch.cat(outputs, dim=0)
         if save_features:
+            all_features = torch.cat(all_features, dim=0)
             h_1.remove()
-            return pred_outputs, ids, feature_dict
+            return pred_outputs, ids, all_features
         else:
             return pred_outputs, ids
 
