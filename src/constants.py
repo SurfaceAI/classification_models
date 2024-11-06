@@ -123,6 +123,8 @@ PROJECT_MULTI_LABEL_SWEEP_CORN = "sweep-road-surface-classification-multi-label-
 PROJECT_MULTI_LABEL_SWEEP_CLM = "sweep-road-surface-classification-multi-label-CLM"
 
 PROJECT_FINAL = "road-surface-classification-hierarchical-final"
+PROJECT_ESTHER_MA = "Esther-MA-road-surface-classification-hierarchical-final"
+
 
 
 # model names

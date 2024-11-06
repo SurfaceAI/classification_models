@@ -40,9 +40,8 @@ def cam_prediction(config):
         **config.get("transform"),
         'normalize': None,
     }
-    predict_data = prepare_data(config.get("root_data"), config.get("dataset"), config.get("metadata"), non_normalize_transform)
+    predict_data = prepare_data(config.get("root_data"), config.get("dataset"), config.get("metadata"), non_normalize_transform, seed=config["seed"], ds_type=config.get("ds_type"))
     
-
     model_path = os.path.join(config.get("root_model"), config.get("model_dict")['trained_model'])
     model, classes, head, level, valid_dataset, hierarchy_method = load_model(model_path=model_path, device=device)
     image_folder = os.path.join(config.get("root_predict"), config.get("dataset"))
@@ -625,7 +624,7 @@ def save_cam(model, data, normalize_transform, classes, valid_dataset, head, lev
 
                 print(f"CAM images saved in {cam_folder}")  
                 
-                break
+                #break
                 
                 
                 
