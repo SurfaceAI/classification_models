@@ -3,7 +3,7 @@ from experiments.config  import global_config
 
 default_params = {
     "batch_size": 16, #16,  # 48
-    "epochs": 12,
+    "epochs": 2,
     #"learning_rate": 0.01,
     "optimizer": const.OPTI_ADAM,
     "eval_metric": const.EVAL_METRIC_ALL,
@@ -79,10 +79,10 @@ vgg16_flatten = {
     **default_params,
     "project": const.PROJECT_FINAL,
     "optimizer": const.OPTI_ADAM,
-    "name": "fine_flatten_CORN",
+    "name": "fine_flatten",
     "level": const.FLATTEN,
     "model": const.VGG16,
-    "head": const.CORN,
+    "head": const.CLASSIFICATION,
     "eval_metric": const.EVAL_METRIC_ALL,
     "learning_rate": 0.00005,
     "hierarchy_method": const.FLATTEN,

@@ -28,14 +28,16 @@ class CheckpointSaver:
         self.early_stop_thresh = early_stop_thresh
         self.early_stop = False
         self.top_model_paths = []
-        self.best_metric_val = np.Inf if decreasing else -np.Inf
+        self.best_metric_val = np.Inf if self.decreasing else -np.Inf
+        #self.best_metric_val = np.Inf if decreasing else -np.Inf
         self.save_state = save_state
         
     def __call__(self, model, epoch, metric_val, optimizer=None):
         saving_name = self.saving_name.split('.',1)
         model_path = os.path.join(self.dirpath, saving_name[0] + f'_epoch{epoch}.pt')
-        save = metric_val<self.best_metric_val if self.decreasing else metric_val>self.best_metric_val
-        if save: 
+        save = metric_val < self.best_metric_val if self.decreasing else metric_val > self.best_metric_val
+        #save = metric_val<self.best_metric_val if self.decreasing else metric_val>self.best_metric_val
+        if epoch > 0 and save: 
             # logging.info(f"Current metric value better than {metric_val} better than best {self.best_metric_val}, saving model at {model_path}")
             self.best_metric_val = metric_val
             data = {
