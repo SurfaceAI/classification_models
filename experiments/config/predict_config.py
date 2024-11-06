@@ -20,6 +20,23 @@ vgg16_surface = {
     "batch_size": 96,
 }
 
+FLATTEN = {
+    **global_config.global_config,
+    "name": "Flatten_CLASSIFICATION_prediction",
+    #"model_dict": {"trained_model": "flatten-vgg16-classification-flatten-20241027_181115-y347grss_epoch0.pt"},
+    "model_dict": {"trained_model": "flatten-vgg16-classification-flatten-20241105_210302_epoch0.pt"}, 
+    "dataset": r"V1_0",
+    "ds_type": "test",
+    "metadata": r"streetSurfaceVis_v1_0.csv",
+    "transform": {
+        "resize": const.H256_W256,
+        "crop": const.CROP_LOWER_MIDDLE_THIRD,
+        "normalize": (const.V1_0_ANNOTATED_MEAN, const.V1_0_ANNOTATED_SD),
+    },
+    "batch_size": 96,
+    "save_features": True,
+}
+
 B_CNN = {
     **global_config.global_config,
     "name": "B_CNN_CLASSIFICATION_prediction",
