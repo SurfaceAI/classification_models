@@ -163,17 +163,17 @@ B_CNN = {
 C_CNN = {
     **global_config.global_config,
     **default_params,
-    "learning_rate": 0.01, 
+    "learning_rate": 0.001, 
     "optimizer": const.OPTI_ADAM,
     "coarse_eval_metric": const.EVAL_METRIC_ALL,
     "fine_eval_metric": const.EVAL_METRIC_ALL,
     "project": const.PROJECT_FINAL,
-    "name": "C_CNN_CLM_GT",
+    "name": "C_CNN_CLM",
     "level": const.HIERARCHICAL,
     "model": const.CCNN,
     "head": const.CLM, #'regression', 'classification', 'obd', 'clm'
-    "hierarchy_method": const.GROUNDTRUTH, #'use_ground_truth', 'None',
-    "lw_modifier": False,
+    "hierarchy_method": const.MODELSTRUCTURE, #'use_ground_truth', 'None',
+    "lw_modifier": True,
     #"lr_scheduler": True,
 }
 
