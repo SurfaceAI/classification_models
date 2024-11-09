@@ -392,6 +392,25 @@ def map_predictions_to_quality(predictions, surface_type):
     }
     return torch.tensor([quality_mapping[surface_type][pred] for pred in predictions], dtype=torch.long)
 
+def map_predictions_to_quality_regression(predictions, coarse_predictions):
+    quality_mapping = {
+        0: [0, 1, 2, 3],  # Asphalt
+        1: [4, 5, 6, 7],  # Concrete
+        2: [8, 9, 10, 11],  # Paving Stones
+        3: [12, 13, 14],  # Sett
+        4: [15, 16, 17]  # Unpaved
+    }
+    
+    # Ensure inputs are tensors for efficient indexing
+    predictions = torch.tensor(predictions, dtype=torch.long)
+    coarse_predictions = torch.tensor(coarse_predictions, dtype=torch.long)
+    
+    # Mapping predictions using the quality mapping based on the coarse predictions
+    mapped_predictions = []
+    for coarse, pred in zip(coarse_predictions, predictions):
+        mapped_predictions.append(quality_mapping[coarse.item()][pred.item()])
+
+    return torch.tensor(mapped_predictions, dtype=torch.long)
 
 def compute_fine_losses(model, fine_criterion, fine_output, fine_labels, device, coarse_filter, hierarchy_method, head):
     fine_loss = 0.0
@@ -486,11 +505,11 @@ def compute_fine_losses(model, fine_criterion, fine_output, fine_labels, device,
                 fine_loss_sett = fine_criterion(fine_output_sett[sett_mask][three_mask_sett].flatten(), fine_labels_mapped_sett.float())
             if unpaved_mask.sum().item() > 0 and three_mask_unpaved.sum().item() > 0:
                 fine_loss_unpaved = fine_criterion(fine_output_unpaved[unpaved_mask][three_mask_unpaved].flatten(), fine_labels_mapped_unpaved.float())
-                fine_loss_asphalt = torch.nan_to_num(fine_loss_asphalt, nan=0.0)
-                fine_loss_concrete = torch.nan_to_num(fine_loss_concrete, nan=0.0)
-                fine_loss_paving_stones = torch.nan_to_num(fine_loss_paving_stones, nan=0.0)
-                fine_loss_sett = torch.nan_to_num(fine_loss_sett, nan=0.0)
-                fine_loss_unpaved = torch.nan_to_num(fine_loss_unpaved, nan=0.0)
+            # fine_loss_asphalt = torch.nan_to_num(fine_loss_asphalt, nan=0.0)
+            # fine_loss_concrete = torch.nan_to_num(fine_loss_concrete, nan=0.0)
+            # fine_loss_paving_stones = torch.nan_to_num(fine_loss_paving_stones, nan=0.0)
+            # fine_loss_sett = torch.nan_to_num(fine_loss_sett, nan=0.0)
+            # fine_loss_unpaved = torch.nan_to_num(fine_loss_unpaved, nan=0.0)
                 
         fine_loss += fine_loss_asphalt
         fine_loss += fine_loss_concrete
@@ -524,12 +543,14 @@ def compute_fine_losses(model, fine_criterion, fine_output, fine_labels, device,
 
 
 
-def compute_fine_metrics_hierarchical(fine_output, fine_labels, coarse_filter, hierarchy_method, head):
+def compute_fine_metrics_hierarchical(fine_output, fine_labels, coarse_filter, coarse_predictions, hierarchy_method, head):
     
+    fine_labels_mapped = torch.tensor([map_flatten_to_ordinal(label) for label in fine_labels], dtype=torch.long)
+
     # Initialize overall prediction tensor and metrics
     predictions = torch.zeros_like(fine_labels)
-    total_mse = 0
-    total_mae = 0
+    # total_mse = 0
+    # total_mae = 0
     all_predictions = []
     all_labels = []
 
@@ -569,7 +590,7 @@ def compute_fine_metrics_hierarchical(fine_output, fine_labels, coarse_filter, h
         asphalt_mask, concrete_mask, paving_stones_mask, sett_mask, unpaved_mask = masks
 
         def compute_metrics(output, labels, mask, category):
-            nonlocal total_mse, total_mae
+            #nonlocal total_mse, total_mae
             
             if mask.sum().item() > 0:
                 if head == 'clm' or head == const.CLASSIFICATION or head == const.CLASSIFICATION_QWK:
@@ -586,15 +607,16 @@ def compute_fine_metrics_hierarchical(fine_output, fine_labels, coarse_filter, h
                 all_labels.extend(labels[mask].cpu().numpy())
 
                 # Calculate MSE and MAE
-                if head == 'regression':
-                    mse = F.mse_loss(output[mask], labels[mask].float(), reduction='sum').item()
-                    mae = F.l1_loss(output[mask], labels[mask].float(), reduction='sum').item()
-                else:
-                    mse = F.mse_loss(preds.float(), labels[mask].float(), reduction='sum').item()
-                    mae = F.l1_loss(preds.float(), labels[mask].float(), reduction='sum').item()
+                # Assuming `predictions` contains mapped values using 18 classes
+                
+                #     mse = F.mse_loss(output[mask], labels[mask].float(), reduction='sum').item()
+                #     mae = F.l1_loss(output[mask], labels[mask].float(), reduction='sum').item()
+                # else:
+                #     mse = F.mse_loss(preds.float(), labels[mask].float(), reduction='sum').item()
+                #     mae = F.l1_loss(preds.float(), labels[mask].float(), reduction='sum').item()
 
-                total_mse += mse
-                total_mae += mae
+                # total_mse += mse
+                # total_mae += mae
 
         compute_metrics(fine_output_asphalt, fine_labels, asphalt_mask, "asphalt")
         compute_metrics(fine_output_concrete, fine_labels, concrete_mask, "concrete")
@@ -605,17 +627,22 @@ def compute_fine_metrics_hierarchical(fine_output, fine_labels, coarse_filter, h
     else:
         if head == 'clm' or head == const.CLASSIFICATION or head == const.CLASSIFICATION_QWK:
             predictions = torch.argmax(fine_output, dim=1)
-            total_mse = F.mse_loss(predictions.float(), fine_labels.float(), reduction='sum').item()
-            total_mae = F.l1_loss(predictions.float(), fine_labels.float(), reduction='sum').item()
+            # total_mse = F.mse_loss(predictions.float(), fine_labels.float(), reduction='sum').item()
+            # total_mae = F.l1_loss(predictions.float(), fine_labels.float(), reduction='sum').item()
         elif head == 'regression':
-            predictions = fine_output.round().long()
-            total_mse = F.mse_loss(fine_output, fine_labels.float(), reduction='sum').item()
-            total_mae = F.l1_loss(fine_output, fine_labels.float(), reduction='sum').item()
+            predictions_quality = fine_output.round().long()
+            # total_mse = F.mse_loss(fine_output, fine_labels_mapped.float(), reduction='sum').item()
+            # total_mae = F.l1_loss(fine_output, fine_labels_mapped.float(), reduction='sum').item()
+            predictions = map_predictions_to_quality_regression(predictions_quality, coarse_predictions)
+        elif head == 'corn':
+            predictions_quality = corn_label_from_logits(fine_output).long()
+            predictions = map_predictions_to_quality(predictions, coarse_predictions)
             
         all_predictions.extend(predictions.cpu().numpy())
         all_labels.extend(fine_labels.cpu().numpy())
 
     # Calculate accuracy
+
     correct = (predictions == fine_labels).sum().item()
     
     correct_1_off = compute_one_off_accuracy_within_groups(predictions, fine_labels, parent)
@@ -624,8 +651,11 @@ def compute_fine_metrics_hierarchical(fine_output, fine_labels, coarse_filter, h
     
     hierarchy_violations = sum(is_hierarchy_violation(fine_labels, predictions, parent))
     
+    mse = F.mse_loss(predictions.float(), fine_labels.float(), reduction='sum').item()
+    mae = F.l1_loss(predictions.float(), fine_labels.float(), reduction='sum').item()
+        
     # Return the sum of MSE, MAE, and QWK
-    return correct, correct_1_off, total_mse, total_mae, qwk, hierarchy_violations
+    return correct, correct_1_off, mse, mae, qwk, hierarchy_violations
 
 
 def compute_all_metrics(outputs, labels, head, model):

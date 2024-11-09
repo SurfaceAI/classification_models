@@ -1216,7 +1216,7 @@ def train_epoch_hierarchical(model, dataloader, optimizer, device, head, hierarc
         
         running_loss += loss.item()
         coarse_loss_total += coarse_loss.item()
-        if head == const.CLASSIFICATION_QWK or head == const.CLM_QWK or head == const.CLM:
+        if head == const.CLASSIFICATION_QWK or head == const.CLM_QWK or head == const.CLM or head == const.CORN:
             fine_loss_total += fine_loss
         else:
             fine_loss_total += fine_loss.item()
@@ -1236,7 +1236,7 @@ def train_epoch_hierarchical(model, dataloader, optimizer, device, head, hierarc
         fine_mae_item, 
         fine_qwk_item, 
         fine_hv_item, 
-        ) = helper.compute_fine_metrics_hierarchical(fine_output, fine_labels, coarse_labels, hierarchy_method, head)
+        ) = helper.compute_fine_metrics_hierarchical(fine_output, fine_labels, coarse_labels, coarse_predictions, hierarchy_method, head)
         
         fine_correct += fine_correct_item
         fine_correct_one_off += fine_correct_one_off_item
@@ -1312,7 +1312,7 @@ def validate_epoch_hierarchical(model, dataloader, device, head, hierarchy_metho
             
             val_running_loss += loss.item()
             val_coarse_loss_total += coarse_loss.item()
-            if head == const.CLASSIFICATION_QWK or head == const.CLM_QWK or head == const.CLM:
+            if head == const.CLASSIFICATION_QWK or head == const.CLM_QWK or head == const.CLM or head == const.CORN:
                 val_fine_loss_total += fine_loss
             else:
                 val_fine_loss_total += fine_loss.item()
@@ -1325,7 +1325,7 @@ def validate_epoch_hierarchical(model, dataloader, device, head, hierarchy_metho
             val_fine_mse_item, 
             val_fine_mae_item, 
             val_fine_qwk_item,
-            val_fine_hv_item) = helper.compute_fine_metrics_hierarchical(fine_output, fine_labels, val_coarse_predictions, hierarchy_method, head)
+            val_fine_hv_item) = helper.compute_fine_metrics_hierarchical(fine_output, fine_labels, val_coarse_predictions, val_coarse_predictions, hierarchy_method, head)
             
             val_fine_correct += val_fine_correct_item
             val_fine_correct_one_off += val_fine_correct_one_off_item
