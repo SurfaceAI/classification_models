@@ -135,7 +135,7 @@ def _run_training(project=None, name=None, config=None, wandb_on=True, seed=None
     saving_name = (
         "-".join(level) + "-" + config.get("model") + "-" + config.get("head") + "-" + config.get('hierarchy_method') + "-" + start_time + id + str(seed) + ".pt"
     )
-
+    print(saving_name)
     #helper.set_seed(config.get("seed"))
 
     # TODO: testing gpu_kernel = None

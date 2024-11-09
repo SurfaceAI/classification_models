@@ -114,7 +114,7 @@ def run_dataset_predict_csv(config):
     df['Seed'] = config.get('seed')
     # save predictions
     start_time = datetime.fromtimestamp(time.time()).strftime("%Y%m%d_%H%M%S")
-    saving_name = config.get("model_dict")['trained_model'] + '-' + config.get("dataset").replace('\\', '_') + '-' + config.get('ds_type') + '-' + start_time + '-'+ str(config.get('seed')) + '.csv'
+    saving_name = config.get("model_dict")['trained_model'] + '-' + config.get("dataset").replace('\\', '_') + '-' + config.get('ds_type') + '-' + start_time + '-'+'.csv'
 
     saving_path = save_predictions_csv(df=df, saving_dir=os.path.join(config.get("root_predict")), saving_name=saving_name)
 
@@ -548,7 +548,8 @@ def save_cam(model, data, normalize_transform, classes, valid_dataset, head, lev
     model.to(device)
     model.eval()
    
-    coarse_classes, fine_classes = classes
+    if level == const.HIERARCHICAL:
+        coarse_classes, fine_classes = classes
     fine_classes = sorted(fine_classes, key=lambda x: const.FLATTENED_INT[x])
 
     valid_dataset_ids = [os.path.splitext(os.path.split(id[0])[-1])[0] for id in valid_dataset.samples]

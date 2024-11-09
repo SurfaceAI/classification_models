@@ -5,7 +5,9 @@ from src.models import prediction
 from experiments.config import predict_config
 from src.utils import helper
 
-seeds = [42, 43, 44, 45, 46]
+seeds = [42]
+#seeds = [42, 43, 44, 45, 46]
+
 
 # Iterate over each seed and run the prediction
 for seed in seeds:

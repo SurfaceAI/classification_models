@@ -26,7 +26,7 @@ FLATTEN = {
     #"model_dict": {"trained_model": "flatten-vgg16-classification-flatten-20241027_181115-y347grss_epoch0.pt"},
     "model_dict": {"trained_model": "flatten-vgg16-classification-flatten-20241106_220720-8zz0sjns42_epoch10.pt"}, 
     "dataset": r"V1_0",
-    "ds_type": "test",
+    "ds_type": "train",
     "metadata": r"streetSurfaceVis_v1_0.csv",
     "transform": {
         "resize": const.H256_W256,
@@ -43,7 +43,7 @@ B_CNN = {
     "model_dict": {"trained_model": "hierarchical-B_CNN-classification-use_model_structure-20241106_222713-z8l98z7u42_epoch9.pt"},
     #"model_dict": {"trained_model": "multilabel-BCNN-20240504_141652-jzr601kb_epoch39.pt"}, 
     "dataset": r"V1_0",
-    "ds_type": "test",
+    "ds_type": "train",
     "metadata": r"streetSurfaceVis_v1_0.csv",
     "transform": {
         "resize": const.H256_W256,
@@ -77,7 +77,7 @@ H_NET = {
     "model_dict": {"trained_model": "hierarchical-HiearchyNet-classification-use_model_structure-20241106_222805-k45vh7jt42_epoch8.pt"},
     #"model_dict": {"trained_model": "multilabel-BCNN-20240504_141652-jzr601kb_epoch39.pt"}, 
     "dataset": r"V1_0",
-    "ds_type": "test",
+    "ds_type": "train",
     "metadata": r"streetSurfaceVis_v1_0.csv",
     "transform": {
         "resize": const.H256_W256,
@@ -94,7 +94,7 @@ GH_CNN = {
     "model_dict": {"trained_model": "hierarchical-GH_CNN-classification-use_model_structure-20241106_222749-y1aa7o3d42_epoch11.pt"},
     #"model_dict": {"trained_model": "multilabel-BCNN-20240504_141652-jzr601kb_epoch39.pt"}, 
     "dataset": r"V1_0",
-    "ds_type": "test",
+    "ds_type": "train",
     "metadata": r"streetSurfaceVis_v1_0.csv",
     "transform": {
         "resize": const.H256_W256,
@@ -126,33 +126,33 @@ CC = {
     "name": "CC_Classification_prediction",
     "level": const.CC,
     "model_dict": {
-        "trained_model": "surface-vgg16-classification-CC-20241103_102134_epoch0.pt",
+        "trained_model": "surface-vgg16-classification-CC-20241106_223318-i78pobr842_epoch11.pt",
         "level": const.TYPE,
         "submodels": {
             const.ASPHALT: {
-                "trained_model": "smoothness-asphalt-vgg16-classification-CC-20241103_102236_epoch0.pt",
+                "trained_model": "smoothness-asphalt-vgg16-classification-CC-20241109_121842-1p08b1vm42_epoch11.pt",
                 "level": const.QUALITY,
             },
             const.CONCRETE: {
-                "trained_model": "smoothness-concrete-vgg16-classification-CC-20241103_102330_epoch0.pt",
+                "trained_model": "smoothness-concrete-vgg16-classification-CC-20241109_21101642_epoch0.pt",
                 "level": const.QUALITY,
             },
             const.PAVING_STONES: {
-                "trained_model": "smoothness-paving_stones-vgg16-classification-CC-20241103_102422_epoch0.pt",
+                "trained_model": "smoothness-paving_stones-vgg16-classification-CC-20241109_21104342_epoch0.pt",
                 "level": const.QUALITY,
             },
             const.SETT: {
-                "trained_model": "smoothness-sett-vgg16-classification-CC-20241103_102514_epoch0.pt",
+                "trained_model": "smoothness-sett-vgg16-classification-CC-20241109_21111042_epoch0.pt",
                 "level": const.QUALITY,
             },
             const.UNPAVED: {
-                "trained_model": "smoothness-unpaved-vgg16-classification-CC-20241103_102612_epoch0.pt",
+                "trained_model": "smoothness-unpaved-vgg16-classification-CC-20241109_21113742_epoch0.pt",
                 "level": const.QUALITY,
             },
         },
     },
     "dataset": "V1_0",
-    "ds_type": "test",
+    "ds_type": "train",
     "metadata": "streetSurfaceVis_v1_0.csv",
     "transform": {
         "resize": const.H256_W256,
