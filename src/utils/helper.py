@@ -21,6 +21,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import wandb
 from sklearn.metrics import cohen_kappa_score
+import pandas as pd
 
 
 def string_to_object(string):
@@ -395,6 +396,9 @@ def map_predictions_to_quality(predictions, surface_type):
 def compute_fine_losses(model, fine_criterion, fine_output, fine_labels, device, coarse_filter, hierarchy_method, head):
     fine_loss = 0.0
     
+    fine_labels_mapped = torch.tensor([map_flatten_to_ordinal(label) for label in fine_labels], dtype=torch.long).to(device)
+
+    
     if hierarchy_method == 'use_ground_truth':
         if head == 'regression':
             fine_output_asphalt = fine_output[:, 0:1].float()
@@ -416,9 +420,7 @@ def compute_fine_losses(model, fine_criterion, fine_output, fine_labels, device,
             fine_output_paving_stones = fine_output[:, 8:12]
             fine_output_sett = fine_output[:, 12:15]
             fine_output_unpaved = fine_output[:, 15:18]
-        
-        fine_labels_mapped = torch.tensor([map_flatten_to_ordinal(label) for label in fine_labels], dtype=torch.long).to(device)
-        
+                
         masks = [
         (coarse_filter == 0),
         (coarse_filter == 1), 
@@ -503,6 +505,12 @@ def compute_fine_losses(model, fine_criterion, fine_output, fine_labels, device,
         
         elif head == 'clm':
             fine_loss = fine_criterion(torch.log(fine_output + 1e-9), fine_labels) #TODO wie kann das berechnet werden?
+            
+        elif head == const.REGRESSION:
+            fine_loss = fine_criterion(fine_output.flatten(), fine_labels_mapped.float())
+            
+        elif head == const.CORN:
+            fine_loss = fine_criterion(fine_output, fine_labels_mapped_concrete, 18) #This probably does not work! Dont know how to calcuate the loss here 
                             
         # elif head == 'regression' or head == 'single':
         #     fine_output = fine_output.flatten().float()
@@ -1042,4 +1050,3 @@ flattened_mapping_true = {
     ("unpaved", "bad"): 16,
     ("unpaved", "very_bad"): 17
 }
-

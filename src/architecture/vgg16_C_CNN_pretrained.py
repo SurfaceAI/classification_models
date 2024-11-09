@@ -233,7 +233,7 @@ class C_CNN(nn.Module):
             self.coarse_condition.weight.data = self.constraint(self.coarse_condition.weight.data)
   
             if self.head == 'regression':
-                fine_output = fine_output * coarse_condition
+                fine_output = torch.sum((fine_output *coarse_condition), dim=1)
             elif self.head == 'corn':
                 fine_output = fine_output * torch.log(coarse_condition)
             else:
