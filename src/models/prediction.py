@@ -50,7 +50,11 @@ def cam_prediction(config):
     cam_subfolder = os.path.join(image_folder, 'cam', os.path.splitext(os.path.basename(model_path))[0])
     os.makedirs(cam_subfolder, exist_ok=True)
     
-    save_cam(model, predict_data, normalize_transform, classes, valid_dataset, head, level, hierarchy_method, device, cam_subfolder)
+    if level == const.HIERARCHICAL:
+        save_cam_hierarchical(model, predict_data, normalize_transform, classes, valid_dataset, head, hierarchy_method, device, cam_subfolder)
+    elif level == const.FLATTEN or level == const.CC:
+        save_cam_flattened(model, predict_data, normalize_transform, classes, valid_dataset, head, hierarchy_method, level, device, cam_subfolder)
+
 
     print(f'Images {config.get("dataset")} predicted and saved with CAM: {image_folder}')
 
@@ -538,7 +542,7 @@ def save_features(features_dict, saving_dir, saving_name):
     torch.save(features_dict, saving_path)
     
     
-def save_cam(model, data, normalize_transform, classes, valid_dataset, head, level, hierarchy_method, device, cam_folder):
+def save_cam_hierarchical(model, data, normalize_transform, classes, valid_dataset, head, level, hierarchy_method, device, cam_folder):
 
     #feature_layer = model.fine_classifier[-4]
     feature_layer = model.features[-3]
@@ -548,8 +552,7 @@ def save_cam(model, data, normalize_transform, classes, valid_dataset, head, lev
     model.to(device)
     model.eval()
    
-    if level == const.HIERARCHICAL:
-        coarse_classes, fine_classes = classes
+    coarse_classes, fine_classes = classes
     fine_classes = sorted(fine_classes, key=lambda x: const.FLATTENED_INT[x])
 
     valid_dataset_ids = [os.path.splitext(os.path.split(id[0])[-1])[0] for id in valid_dataset.samples]
@@ -579,10 +582,10 @@ def save_cam(model, data, normalize_transform, classes, valid_dataset, head, lev
                     fine_output = model.get_class_probabilities(fine_output).squeeze(0)
                 
                 fine_idx, fine_pred_class = helper.compute_fine_prediction_hierarchical(fine_output=fine_output, 
-                                                                                                             coarse_filter=coarse_idx, 
-                                                                                                             hierarchy_method=hierarchy_method, 
-                                                                                                             head=head,
-                                                                                                             fine_classes=fine_classes)
+                                                                                                            coarse_filter=coarse_idx, 
+                                                                                                            hierarchy_method=hierarchy_method, 
+                                                                                                            head=head,
+                                                                                                            fine_classes=fine_classes)
 
                 # create cam
                 activations = activation_hook.activation[0]
@@ -641,7 +644,68 @@ def save_cam(model, data, normalize_transform, classes, valid_dataset, head, lev
                         plt.close()
 
                 print(f"CAM images saved in {cam_folder}")  
+
+def save_cam_flattened(model, data, normalize_transform, classes, valid_dataset, head, hierarchy_method, level, device, cam_folder):
+    # Feature layer for generating CAM
+    feature_layer = model.features[-3]  # Adjust if your feature extraction layer differs
+    #out_weights_fine = model.classifier[-1].weight  # Assuming a single output layer for classification
+    out_weights_fine = helper.get_fine_weights(model, level, head)
+    model.to(device)
+    model.eval()
+    
+    classes = sorted(classes, key=lambda x: const.FLATTENED_INT[x])  # Sort fine classes if needed
+
+    # Extract valid dataset IDs for validation images
+    valid_dataset_ids = [os.path.splitext(os.path.split(id[0])[-1])[0] for id in valid_dataset.samples]
+    
+    with torch.no_grad():
+        with helper.ActivationHook(feature_layer) as activation_hook:
+            for image, image_id in data:
+                # Preprocess the input image
+                input_image = normalize_transform(image).unsqueeze(0).to(device)
                 
+                # Forward pass
+                fine_output = model(input_image)
+                if head == const.CLASSIFICATION:
+                    fine_output = model.get_class_probabilities(fine_output).squeeze(0)
+                
+                # Determine predicted class and value
+                fine_pred_value = torch.max(fine_output, dim=0).values.item()
+                fine_idx = torch.argmax(fine_output, dim=0).item()
+                fine_pred_class = classes[fine_idx]
+                
+                # Generate CAMs
+                activations = activation_hook.activation[0]
+                cam_map_fine = torch.einsum('ck,kij->cij', out_weights_fine, activations)
+                
+                # Save original image
+                to_pil = ToPILImage()
+                original_pil_image = to_pil(image.cpu())
+                original_image_path = os.path.join(cam_folder, f"{image_id}_original.jpg")
+                original_pil_image.save(original_image_path)
+                print(f"Original image saved at {original_image_path}")
+                
+                # Create and save CAM images for each class
+                for i in range(len(classes)):
+                    class_name = classes[i]
+                    fig, ax = plt.subplots()
+                    
+                    # Display the CAM
+                    ax.imshow(cam_map_fine[i].detach().cpu(), alpha=1.0, extent=(0, 48, 48, 0), interpolation='bicubic', cmap='magma')
+                    ax.axis('off')
+                    
+                    # Save with different filenames for predicted vs non-predicted classes
+                    if i == fine_idx:
+                        class_image_path = os.path.join(cam_folder, f"{image_id}_{class_name}_predicted_cam.jpg")
+                        ax.set_title(f"Predicted: {class_name}")
+                    else:
+                        class_image_path = os.path.join(cam_folder, f"{image_id}_{class_name}_cam.jpg")
+                    
+                    plt.savefig(class_image_path, bbox_inches='tight', pad_inches=0)
+                    plt.close()
+
+                print(f"CAM images saved in {cam_folder}")
+
                 #break
                 
                 
