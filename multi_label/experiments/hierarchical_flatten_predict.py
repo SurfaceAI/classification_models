@@ -26,6 +26,6 @@ from src.utils import helper
 #     # Run the prediction
 #     prediction.run_dataset_predict_csv(config)
 
-#prediction.run_dataset_predict_csv(predict_config.FLATTEN)
+prediction.run_dataset_predict_csv(predict_config.FLATTEN)
 
-prediction.cam_prediction(predict_config.FLATTEN)
+#prediction.cam_prediction(predict_config.FLATTEN)

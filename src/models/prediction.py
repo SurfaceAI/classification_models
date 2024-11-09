@@ -51,7 +51,7 @@ def cam_prediction(config):
     os.makedirs(cam_subfolder, exist_ok=True)
     
     if level == const.HIERARCHICAL:
-        save_cam_hierarchical(model, predict_data, normalize_transform, classes, valid_dataset, head, hierarchy_method, device, cam_subfolder)
+        save_cam_hierarchical(model, predict_data, normalize_transform, classes, valid_dataset, head, level, hierarchy_method, device, cam_subfolder)
     elif level == const.FLATTEN or level == const.CC:
         save_cam_flattened(model, predict_data, normalize_transform, classes, valid_dataset, head, hierarchy_method, level, device, cam_subfolder)
 
@@ -191,9 +191,9 @@ def recursive_predict_csv(model_dict, model_root, data, batch_size, device, leve
             #todo: add regression
             
             #coarse_classes = classes[0]
-            #fine_classes = sorted(classes[1], key=lambda x: const.FLATTENED_INT[x]) #ordered according to integer values
+            classes = sorted(classes, key=lambda x: const.FLATTENED_INT[x]) #ordered according to integer values
 
-            #pred_classes = [coarse_classes[idx.item()] for idx in torch.argmax(pred_outputs, dim=1)]
+            #pred_classes = [classes[idx.item()] for idx in torch.argmax(outputs, dim=1)]
             
             if head == const.CLASSIFICATION:
                 pred_classes = [classes[idx.item()] for idx in torch.argmax(pred_outputs, dim=1)]
