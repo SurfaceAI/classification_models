@@ -404,8 +404,8 @@ def predict(model, data, batch_size, head, level, device, save_features, seed):
                         
                     all_features.append(feature_dict['h1_features'])
               
-            if index == 0:
-                break 
+            # if index == 0:
+            #     break 
     # h_1.remove()
     # h_2.remove()
     

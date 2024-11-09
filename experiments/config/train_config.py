@@ -9,7 +9,7 @@ default_params = {
     "eval_metric": const.EVAL_METRIC_ALL,
     'is_regression': False,
     #"max_class_size": None,
-    "lr_scheduler": False,
+    "lr_scheduler": True,
     "freeze_convs": False,
     "gamma": 0.5,
 }
@@ -25,54 +25,6 @@ default_search_params = {
     #"freeze_convs": {"values": [True, False]}
 }
 
-
-# vgg16_params = {
-#     **global_config.global_config,
-#     **default_params,
-#     "batch_size": 16,
-#     "epochs": 1,
-#     "learning_rate": 0.003,
-#     "project": const.PROJECT_SURFACE_FIXED,
-#     "name": "VGG16",
-#     "level": const.SURFACE,
-#     "model": const.VGG16,
-# }
-
-# vgg16_smoothness_params = {
-#     **global_config.global_config,
-#     **default_params,
-#     "project": const.PROJECT_SMOOTHNESS_FIXED,
-#     "name": "VGG16",
-#     "level": const.SMOOTHNESS,
-#     "model": const.VGG16,
-# }
-
-# vgg16_flatten_params = {
-#     **global_config.global_config,
-#     **default_params,
-#     "project": const.PROJECT_FLATTEN_FIXED,
-#     "name": "VGG16",
-#     "level": const.FLATTEN,
-#     "model": const.VGG16,
-# # }
-
-# rateke_params = {
-#     **global_config.global_config,
-#     **default_params,
-#     "project": const.PROJECT_SURFACE_FIXED,
-#     "name": "rateke",
-#     "level": const.SURFACE,
-#     "model": const.RATEKE,
-# }
-
-# rateke_flatten_params = {
-#     **global_config.global_config,
-#     **default_params,
-#     "project": const.PROJECT_FLATTEN_FIXED,
-#     "name": "rateke",
-#     "level": const.FLATTEN,
-#     "model": const.RATEKE,
-# }
 
 vgg16_flatten = {
     **global_config.global_config,
@@ -163,16 +115,16 @@ B_CNN = {
 C_CNN = {
     **global_config.global_config,
     **default_params,
-    "learning_rate": 0.00001, 
+    "learning_rate": 0.00005, 
     "optimizer": const.OPTI_ADAM,
     "coarse_eval_metric": const.EVAL_METRIC_ALL,
     "fine_eval_metric": const.EVAL_METRIC_ALL,
     "project": const.PROJECT_ESTHER_MA,
-    "name": "C_CNN_class",
+    "name": "C_CNN_regression_GT",
     "level": const.HIERARCHICAL,
     "model": const.CCNN,
-    "head": const.CLASSIFICATION, #'regression', 'classification', 'obd', 'clm'
-    "hierarchy_method": const.MODELSTRUCTURE, #'use_ground_truth', 'None',
+    "head": const.REGRESSION, #'regression', 'classification', 'obd', 'clm'
+    "hierarchy_method": const.GROUNDTRUTH, #'use_ground_truth', 'None',
     "lw_modifier": False,
     #"lr_scheduler": True,
 }
@@ -182,15 +134,15 @@ H_NET = {
     **default_params,
     #"batch_size": 64,
     #"epochs": 12,
-    "learning_rate": 0.00001,
+    "learning_rate": 0.01,
     "optimizer": const.OPTI_ADAM,
     "coarse_eval_metric": const.EVAL_METRIC_ALL,
     "fine_eval_metric": const.EVAL_METRIC_ALL,
     "project": const.PROJECT_ESTHER_MA,
-    "name": "HiearchyNet_class",
+    "name": "HiearchyNet_clm",
     "level": const.HIERARCHICAL,
     "model": const.HNET,
-    "head": const.CLASSIFICATION, #'regression', 'classification', 'obd', 'clm'
+    "head": const.CLM, #'regression', 'classification', 'obd', 'clm'
     "hierarchy_method": const.MODELSTRUCTURE, #'use_ground_truth', 'None',
     "lw_modifier": False,
     #"lr_scheduler": False,

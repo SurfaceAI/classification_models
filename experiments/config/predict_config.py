@@ -24,7 +24,7 @@ FLATTEN = {
     **global_config.global_config,
     "name": "Flatten_CLASSIFICATION_prediction",
     #"model_dict": {"trained_model": "flatten-vgg16-classification-flatten-20241027_181115-y347grss_epoch0.pt"},
-    "model_dict": {"trained_model": "flatten-vgg16-classification-flatten-20241105_210302_epoch0.pt"}, 
+    "model_dict": {"trained_model": "flatten-vgg16-classification-flatten-20241106_220720-8zz0sjns42_epoch10.pt"}, 
     "dataset": r"V1_0",
     "ds_type": "test",
     "metadata": r"streetSurfaceVis_v1_0.csv",
@@ -40,7 +40,7 @@ FLATTEN = {
 B_CNN = {
     **global_config.global_config,
     "name": "B_CNN_CLASSIFICATION_prediction",
-    "model_dict": {"trained_model": "hierarchical-B_CNN-classification-use_model_structure-20241027_161111-xu274wad_epoch2.pt"},
+    "model_dict": {"trained_model": "hierarchical-B_CNN-classification-use_model_structure-20241106_222713-z8l98z7u42_epoch9.pt"},
     #"model_dict": {"trained_model": "multilabel-BCNN-20240504_141652-jzr601kb_epoch39.pt"}, 
     "dataset": r"V1_0",
     "ds_type": "test",
@@ -74,7 +74,7 @@ C_CNN = {
 H_NET = {
     **global_config.global_config,
     "name": "H_NET_CLASSIFICATION_prediction",
-    "model_dict": {"trained_model": "hierarchical-HiearchyNet-classification-use_model_structure-20241027_180036-ob5xv766_epoch8.pt"},
+    "model_dict": {"trained_model": "hierarchical-HiearchyNet-classification-use_model_structure-20241106_222805-k45vh7jt42_epoch8.pt"},
     #"model_dict": {"trained_model": "multilabel-BCNN-20240504_141652-jzr601kb_epoch39.pt"}, 
     "dataset": r"V1_0",
     "ds_type": "test",
@@ -91,7 +91,7 @@ H_NET = {
 GH_CNN = {
     **global_config.global_config,
     "name": "GH_CNN_CLASSIFICATION_prediction",
-    "model_dict": {"trained_model": "hierarchical-GH_CNN-classification-use_model_structure-20241027_180609-qc6an27g_epoch1.pt"},
+    "model_dict": {"trained_model": "hierarchical-GH_CNN-classification-use_model_structure-20241106_222749-y1aa7o3d42_epoch11.pt"},
     #"model_dict": {"trained_model": "multilabel-BCNN-20240504_141652-jzr601kb_epoch39.pt"}, 
     "dataset": r"V1_0",
     "ds_type": "test",

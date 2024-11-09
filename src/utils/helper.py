@@ -398,7 +398,7 @@ def map_predictions_to_quality_regression(predictions, coarse_predictions):
         1: [4, 5, 6, 7],  # Concrete
         2: [8, 9, 10, 11],  # Paving Stones
         3: [12, 13, 14],  # Sett
-        4: [15, 16, 17]  # Unpaved
+        4: [15, 16, 17, 18]  # Unpaved
     }
     
     # Ensure inputs are tensors for efficient indexing
@@ -803,7 +803,7 @@ def is_hierarchy_violation(true_label, predicted_label, parent):
     # Check if the parent classes of the true and predicted labels are the same
     return parent[true_label] != parent[predicted_label]
 
-parent = torch.tensor([0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 4, 4, 4])
+parent = torch.tensor([0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 4, 4, 4, 4])
 
 def compute_one_off_accuracy_within_groups(predictions, labels, parent):
 # Get the parent group of the predictions and labels
