@@ -142,7 +142,7 @@ class C_CNN(nn.Module):
             self.coarse_condition = nn.Linear(num_c, num_classes - 5, bias=False)
         else: 
             self.coarse_condition = nn.Linear(num_c, num_classes, bias=False)
-        self.coarse_condition.weight.data.fill_(0)  # Initialize weights to zero
+        self.coarse_condition.weight.data.fill_(0.01)  # Initialize weights to zero
         self.constraint = NonNegUnitNorm(axis=0) 
 
                      
@@ -229,12 +229,13 @@ class C_CNN(nn.Module):
         else:
             coarse_condition = self.coarse_condition(coarse_probs) 
         
-        if self.hierarchy_method == const.MODELSTRUCTURE:   
-            if self.head == 'regression' or self.head == 'corn':    
-                fine_output = torch.sum(fine_output * coarse_condition, dim=1)
+        if self.hierarchy_method == const.MODELSTRUCTURE: 
+            self.coarse_condition.weight.data = self.constraint(self.coarse_condition.weight.data)
+  
+            if self.head == 'regression' or self.head == 'corn':
+                fine_output = fine_output * torch.log(coarse_condition)
             else:
                 fine_output = coarse_condition + fine_output
-                self.coarse_condition.weight.data = self.constraint(self.coarse_condition.weight.data)
                 
         return coarse_output, fine_output     
                
