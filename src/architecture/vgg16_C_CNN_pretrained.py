@@ -42,29 +42,31 @@ class C_CNN(nn.Module):
             param.requires_grad = True
                 
         self.block1_to_4 = model.features[:24]
-        self.block5_coarse = nn.Sequential(
-            copy.deepcopy(model.features[24]),
-            nn.BatchNorm2d(512),
-            copy.deepcopy(model.features[25]),
-            nn.BatchNorm2d(512),
-            copy.deepcopy(model.features[26]),
-            nn.BatchNorm2d(512)
-        )
+        self.block5_coarse = nn.Sequential(copy.deepcopy(model.features[24:]))
+        # nn.Sequential(
+        #     copy.deepcopy(model.features[24]),
+        #     nn.BatchNorm2d(512),
+        #     copy.deepcopy(model.features[26]),
+        #     nn.BatchNorm2d(512),
+        #     copy.deepcopy(model.features[28]),
+        #     nn.BatchNorm2d(512)
+        # )
         
         # Adding BatchNorm layers to block5_fine
-        self.block5_fine = nn.Sequential(
-            copy.deepcopy(model.features[24]),
-            nn.BatchNorm2d(512),
-            copy.deepcopy(model.features[25]),
-            nn.BatchNorm2d(512),
-            copy.deepcopy(model.features[26]),
-            nn.BatchNorm2d(512)
-        )
+        self.block5_fine = nn.Sequential(copy.deepcopy(model.features[24:]))
+        # nn.Sequential(
+        #     copy.deepcopy(model.features[24]),
+        #     nn.BatchNorm2d(512),
+        #     copy.deepcopy(model.features[26]),
+        #     nn.BatchNorm2d(512),
+        #     copy.deepcopy(model.features[28]),
+        #     nn.BatchNorm2d(512)
+        # )
 
 
         #Coarse prediction branch
         self.coarse_classifier = nn.Sequential(
-            nn.Linear(512 * 16 * 16, 512),
+            nn.Linear(512 * 8 * 8, 512),
             nn.ReLU(),
             nn.Dropout(0.5),
             nn.Linear(512, 512),
@@ -108,7 +110,7 @@ class C_CNN(nn.Module):
             
         elif head == 'single':
             self.fine_classifier = nn.Sequential(
-            nn.Linear(512 * 16 * 16, 1024),
+            nn.Linear(512 * 8 * 8, 1024),
             nn.ReLU(),
             nn.Dropout(0.5),
             nn.Linear(1024, 1024),
@@ -119,7 +121,7 @@ class C_CNN(nn.Module):
                 
         elif head == 'classification' or head == 'classification_qwk':
             self.fine_classifier = nn.Sequential(
-                nn.Linear(512 * 16 * 16, 1024),
+                nn.Linear(512 * 8 * 8, 1024),
                 nn.ReLU(),
                 nn.Dropout(0.5),
                 nn.Linear(1024, 1024),
@@ -146,7 +148,7 @@ class C_CNN(nn.Module):
                      
     def _create_quality_fc_clm(self, num_classes=4):
         layers = nn.Sequential(
-            nn.Linear(512 * 16 * 16, 1024),
+            nn.Linear(512 * 8 * 8, 1024),
             nn.ReLU(),
             nn.Dropout(0.5),
             nn.Linear(1024, 1024),
@@ -160,7 +162,7 @@ class C_CNN(nn.Module):
     
     def _create_quality_fc_regression(self):
         layers = nn.Sequential(
-            nn.Linear(512 * 16 * 16, 1024),
+            nn.Linear(512 * 8 * 8, 1024),
             nn.ReLU(),
             nn.Dropout(0.5),
             nn.Linear(1024, 1024),
@@ -172,7 +174,7 @@ class C_CNN(nn.Module):
     
     def _create_quality_fc_corn(self, num_classes=4):
         layers = nn.Sequential(
-            nn.Linear(512 * 16 * 16, 1024),
+            nn.Linear(512 * 8 * 8, 1024),
             nn.ReLU(),
             nn.Dropout(0.5),
             nn.Linear(1024, 1024),
@@ -204,6 +206,7 @@ class C_CNN(nn.Module):
         fine_flat = x_fine.reshape(x_fine.size(0), -1)  
         #fine_flat = x.reshape(x.size(0), -1)  
         
+        #if hierarchy_method == const.GROUNDTRUTH: TODO
         if self.head == 'clm' or self.head == 'clm_qwk' or self.head == 'regression' or self.head == 'corn':
             fine_output_asphalt = self.classifier_asphalt(fine_flat) #([batch_size, 1024])  
             fine_output_concrete = self.classifier_concrete(fine_flat)
