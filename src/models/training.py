@@ -1214,6 +1214,11 @@ def train_epoch_hierarchical(model, dataloader, optimizer, device, head, hierarc
         loss.backward()
         optimizer.step()
         
+        if model == const.CCNN and hierarchy_method == const.MODELSTRUCTURE:
+            print(f"Epoch {epoch+1}")
+            print("CPWM:")
+            print(model.coarse_condition.weight.data)
+        
         running_loss += loss.item()
         coarse_loss_total += coarse_loss.item()
         if head == const.CLASSIFICATION_QWK or head == const.CLM_QWK or head == const.CLM or head == const.CORN:
@@ -1227,7 +1232,7 @@ def train_epoch_hierarchical(model, dataloader, optimizer, device, head, hierarc
 
         # TODO: metric as function, metric_name as input argument
 
-        if head == const.CLASSIFICATION or head == const.CLASSIFICATION_QWK:
+        if head == const.CLASSIFICATION_QWK or head == const.CLM_QWK or head == const.CLM or head == const.CORN or head == const.REGRESSION:
             fine_output = model.get_class_probabilities(fine_output)
             
         (fine_correct_item, 
@@ -1317,7 +1322,7 @@ def validate_epoch_hierarchical(model, dataloader, device, head, hierarchy_metho
             else:
                 val_fine_loss_total += fine_loss.item()
 
-            if head == const.CLASSIFICATION or head == const.CLASSIFICATION_QWK:
+            if head == const.CLASSIFICATION or head == const.CLASSIFICATION_QWK or head == const.CLM or head == const.CORN or head == const.REGRESSION:
                 fine_output = model.get_class_probabilities(fine_output)
                 
             (val_fine_correct_item, 
