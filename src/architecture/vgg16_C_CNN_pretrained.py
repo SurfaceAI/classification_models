@@ -232,7 +232,9 @@ class C_CNN(nn.Module):
         if self.hierarchy_method == const.MODELSTRUCTURE: 
             self.coarse_condition.weight.data = self.constraint(self.coarse_condition.weight.data)
   
-            if self.head == 'regression' or self.head == 'corn':
+            if self.head == 'regression':
+                fine_output = fine_output * coarse_condition
+            elif self.head == 'corn':
                 fine_output = fine_output * torch.log(coarse_condition)
             else:
                 fine_output = coarse_condition + fine_output
