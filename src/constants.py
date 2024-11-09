@@ -31,6 +31,14 @@ HORRIBLE = "horrible"
 #     HORRIBLE: 6,
 # }
 
+QUALITY_MAPPING = {
+    0: [0, 1, 2, 3],  # Asphalt
+    1: [4, 5, 6, 7],  # Concrete
+    2: [8, 9, 10, 11],  # Paving Stones
+    3: [12, 13, 14],  # Sett
+    4: [15, 16, 17]  # Unpaved
+}
+
 SMOOTHNESS_INT = {
     EXCELLENT: 0,
     GOOD: 1,
@@ -87,6 +95,9 @@ SURFACE = "surface"
 SMOOTHNESS = "smoothness"
 FLATTEN = "flatten"
 HIERARCHICAL = "hierarchical"
+
+TYPE = "type"
+QUALITY = "quality"
 
 # dataset
 V0 = "V0"

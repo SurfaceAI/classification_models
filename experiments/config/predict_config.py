@@ -124,27 +124,35 @@ B_CNN_CORN_GT = {
 CC = {
     **global_config.global_config,
     "name": "CC_Classification_prediction",
+    "level": const.CC,
     "model_dict": {
         "trained_model": "surface-vgg16-classification-CC-20241103_102134_epoch0.pt",
+        "level": const.TYPE,
         "submodels": {
             const.ASPHALT: {
-                "trained_model": "smoothness-asphalt-vgg16-classification-CC-20241103_102236_epoch0.pt"
+                "trained_model": "smoothness-asphalt-vgg16-classification-CC-20241103_102236_epoch0.pt",
+                "level": const.QUALITY,
             },
             const.CONCRETE: {
-                "trained_model": "smoothness-concrete-vgg16-classification-CC-20241103_102330_epoch0.pt"
+                "trained_model": "smoothness-concrete-vgg16-classification-CC-20241103_102330_epoch0.pt",
+                "level": const.QUALITY,
             },
             const.PAVING_STONES: {
-                "trained_model": "smoothness-paving_stones-vgg16-classification-CC-20241103_102422_epoch0.pt"
+                "trained_model": "smoothness-paving_stones-vgg16-classification-CC-20241103_102422_epoch0.pt",
+                "level": const.QUALITY,
             },
             const.SETT: {
-                "trained_model": "smoothness-sett-vgg16-classification-CC-20241103_102514_epoch0.pt"
+                "trained_model": "smoothness-sett-vgg16-classification-CC-20241103_102514_epoch0.pt",
+                "level": const.QUALITY,
             },
             const.UNPAVED: {
-                "trained_model": "smoothness-unpaved-vgg16-classification-CC-20241103_102612_epoch0.pt"
+                "trained_model": "smoothness-unpaved-vgg16-classification-CC-20241103_102612_epoch0.pt",
+                "level": const.QUALITY,
             },
         },
     },
     "dataset": "V1_0",
+    "ds_type": "test",
     "metadata": "streetSurfaceVis_v1_0.csv",
     "transform": {
         "resize": const.H256_W256,
