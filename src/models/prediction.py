@@ -70,15 +70,26 @@ def run_dataset_predict_csv(config):
     
     #Filter data 
     if config.get('level') == const.CC:
-        df = predict_surface_and_quality(
-            model_root = config.get("root_model"),
-            model_dict=config["model_dict"],
-            data=predict_data,
-            device=device,
-            batch_size=config.get("batch_size"),
-            save_features=config.get('save_features'),
-            seed=config["seed"],
-        )
+        if save_features:
+            df, all_features = predict_surface_and_quality(
+                model_root = config.get("root_model"),
+                model_dict=config["model_dict"],
+                data=predict_data,
+                device=device,
+                batch_size=config.get("batch_size"),
+                save_features=config.get('save_features'),
+                seed=config["seed"],
+            )
+        else:
+            df = predict_surface_and_quality(
+                model_root = config.get("root_model"),
+                model_dict=config["model_dict"],
+                data=predict_data,
+                device=device,
+                batch_size=config.get("batch_size"),
+                save_features=config.get('save_features'),
+                seed=config["seed"],
+            )
 
     else:   
             
@@ -112,8 +123,15 @@ def run_dataset_predict_csv(config):
 
     # save features
     if config.get('save_features') and config.get('seed') == 42:
-        features_save_name = config.get("model_dict")['trained_model'] + '-' + config.get("dataset").replace('\\', '_')
-        save_features(features, os.path.join(config.get("root_predict"), 'feature_maps'), features_save_name)
+        if config.get('level') == const.CC:
+            for feature_key, features in all_features.items():
+                # Create a unique name for each feature set
+                features_save_name = config.get("model_dict")['trained_model'] + '-' + feature_key + '-' + config.get("dataset").replace('\\', '_')
+                # Save the features
+                save_features(features, os.path.join(config.get("root_predict"), 'feature_maps'), features_save_name)
+        else:
+            features_save_name = config.get("model_dict")['trained_model'] + '-' + config.get("dataset").replace('\\', '_')
+            save_features(features, os.path.join(config.get("root_predict"), 'feature_maps'), features_save_name)
 
     df['Seed'] = config.get('seed')
     # save predictions
@@ -343,8 +361,8 @@ def predict(model, data, batch_size, head, level, device, save_features, seed):
                 h_2 = model.features[30].register_forward_hook(helper.make_hook("h2_features", feature_dict))
                 
             elif 'C_CNN' in model.__module__:
-                h_1 = model.block5_coarse.register_forward_hook(helper.make_hook("h1_features", feature_dict))
-                h_2 = model.block5_fine.register_forward_hook(helper.make_hook("h2_features", feature_dict))
+                h_1 = model.block5_coarse[-1].register_forward_hook(helper.make_hook("h1_features", feature_dict))
+                h_2 = model.block5_fine[-1].register_forward_hook(helper.make_hook("h2_features", feature_dict))
                 
             elif 'GH_CNN' or 'H_NET' in model.__module__:
                 h_1 = model.features[30].register_forward_hook(helper.make_hook("h1_features", feature_dict))
@@ -383,6 +401,9 @@ def predict(model, data, batch_size, head, level, device, save_features, seed):
             if level == const.HIERARCHICAL:
                 model_inputs = (batch_inputs, None)
                 coarse_batch_outputs, fine_batch_outputs = model(model_inputs)
+                
+                print("CPWM:")
+                print(model.coarse_condition.weight.data)
                 
                 coarse_batch_outputs = model.get_class_probabilities(coarse_batch_outputs)
                 
@@ -545,7 +566,10 @@ def save_features(features_dict, saving_dir, saving_name):
 def save_cam_hierarchical(model, data, normalize_transform, classes, valid_dataset, head, level, hierarchy_method, device, cam_folder):
 
     #feature_layer = model.fine_classifier[-4]
-    feature_layer = model.features[-3]
+    if 'C_CNN' in model.__module__:
+        feature_layer = model.block5_fine[0][-3]
+    else:
+        feature_layer = model.features[-3]
     #out_weights_coarse = model.coarse_classifier[-1].weight #TODO adapt for multiple heads 
     out_weights_fine_reduced = helper.get_fine_weights(model, level, head)
     
@@ -750,12 +774,19 @@ def save_cam_flattened(model, data, normalize_transform, classes, valid_dataset,
             
         
 def predict_surface_and_quality(model_root, model_dict, data, device, batch_size, save_features, seed):
+    
+    all_CC_features = {}
     # Load surface type model
     surface_model_path = os.path.join(model_root, model_dict['trained_model'])
     surface_model, surface_classes, head, level, valid_dataset, hierarchy_method = load_model(surface_model_path, device)
 
     # Predict surface type
-    surface_predictions, image_ids = predict(surface_model, data, batch_size, head, level, device, save_features=save_features, seed=seed)
+    if save_features:
+        surface_predictions, image_ids, surface_features = predict(surface_model, data, batch_size, head, level, device, save_features=save_features, seed=seed)
+        all_CC_features['surface'] = surface_features
+
+    else:
+        surface_predictions, image_ids = predict(surface_model, data, batch_size, head, level, device, save_features=save_features, seed=seed)
 
     # Get predicted classes for surface type
     predicted_surface_classes = [surface_classes[idx.item()] for idx in torch.argmax(surface_predictions, dim=1)]
@@ -807,12 +838,17 @@ def predict_surface_and_quality(model_root, model_dict, data, device, batch_size
         #subset = Subset(data, sub_data_indices)
         # sub_data_loader = DataLoader(
         #     subset,
-        #     batch_size=batch_size,
+        #     batch_size=batch_size,sc
         #     shuffle=False
         # )
-
         # Predict quality using the submodel
-        quality_predictions, _ = predict(submodel, subset, batch_size, head, level, device, save_features=save_features, seed=seed)
+        if save_features:
+            quality_predictions, _ , quality_features= predict(submodel, subset, batch_size, head, level, device, save_features=save_features, seed=seed)
+            all_CC_features[surface_type] = quality_features
+
+        else:
+            quality_predictions, _ = predict(submodel, subset, batch_size, head, level, device, save_features=save_features, seed=seed)
+        
         predicted_quality_classes = [quality_classes[idx.item()] for idx in torch.argmax(quality_predictions, dim=1)]
 
         # Store results
@@ -826,7 +862,11 @@ def predict_surface_and_quality(model_root, model_dict, data, device, batch_size
 
     # Convert results to DataFrame (or any desired output format)
     df_results = pd.DataFrame(results)
-    return df_results
+    if save_features:
+        return df_results, all_CC_features
+    else:
+        return df_results
+
 
 # def run_dataset_prediction_json(name, data_root, dataset, transform, model_root, model_dict, predict_dir, gpu_kernel, batch_size):
 #     # TODO: config instead of data_root etc.?
