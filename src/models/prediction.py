@@ -69,57 +69,57 @@ def run_dataset_predict_csv(config):
     predict_data = prepare_data(config.get("root_data"), config.get("dataset"), config.get("metadata"), config.get("transform"), ds_type=config.get("ds_type"))
     
     #Filter data 
-    if config.get('level') == const.CC:
-        if save_features:
-            df, all_features = predict_surface_and_quality(
-                model_root = config.get("root_model"),
-                model_dict=config["model_dict"],
-                data=predict_data,
-                device=device,
-                batch_size=config.get("batch_size"),
-                save_features=config.get('save_features'),
-                seed=config["seed"],
-            )
-        else:
-            df = predict_surface_and_quality(
-                model_root = config.get("root_model"),
-                model_dict=config["model_dict"],
-                data=predict_data,
-                device=device,
-                batch_size=config.get("batch_size"),
-                save_features=config.get('save_features'),
-                seed=config["seed"],
-            )
+    # if config.get('level') == const.CC:
+    #     if config.get('save_features'):
+    #         df, all_features = predict_surface_and_quality(
+    #             model_root = config.get("root_model"),
+    #             model_dict=config["model_dict"],
+    #             data=predict_data,
+    #             device=device,
+    #             batch_size=config.get("batch_size"),
+    #             save_features=config.get('save_features'),
+    #             seed=config["seed"],
+    #         )
+    #     else:
+    #         df = predict_surface_and_quality(
+    #             model_root = config.get("root_model"),
+    #             model_dict=config["model_dict"],
+    #             data=predict_data,
+    #             device=device,
+    #             batch_size=config.get("batch_size"),
+    #             save_features=config.get('save_features'),
+    #             seed=config["seed"],
+    #         )
 
-    else:   
+    # else:   
             
-        if config.get('level') != "hierarchical":
-            level_no = 0
-            columns = ['Image', 'Prediction', 'Level', f'Level_{level_no}']
-            df = pd.DataFrame(columns=columns)
-        if config.get('save_features'):
-            df, pred_outputs, image_ids, features = recursive_predict_csv(model_dict=config.get("model_dict"), 
-                                model_root=config.get("root_model"), 
-                                data=predict_data, 
-                                batch_size=config.get("batch_size"), 
-                                device=device, 
-                                level=config.get('level'), 
-                                hierarchy_method=config.get('hierarchy_method'),
-                                save_features=config.get('save_features'),
-                                level_no=level_no,
-                                seed=config["seed"],)
-        else: 
-            df, pred_outputs, image_ids = recursive_predict_csv(model_dict=config.get("model_dict"), 
-                                model_root=config.get("root_model"), 
-                                data=predict_data, 
-                                batch_size=config.get("batch_size"), 
-                                device=device, 
-                                level=config.get('level'),  
-                                hierarchy_method=config.get('hierarchy_method'),
-                                save_features=config.get('save_features'),
-                                level_no=level_no,
-                                seed=config["seed"])
-        
+    if config.get('level') == const.CC:
+        level_no = 0
+        columns = ['Image', 'Prediction', 'Level', f'Level_{level_no}']
+        df = pd.DataFrame(columns=columns)
+    if config.get('save_features'):
+        df, pred_outputs, image_ids, features = recursive_predict_csv(model_dict=config.get("model_dict"), 
+                            model_root=config.get("root_model"), 
+                            data=predict_data, 
+                            batch_size=config.get("batch_size"), 
+                            device=device, 
+                            level=config.get('level'), 
+                            hierarchy_method=config.get('hierarchy_method'),
+                            save_features=config.get('save_features'),
+                            level_no=level_no,
+                            seed=config["seed"],)
+    else: 
+        df, pred_outputs, image_ids = recursive_predict_csv(model_dict=config.get("model_dict"), 
+                            model_root=config.get("root_model"), 
+                            data=predict_data, 
+                            batch_size=config.get("batch_size"), 
+                            device=device, 
+                            level=config.get('level'),  
+                            hierarchy_method=config.get('hierarchy_method'),
+                            save_features=config.get('save_features'),
+                            level_no=level_no,
+                            seed=config["seed"])
+    
 
     # save features
     if config.get('save_features') and config.get('seed') == 42:
@@ -161,7 +161,7 @@ def recursive_predict_csv(model_dict, model_root, data, batch_size, device, leve
         valid_dataset_ids = [os.path.splitext(os.path.split(id[0])[-1])[0] for id in valid_dataset.samples]
         is_valid_data = [1 if image_id in valid_dataset_ids else 0 for image_id in image_ids]
         
-        df = pd.DataFrame()   
+        #df = pd.DataFrame()   
         if level == const.HIERARCHICAL:             #todo: add regression
             pred_coarse_outputs = pred_outputs[0]
             pred_fine_outputs = pred_outputs[1]
@@ -814,18 +814,19 @@ def predict_surface_and_quality(model_root, model_dict, data, device, batch_size
         submodel_path = os.path.join(model_root, submodel_dict['trained_model'])
         submodel, quality_classes, _, _, _, _ = load_model(submodel_path, device) #TODO ggf sortieren noch
         
-        
-        
-        image_id_to_index = {}
-        sub_data = [image_id for image_id, _ in images]
-        
-        for idx, (image_data, image_id) in enumerate(data):
-            image_id_to_index[image_id] = idx
-
-        # Step 2: Get the indices for the subset based on your sub_data list of image IDs
-        sub_data_indices = [image_id_to_index[image_id] for image_id in sub_data if image_id in image_id_to_index] #TODO: nicht ganz sicher, ob das so richtig ist
-        # Step 3: Create a subset using the indices
+        image_id_to_index = {image_id: idx for idx, (image_data, image_id) in enumerate(data)}
+        sub_data_indices = [image_id_to_index[image_id] for image_id, _ in images if image_id in image_id_to_index]
         subset = Subset(data, sub_data_indices)
+        # image_id_to_index = {}
+        # sub_data = [image_id for image_id, _ in images]
+        
+        # for idx, (image_data, image_id) in enumerate(data):
+        #     image_id_to_index[image_id] = idx
+
+        # # Step 2: Get the indices for the subset based on your sub_data list of image IDs
+        # sub_data_indices = [image_id_to_index[image_id] for image_id in sub_data if image_id in image_id_to_index] #TODO: nicht ganz sicher, ob das so richtig ist
+        # # Step 3: Create a subset using the indices
+        # subset = Subset(data, sub_data_indices)
 
         # Prepare data for this specific surface type
 #         sub_data = [image_id for image_id, _ in images]  # Extract image IDs #TODO hier weitermachen
