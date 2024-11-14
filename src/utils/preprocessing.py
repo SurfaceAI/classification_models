@@ -228,17 +228,18 @@ class PredictImageFolder(datasets.VisionDataset):
         
         # Load CSV and filter for test images only
         df = pd.read_csv(csv_file)
+                
         if ds_type == "test":
-            self.filteres_imgs = df[df['train'] == False]['mapillary_image_id'].tolist()  # List of image IDs to load
+            self.filtered_imgs = df[df['train'] == False]['mapillary_image_id'].tolist()  # List of image IDs to load
         elif ds_type == "train":
-            self.filteres_imgs = df[df['train'] == True]['mapillary_image_id'].tolist()
-        self.filteres_imgs = [str(img_id) for img_id in self.filteres_imgs]
+            self.filtered_imgs = df[df['train'] == True]['mapillary_image_id'].tolist()
+        self.filtered_imgs = [str(img_id) for img_id in self.filtered_imgs]
 
         # Filter samples based on test images
         self.samples = self.make_dataset(self.root, extensions, is_valid_file)
 
         # Only keep samples in self.samples that match the test image IDs
-        self.samples = [s for s in self.samples if os.path.splitext(os.path.basename(s))[0] in self.filteres_imgs]
+        self.samples = [s for s in self.samples if os.path.splitext(os.path.basename(s))[0] in self.filtered_imgs]
 
         self.loader = loader
         self.extensions = extensions
@@ -377,10 +378,10 @@ class TestImages(Dataset):
 
         # Load the CSV file and filter for test images
         df = pd.read_csv(csv_file)
-        self.filteres_imgs = df[df['train'] == False]['mapillary_image_id'].tolist()  # List of test image filenames
+        self.filtered_imgs = df[df['train'] == False]['mapillary_image_id'].tolist()  # List of test image filenames
 
     def __len__(self):
-        return len(self.filteres_imgs)
+        return len(self.filtered_imgs)
 
     def __getitem__(self, idx):
         """
@@ -392,7 +393,7 @@ class TestImages(Dataset):
         Returns:
         - Transformed image tensor.
         """
-        img_path = os.path.join(self.data_path, self.filteres_imgs[idx])
+        img_path = os.path.join(self.data_path, self.filtered_imgs[idx])
 
         # Load the image using PIL
         image = Image.open(img_path).convert("RGB")
