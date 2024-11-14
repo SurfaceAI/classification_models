@@ -64,10 +64,9 @@ def run_dataset_predict_csv(config):
     device = torch.device(
         f"cuda:{config.get('gpu_kernel')}" if torch.cuda.is_available() else "cpu"
     )
-
     # prepare data
     predict_data = prepare_data(config.get("root_data"), config.get("dataset"), config.get("metadata"), config.get("transform"), ds_type=config.get("ds_type"))
-    
+    print(len(predict_data))
     #Filter data 
     # if config.get('level') == const.CC:
     #     if config.get('save_features'):
@@ -93,10 +92,10 @@ def run_dataset_predict_csv(config):
 
     # else:   
             
-    if config.get('level') == const.CC:
-        level_no = 0
-        columns = ['Image', 'Prediction', 'Level', f'Level_{level_no}']
-        df = pd.DataFrame(columns=columns)
+    #if config.get('level') == const.CC:
+        #level_no = 0
+        # columns = ['Image', 'Prediction', 'Level', f'Level_{level_no}']
+        # df = pd.DataFrame(columns=columns)
     if config.get('save_features'):
         df, pred_outputs, image_ids, features = recursive_predict_csv(model_dict=config.get("model_dict"), 
                             model_root=config.get("root_model"), 
@@ -117,7 +116,7 @@ def run_dataset_predict_csv(config):
                             level=config.get('level'),  
                             hierarchy_method=config.get('hierarchy_method'),
                             save_features=config.get('save_features'),
-                            level_no=level_no,
+                            #level_no=level_no,
                             seed=config["seed"])
     
 
@@ -139,6 +138,7 @@ def run_dataset_predict_csv(config):
     saving_name = config.get("model_dict")['trained_model'] + '-' + config.get("dataset").replace('\\', '_') + '-' + config.get('ds_type') + '-' + start_time + '-'+'.csv'
 
     saving_path = save_predictions_csv(df=df, saving_dir=os.path.join(config.get("root_predict")), saving_name=saving_name)
+    print(df)
 
     print(f'Images {config.get("dataset")} predicted and saved: {saving_path}')
 
@@ -150,6 +150,10 @@ def recursive_predict_csv(model_dict, model_root, data, batch_size, device, leve
     else:
         model_path = os.path.join(model_root, model_dict['trained_model'])
         model, classes, head, level, valid_dataset, hierarchy_method = load_model(model_path=model_path, device=device)
+        print(classes)
+        level = const.FLATTEN
+        print(level)
+        classes = ["excellent", "good", "intermediate", "bad"]
 
         if save_features:
             pred_outputs, image_ids, features = predict(model, data, batch_size, head, level, device, save_features, seed) 
@@ -161,8 +165,8 @@ def recursive_predict_csv(model_dict, model_root, data, batch_size, device, leve
         valid_dataset_ids = [os.path.splitext(os.path.split(id[0])[-1])[0] for id in valid_dataset.samples]
         is_valid_data = [1 if image_id in valid_dataset_ids else 0 for image_id in image_ids]
         
-        #df = pd.DataFrame()   
-        if level == const.HIERARCHICAL:             #todo: add regression
+        if level == const.HIERARCHICAL:   
+            df = pd.DataFrame() #todo: add regression
             pred_coarse_outputs = pred_outputs[0]
             pred_fine_outputs = pred_outputs[1]
             
@@ -204,12 +208,13 @@ def recursive_predict_csv(model_dict, model_root, data, batch_size, device, leve
                 return df, pred_outputs, image_ids
             
         #classifier chain  
-        elif level == const.FLATTEN:
+        elif level == const.FLATTEN or level ==  const.ASPHALT:
+            df = pd.DataFrame()   
             columns =  ['Image', 'Fine_Prediction', 'Fine_Probability', 'is_in_validation']
             #todo: add regression
             
             #coarse_classes = classes[0]
-            classes = sorted(classes, key=lambda x: const.FLATTENED_INT[x]) #ordered according to integer values
+            #classes = sorted(classes, key=lambda x: const.FLATTENED_INT[x]) #ordered according to integer values
 
             #pred_classes = [classes[idx.item()] for idx in torch.argmax(outputs, dim=1)]
             
@@ -237,87 +242,69 @@ def recursive_predict_csv(model_dict, model_root, data, batch_size, device, leve
         else:
             #df = pd.DataFrame(columns=columns)
             level_name = model_dict.get('level', '')
-            columns = ['Image', 'Prediction', 'Level', 'is_in_validation', f'Level_{level_no}'] # is_in_valid_dataset / join
+            columns = ['Image', 'Prediction', 'Prob', 'Level', 'is_in_validation', f'Level_{level_no}'] # is_in_valid_dataset / join
             pre_cls_entry = []
             if pre_cls is not None:
                 columns = columns + [f'Level_{level_no-1}']
                 pre_cls_entry = [pre_cls]
-                
-            if head == const.REGRESSION:
-                pred_classes = ["outside" if str(pred.item()) not in classes.keys() else classes[str(pred.item())] for pred in pred_outputs.round().int()]
-                df_tmp = pd.DataFrame(columns=columns, index=range(pred_outputs.shape[0]))
-                i = 0
-                for image_id, pred, is_vd, cls in tqdm(zip(image_ids, pred_outputs, is_valid_data, pred_classes), desc="write df"):
-                    df_tmp.iloc[i] = [image_id, pred.item(), level_name, is_vd, cls] + pre_cls_entry
-                    i += 1
-                print(df_tmp.shape)
-                df = pd.concat([df, df_tmp], ignore_index=True)
-                print(df.shape)
-                
-            elif head == const.CORN:
-                pred_classes = [classes[idx.item()] for idx in corn_label_from_logits(pred_outputs)]
-                df_tmp = pd.DataFrame(columns=columns, index=range(pred_outputs.shape[0]))
-                i = 0
-                for image_id, pred, is_vd, cls in tqdm(zip(image_ids, pred_outputs, is_valid_data, pred_classes), desc="write df"):
-                    df_tmp.iloc[i] = [image_id, pred.item(), level_name, is_vd, cls] + pre_cls_entry
-                    i += 1
-                print(df_tmp.shape)
-                df = pd.concat([df, df_tmp], ignore_index=True)
-                print(df.shape)                
-                
-                # for image_id, pred, is_vd, cls in zip(image_ids, pred_outputs, is_valid_data, pred_classes):
-                #     i = df.shape[0]
-                #     df.loc[i, columns] = [image_id, pred.item(), is_vd, cls] + pre_cls_entry
-                # for cls in classes:
-                #     sub_indices = [idx for idx, pred_cls in enumerate(pred_classes) if pred_cls == cls]
-                #     sub_model_dict = model_dict.get('submodels', {}).get(cls)
-                #     if not sub_indices or sub_model_dict is None:
-                #         continue
-                #     sub_data = Subset(data, sub_indices)
-                #     recursive_predict_csv(model_dict=sub_model_dict, model_root=model_root, data=sub_data, batch_size=batch_size, device=device, level=const.SMOOTHNESS, 
-                #                           hierarchy_method=hierarchy_method, save_features=save_features, df=df, level_no=level_no+1, pre_cls=cls)
-            else:                
+              
+            print(pred_outputs)
+          
+            if level == const.QUALITY:
+                if head == const.REGRESSION:
+                    pred_classes = ["outside" if str(pred.item()) not in classes.keys() else classes[str(pred.item())] for pred in pred_outputs.round().int()]
+                elif head == const.CORN:
+                    pred_classes = [classes[idx.item()] for idx in corn_label_from_logits(pred_outputs)]                                 
+                else:
+                    pred_classes = [classes[idx.item()] for idx in torch.argmax(pred_outputs, dim=1)]
+            else:
                 pred_classes = [classes[idx.item()] for idx in torch.argmax(pred_outputs, dim=1)]
-                df_tmp = pd.DataFrame(columns=columns, index=range(pred_outputs.shape[0] * pred_outputs.shape[1]))
-                i = 0
-                for image_id, pred, is_vd in tqdm(zip(image_ids, pred_outputs, is_valid_data), desc="write df"):
-                    for cls, prob in zip(classes, pred.tolist()):
-                        df_tmp.iloc[i] = [image_id, prob, level_name, is_vd, cls] + pre_cls_entry
-                        i += 1
-                print(df_tmp.shape)
-                df = pd.concat([df, df_tmp], ignore_index=True)
-                print(df.shape)
-                # subclasses not for regression implemented
-                for cls in classes:
-                    sub_indices = [idx for idx, pred_cls in enumerate(pred_classes) if pred_cls == cls]
-                    sub_model_dict = model_dict.get('submodels', {}).get(cls)
-                    if not sub_indices or sub_model_dict is None:
-                        continue
-                    sub_data = Subset(data, sub_indices)
-                    if save_features:
-                        df, pred_outputs, image_ids, features = recursive_predict_csv(model_dict=sub_model_dict, 
-                                                model_root=model_root, 
-                                                data=sub_data, 
-                                                batch_size=batch_size, 
-                                                device=device, 
-                                                level=level, 
-                                                hierarchy_method=hierarchy_method, 
-                                                save_features=save_features, 
-                                                df=df, 
-                                                level_no=level_no+1, 
-                                                pre_cls=cls)
-                    else:
-                        df, pred_outputs, image_ids = recursive_predict_csv(model_dict=sub_model_dict, 
-                                               model_root=model_root, 
-                                               data=sub_data, 
-                                               batch_size=batch_size, 
-                                               device=device, 
-                                               level=level, 
-                                               hierarchy_method=hierarchy_method, 
-                                               save_features=save_features, 
-                                               df=df, 
-                                               level_no=level_no+1, 
-                                               pre_cls=cls)
+            
+            print(classes)
+            df_tmp = pd.DataFrame(columns=columns, index=range(pred_outputs.shape[0] * pred_outputs.shape[1]))
+            i = 0
+            for image_id, pred, is_vd in tqdm(zip(image_ids, pred_outputs, is_valid_data), desc="write df"):
+                for cls, prob in zip(classes, pred.tolist()):
+                    df_tmp.iloc[i] = [image_id, prob, level_name, is_vd, cls] + pre_cls_entry
+                    i += 1
+            print(df_tmp.shape)
+            df = pd.concat([df, df_tmp], ignore_index=True)
+            print(df.shape)
+            # subclasses not for regression implemented
+            for cls in classes:
+                sub_indices = [idx for idx, pred_cls in enumerate(pred_classes) if pred_cls == cls]
+                sub_model_dict = model_dict.get('submodels', {}).get(cls)
+                # print(sub_model_dict)
+                # print("Predicted coarse classes:", pred_classes)
+                # print("Submodel indices:", sub_indices)
+                #print("Data passed to submodels:", [data[idx] for idx in sub_indices][:5]) 
+                if not sub_indices or sub_model_dict is None:
+                    continue
+                sub_data = Subset(data, sub_indices)
+                if save_features:
+                    df, pred_outputs, image_ids, features = recursive_predict_csv(model_dict=sub_model_dict, 
+                                            model_root=model_root, 
+                                            data=sub_data, 
+                                            batch_size=batch_size, 
+                                            device=device, 
+                                            level=level, 
+                                            hierarchy_method=hierarchy_method, 
+                                            save_features=save_features, 
+                                            df=df, 
+                                            level_no=level_no+1, 
+                                            pre_cls=cls)
+                else:
+                    df, pred_outputs, image_ids = recursive_predict_csv(model_dict=sub_model_dict, 
+                                            model_root=model_root, 
+                                            data=sub_data, 
+                                            batch_size=batch_size, 
+                                            device=device, 
+                                            level=level, 
+                                            hierarchy_method=hierarchy_method, 
+                                            save_features=save_features, 
+                                            df=df, 
+                                            level_no=level_no+1, 
+                                            pre_cls=cls)
                 # for image_id, pred, is_vd in zip(image_ids, pred_outputs, is_valid_data):
                 #     for cls, prob in zip(classes, pred.tolist()):
                 #         i = df.shape[0]
@@ -424,8 +411,8 @@ def predict(model, data, batch_size, head, level, device, save_features, seed):
                 
                 if head == const.CLASSIFICATION:
                     batch_outputs = model.get_class_probabilities(batch_outputs) 
-                elif head == const.REGRESSION:
-                    batch_outputs = batch_outputs.flatten()
+                # elif head == const.REGRESSION:
+                #     batch_outputs = batch_outputs.flatten()
                 else:
                     pass
                     
@@ -479,6 +466,7 @@ def predict(model, data, batch_size, head, level, device, save_features, seed):
 def prepare_data(data_root, dataset, metadata, transform, ds_type=None):
 
     data_path = os.path.join(data_root, dataset, "s_1024")
+    #data_path = os.path.join(data_root, dataset, "annotated", "asphalt")
     transform = preprocessing.transform(**transform)
     metadata_path = os.path.join(data_root, dataset, "metadata", metadata)
     predict_data = preprocessing.PredictImageFolder(
