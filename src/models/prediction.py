@@ -153,6 +153,7 @@ def recursive_predict_csv(model_dict, model_root, data, batch_size, device, leve
         print(classes)
         #level = const.FLATTEN
         print(level)
+        print(head)
         #classes = ["excellent", "good", "intermediate", "bad"]
 
         if save_features:
@@ -255,8 +256,8 @@ def recursive_predict_csv(model_dict, model_root, data, batch_size, device, leve
           
             if level_name == const.QUALITY:
                 if head == const.REGRESSION:
-                    pred_classes = [classes[idx.item()] for idx in pred_outputs.round().int()]
-                    #pred_classes = ["outside" if str(pred.item()) not in classes.keys() else classes[str(pred.item())] for pred in pred_outputs.round().int()]
+                    #pred_classes = [classes[idx.item()] for idx in pred_outputs.round().int()]
+                    pred_classes = ["outside" if str(pred.item()) not in classes.keys() else classes[str(pred.item())] for pred in pred_outputs.round().int()]
                 elif head == const.CORN:
                     pred_classes = [classes[idx.item()] for idx in corn_label_from_logits(pred_outputs)]                                 
                 else:
@@ -265,15 +266,26 @@ def recursive_predict_csv(model_dict, model_root, data, batch_size, device, leve
                 pred_classes = [classes[idx.item()] for idx in torch.argmax(pred_outputs, dim=1)]
             
             #print(classes)
-            df_tmp = pd.DataFrame(columns=columns, index=range(pred_outputs.shape[0] * pred_outputs.shape[1]))
-            i = 0
-            for image_id, pred, is_vd in tqdm(zip(image_ids, pred_outputs, is_valid_data), desc="write df"):
-                for cls, prob in zip(classes, pred.tolist()):
-                    df_tmp.iloc[i] = [image_id, prob, level_name, is_vd, cls] + pre_cls_entry
+            if level_name == const.TYPE:
+                df_tmp = pd.DataFrame(columns=columns, index=range(pred_outputs.shape[0] * pred_outputs.shape[1]))
+                i = 0
+                for image_id, pred, is_vd in tqdm(zip(image_ids, pred_outputs, is_valid_data), desc="write df"):
+                    for cls, prob in zip(classes, pred.tolist()):
+                        df_tmp.iloc[i] = [image_id, prob, level_name, is_vd, cls] + pre_cls_entry
+                        i += 1
+                print(df_tmp.shape)
+                df = pd.concat([df, df_tmp], ignore_index=True)
+                print(df.shape)
+                
+            else:
+                df_tmp = pd.DataFrame(columns=columns, index=range(0, len(pred_classes)))
+                i = 0
+                for image_id, pred, is_vd in tqdm(zip(image_ids, pred_classes, is_valid_data), desc="write df"):
+                    df_tmp.iloc[i] = [image_id, pred, level_name, is_vd, pre_cls_entry] + pre_cls_entry
                     i += 1
-            print(df_tmp.shape)
-            df = pd.concat([df, df_tmp], ignore_index=True)
-            print(df.shape)
+                print(df_tmp.shape)
+                df = pd.concat([df, df_tmp], ignore_index=True)
+                print(df.shape)
             # subclasses not for regression implemented
             for cls in classes:
                 sub_indices = [idx for idx, pred_cls in enumerate(pred_classes) if pred_cls == cls]
@@ -415,8 +427,8 @@ def predict(model, data, batch_size, head, level, device, save_features, seed):
                 
                 if head == const.CLASSIFICATION:
                     batch_outputs = model.get_class_probabilities(batch_outputs) 
-                # elif head == const.REGRESSION:
-                #     batch_outputs = batch_outputs.flatten()
+                elif head == const.REGRESSION:
+                    batch_outputs = batch_outputs.flatten()
                 else:
                     pass
                     
@@ -439,8 +451,8 @@ def predict(model, data, batch_size, head, level, device, save_features, seed):
                         
                     all_features.append(feature_dict['h1_features'])
               
-            # if index == 0:
-            #     break 
+            if index == 0:
+                break 
     # h_1.remove()
     # h_2.remove()
     
@@ -765,51 +777,51 @@ def save_cam_flattened(model, data, normalize_transform, classes, valid_dataset,
                 # plt.close() 
             
         
-def predict_surface_and_quality(model_root, model_dict, data, device, batch_size, save_features, seed):
+# def predict_surface_and_quality(model_root, model_dict, data, device, batch_size, save_features, seed):
     
-    all_CC_features = {}
-    # Load surface type model
-    surface_model_path = os.path.join(model_root, model_dict['trained_model'])
-    surface_model, surface_classes, head, level, valid_dataset, hierarchy_method = load_model(surface_model_path, device)
+#     all_CC_features = {}
+#     # Load surface type model
+#     surface_model_path = os.path.join(model_root, model_dict['trained_model'])
+#     surface_model, surface_classes, head, level, valid_dataset, hierarchy_method = load_model(surface_model_path, device)
 
-    # Predict surface type
-    if save_features:
-        surface_predictions, image_ids, surface_features = predict(surface_model, data, batch_size, head, level, device, save_features=save_features, seed=seed)
-        all_CC_features['surface'] = surface_features
+#     # Predict surface type
+#     if save_features:
+#         surface_predictions, image_ids, surface_features = predict(surface_model, data, batch_size, head, level, device, save_features=save_features, seed=seed)
+#         all_CC_features['surface'] = surface_features
 
-    else:
-        surface_predictions, image_ids = predict(surface_model, data, batch_size, head, level, device, save_features=save_features, seed=seed)
+#     else:
+#         surface_predictions, image_ids = predict(surface_model, data, batch_size, head, level, device, save_features=save_features, seed=seed)
 
-    # Get predicted classes for surface type
-    predicted_surface_classes = [surface_classes[idx.item()] for idx in torch.argmax(surface_predictions, dim=1)]
+#     # Get predicted classes for surface type
+#     predicted_surface_classes = [surface_classes[idx.item()] for idx in torch.argmax(surface_predictions, dim=1)]
 
-    valid_dataset_ids = [os.path.splitext(os.path.split(id[0])[-1])[0] for id in valid_dataset.samples]
-    is_valid_data = [1 if image_id in valid_dataset_ids else 0 for image_id in image_ids]
+#     valid_dataset_ids = [os.path.splitext(os.path.split(id[0])[-1])[0] for id in valid_dataset.samples]
+#     is_valid_data = [1 if image_id in valid_dataset_ids else 0 for image_id in image_ids]
         
-    # Group images by predicted surface type
-    grouped_images = {}
-    for image_id, pred_surface_class, is_valid in zip(image_ids, predicted_surface_classes, is_valid_data):
-        if pred_surface_class not in grouped_images:
-            grouped_images[pred_surface_class] = []
-        grouped_images[pred_surface_class].append((image_id, is_valid))
+#     # Group images by predicted surface type
+#     grouped_images = {}
+#     for image_id, pred_surface_class, is_valid in zip(image_ids, predicted_surface_classes, is_valid_data):
+#         if pred_surface_class not in grouped_images:
+#             grouped_images[pred_surface_class] = []
+#         grouped_images[pred_surface_class].append((image_id, is_valid))
 
-    # Dictionary to store results
-    results = []
+#     # Dictionary to store results
+#     results = []
 
-    # Predict quality for each group
-    for surface_type, images in grouped_images.items():
-        submodel_dict = model_dict['submodels'].get(surface_type)
-        if not submodel_dict:
-            continue  # Skip if no submodel is defined for this surface type
+#     # Predict quality for each group
+#     for surface_type, images in grouped_images.items():
+#         submodel_dict = model_dict['submodels'].get(surface_type)
+#         if not submodel_dict:
+#             continue  # Skip if no submodel is defined for this surface type
 
-        # Load the submodel for this surface type
-        submodel_path = os.path.join(model_root, submodel_dict['trained_model'])
-        submodel, quality_classes, _, _, _, _ = load_model(submodel_path, device) #TODO ggf sortieren noch
+#         # Load the submodel for this surface type
+#         submodel_path = os.path.join(model_root, submodel_dict['trained_model'])
+#         submodel, quality_classes, _, _, _, _ = load_model(submodel_path, device) #TODO ggf sortieren noch
         
-        image_id_to_index = {image_id: idx for idx, (image_data, image_id) in enumerate(data)}
-        sub_data_indices = [image_id_to_index[image_id] for image_id, _ in images if image_id in image_id_to_index]
-        subset = Subset(data, sub_data_indices)
-        # image_id_to_index = {}
+#         image_id_to_index = {image_id: idx for idx, (image_data, image_id) in enumerate(data)}
+#         sub_data_indices = [image_id_to_index[image_id] for image_id, _ in images if image_id in image_id_to_index]
+#         subset = Subset(data, sub_data_indices)
+#         # image_id_to_index = {}
         # sub_data = [image_id for image_id, _ in images]
         
         # for idx, (image_data, image_id) in enumerate(data):
