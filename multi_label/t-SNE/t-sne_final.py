@@ -9,27 +9,32 @@ import pandas as pd
 import numpy as np 
 from sklearn.manifold import TSNE
 import matplotlib.pyplot as plt
+import torch
 
 
 # %%
 #config = predict_config.B_CNN
 seed=42
-evaluation_path = r"C:\Users\esthe\Documents\GitHub\classification_models\evaluations"
-root_data = r"C:\Users\esthe\Documents\GitHub\classification_models\data\training"
-root_predict = r"C:\Users\esthe\Documents\GitHub\classification_models\data\training\prediction"
-prediction_file = "Esther_MA\hierarchical-B_CNN-classification-use_model_structure-20241106_222713-z8l98z7u42_epoch9.pt-V1_0-train-20241109_220923-42.csv"
-features_load_name = r'Esther_MA\feature_maps\flatten-vgg16-classification-flatten-20241105_210302_epoch0.pt-V1_0'
-
+evaluation_path = "/home/esther/surfaceai/classification_models/evaluations"
+root_data = "/home/esther/surfaceai/classification_models/data/training"
+root_predict = os.path.join(root_data, "prediction", "Esther_MA")
+prediction_file = "hierarchical-B_CNN-classification-use_model_structure-20241106_222713-z8l98z7u42_epoch9.pt-classification-V1_0-test-20241123_155711-.csv"
+features_load_name = "feature_maps/hierarchical-B_CNN-classification-use_model_structure-20241106_222713-z8l98z7u42_epoch9.pt-hierarchical-V1_0-20241123_155711"
 
 # %%
 #Load feature vecotrs
 with open(os.path.join(root_predict, features_load_name), "rb") as f_in:
+    #stored_data = torch.load(f_in)
+    # print(type(stored_data))
+    # print(stored_data)
     stored_data = pickle.load(f_in)
+    #print(type(stored_data))
+    #print(stored_data)
+    stored_data.keys
     stored_ids = stored_data['image_ids']
     stored_coarse_features = stored_data['coarse_features']
     stored_fine_features = stored_data['fine_features']
-    stored_predictions = stored_data['prediction']
-
+    stored_predictions = stored_data['pred_outputs']
 
 # %%
 stored_df = pd.DataFrame({'image_id': stored_ids, 'coarse_features': str(stored_coarse_features),
@@ -49,28 +54,29 @@ for id in stored_ids:
     
 stored_df = pd.DataFrame(all_encodings)    
 
+#print(stored_df)
     
 
 # %%
 #load the true labels
-all_labels = pd.read_csv(os.path.join(root_data, f'V1_0\metadata\streetSurfaceVis_v1_0.csv'), usecols=['mapillary_image_id', 'surface_type', 'surface_quality'])
+all_labels = pd.read_csv(os.path.join(root_data, f'V1_0/metadata/streetSurfaceVis_v1_0.csv'), usecols=['mapillary_image_id', 'surface_type', 'surface_quality'])
 all_labels = all_labels[~all_labels['surface_quality'].isna()]
 all_labels = all_labels[~all_labels['surface_type'].isna()]
 
 
-
+#print(all_labels)
 # %%
 #adding true labels to our stored_df
 
 stored_df = pd.merge(stored_df, all_labels, how="left", left_on="image_id",
                      right_on="mapillary_image_id")
 
-
 # %%
 #separating our stored_df in valid and training data
 all_predictions = pd.read_csv(os.path.join(root_predict, prediction_file))
 all_predictions = all_predictions.rename(columns = {"Image":"image_id"})
 all_predictions['image_id'] = all_predictions['image_id'].astype('int64')
+print(all_predictions)
 valid_predictions = all_predictions[all_predictions['is_in_validation'] == 1]
 train_predictions = all_predictions[all_predictions['is_in_validation'] == 0]
 
@@ -83,6 +89,9 @@ valid_df = pd.merge(stored_df, all_predictions[all_predictions['is_in_validation
 
 train_df = pd.merge(stored_df, all_predictions[all_predictions['is_in_validation'] == 0],
                      how='inner', on='image_id')
+
+print(valid_df)
+print(train_df)
 
 # %%
 id_position = {image_id: position for position, image_id in enumerate(stored_ids)}
@@ -106,17 +115,16 @@ validation_labels_fine_tsne = valid_df['surface_type'].to_list()
 train_input_fine_tsne = stored_fine_features[train_df['position'].to_list()]
 train_labels_fine_tsne = train_df['surface_type'].to_list()
 
-validation_input_coarse_tsne
 
 
 # %%
 
 
-tsne_coarse_valid = TSNE(n_components=2, learning_rate='auto', init='random', perplexity=15, random_state=seed).fit_transform(validation_input_coarse_tsne)
-tsne_coarse_train = TSNE(n_components=2, learning_rate='auto', init='random', perplexity=5, random_state=seed).fit_transform(train_input_coarse_tsne)
+tsne_coarse_valid = TSNE(n_components=2, learning_rate='auto', init='random', perplexity=5, random_state=seed).fit_transform(validation_input_coarse_tsne)
+tsne_coarse_train = TSNE(n_components=2, learning_rate='auto', init='random', perplexity=15, random_state=seed).fit_transform(train_input_coarse_tsne)
 
-tsne_fine_valid = TSNE(n_components=2, learning_rate='auto', init='random', perplexity=15, random_state=seed).fit_transform(validation_input_fine_tsne)
-tsne_fine_train = TSNE(n_components=2, learning_rate='auto', init='random', perplexity=5, random_state=seed).fit_transform(train_input_fine_tsne)
+tsne_fine_valid = TSNE(n_components=2, learning_rate='auto', init='random', perplexity=5, random_state=seed).fit_transform(validation_input_fine_tsne)
+tsne_fine_train = TSNE(n_components=2, learning_rate='auto', init='random', perplexity=15, random_state=seed).fit_transform(train_input_fine_tsne)
 
 
 # %%
