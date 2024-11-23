@@ -91,7 +91,8 @@ def run_dataset_predict_csv(config):
     #         )
 
     # else:   
-            
+    level_no = 0
+  
     if config.get('level') == const.CC:
         level_no = 0
         # columns = ['Image', 'Prediction', 'Level', f'Level_{level_no}']
@@ -128,6 +129,18 @@ def run_dataset_predict_csv(config):
                 features_save_name = config.get("model_dict")['trained_model'] + '-' + feature_key + '-' + config.get("dataset").replace('\\', '_')
                 # Save the features
                 save_features(features, os.path.join(config.get("root_predict"), 'feature_maps'), features_save_name)
+                
+        elif config.get('level') == const.HIERARCHICAL:
+            features_dict = {
+                'image_ids': image_ids,
+                'pred_outputs': pred_outputs,
+                'coarse_features': features[0] if len(features) > 0 else None,
+                'fine_features': features[1] if len(features) > 1 else None
+            }
+            with open(os.path.join(config.get('evaluation_path'), features_save_name), 'wb') as f_out:
+                pickle.dump(features_dict, f_out, protocol=pickle.HIGHEST_PROTOCOL)
+                
+                
         else:
             features_save_name = config.get("model_dict")['trained_model'] + '-' + config.get("dataset").replace('\\', '_')
             save_features(features, os.path.join(config.get("root_predict"), 'feature_maps'), features_save_name)
@@ -172,7 +185,8 @@ def recursive_predict_csv(model_dict, model_root, data, batch_size, device, leve
             pred_fine_outputs = pred_outputs[1]
             
             coarse_classes = classes[0]
-            fine_classes = sorted(classes[1], key=lambda x: const.FLATTENED_INT[x]) #ordered according to integer values
+            fine_classes = classes[1]
+            #fine_classes = sorted(classes[1], key=lambda x: const.FLATTENED_INT[x]) #ordered according to integer values
             
             pred_coarse_classes = [coarse_classes[idx.item()] for idx in torch.argmax(pred_coarse_outputs, dim=1)]
             
@@ -218,7 +232,7 @@ def recursive_predict_csv(model_dict, model_root, data, batch_size, device, leve
             #classes = sorted(classes, key=lambda x: const.FLATTENED_INT[x]) #ordered according to integer values
 
             #pred_classes = [classes[idx.item()] for idx in torch.argmax(outputs, dim=1)]
-            sorted(classes[1], key=lambda x: const.FLATTENED_INT[x])
+            #sorted(classes[1], key=lambda x: const.FLATTENED_INT[x])
             
             if head == const.CLASSIFICATION:
                 pred_classes = [classes[idx.item()] for idx in torch.argmax(pred_outputs, dim=1)]
@@ -513,6 +527,7 @@ def load_model(model_path, device):
     #Hierarhical
     if level == const.HIERARCHICAL: 
         fine_classes = valid_dataset.classes  #TODO: Adapt this to classes with clm and corn (-> dict like in to_train_list training.py)
+        fine_classes = sorted(fine_classes, key=custom_sort_key)
         coarse_classes = list(OrderedDict.fromkeys(class_name.split('__')[0] for class_name in fine_classes))
         num_c = len(coarse_classes)
         num_classes = len(fine_classes) 
@@ -521,7 +536,25 @@ def load_model(model_path, device):
         
         return model, (coarse_classes, fine_classes), head, level, valid_dataset, hierarchy_method, 
     
-    #CC    
+    #FLATTEN
+    elif level == const.FLATTEN:
+        classes = valid_dataset.classes
+        classes = sorted(classes, key=custom_sort_key)
+        num_classes = len(classes)
+        model = model_cls(num_classes=num_classes, head=head) 
+        model.load_state_dict(model_state['model_state_dict'])
+        
+        return model, classes, head, level, valid_dataset, hierarchy_method  
+    #CC 
+    #Surface type
+    elif level == const.SURFACE:
+        classes = valid_dataset.classes
+        num_classes = len(classes)
+        model = model_cls(num_classes=num_classes, head=head) 
+        model.load_state_dict(model_state['model_state_dict'])
+        
+        return model, classes, head, level, valid_dataset, hierarchy_method
+    #quality type
     else:
         if head == const.REGRESSION:
             class_to_idx = valid_dataset.class_to_idx
@@ -529,8 +562,9 @@ def load_model(model_path, device):
             num_classes = 1
         #add clm and corn
         else:
-            classes = valid_dataset.classes  
-            classes = sorted(classes, key=lambda cls: constants.SMOOTHNESS_INT.get(cls, float('inf')))
+            classes = valid_dataset.classes
+            classes = sorted(classes, key=custom_sort_key)
+            #classes = sorted(classes, key=lambda cls: constants.SMOOTHNESS_INT.get(cls, float('inf')))
             num_classes = len(classes)
         model = model_cls(num_classes=num_classes, head=head) 
         model.load_state_dict(model_state['model_state_dict'])
@@ -581,7 +615,7 @@ def save_cam_hierarchical(model, data, normalize_transform, classes, valid_datas
     model.eval()
    
     coarse_classes, fine_classes = classes
-    fine_classes = sorted(fine_classes, key=lambda x: const.FLATTENED_INT[x])
+    #fine_classes = sorted(fine_classes, key=lambda x: const.FLATTENED_INT[x])
 
     valid_dataset_ids = [os.path.splitext(os.path.split(id[0])[-1])[0] for id in valid_dataset.samples]
     
@@ -933,6 +967,14 @@ def save_cam_flattened(model, data, normalize_transform, classes, valid_dataset,
 #                     predictions[image_id]['label'] = predictions[image_id]['label'] + '__' + value['label']
     
 #     return predictions
+
+def custom_sort_key(class_name):
+    if "__" in class_name:  # Case for full classes like "asphalt__bad"
+        surface, condition = class_name.split("__")
+        return (surface, const.condition_order[condition])
+    else:  # Case for standalone conditions like "bad", "excellent"
+        return const.condition_order[class_name]
+
 
 def main():
     '''predict images in folder

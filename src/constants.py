@@ -98,6 +98,15 @@ FLATTENED_INT = {
     UNPAVED: 4,
 }
 
+condition_order = {
+    "excellent": 0,
+    "good": 1,
+    "intermediate": 2,
+    "bad": 3,
+    "very_bad": 4
+}
+
+
 # classification level
 SURFACE = "surface"
 SMOOTHNESS = "smoothness"
