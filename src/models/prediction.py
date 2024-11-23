@@ -120,13 +120,14 @@ def run_dataset_predict_csv(config):
                             level_no=level_no,
                             seed=config["seed"])
     
+    start_time = datetime.fromtimestamp(time.time()).strftime("%Y%m%d_%H%M%S")
 
     # save features
-    if config.get('save_features') and config.get('seed') == 42:
+    if config.get('save_features'):
         if config.get('level') == const.CC:
             for feature_key, features in all_features.items():
                 # Create a unique name for each feature set
-                features_save_name = config.get("model_dict")['trained_model'] + '-' + feature_key + '-' + config.get("dataset").replace('\\', '_')
+                features_save_name = config.get("model_dict")['trained_model'] + '-' + feature_key + '-' + config.get("dataset").replace('\\', '_') + '-' + start_time
                 # Save the features
                 save_features(features, os.path.join(config.get("root_predict"), 'feature_maps'), features_save_name)
                 
@@ -137,6 +138,9 @@ def run_dataset_predict_csv(config):
                 'coarse_features': features[0] if len(features) > 0 else None,
                 'fine_features': features[1] if len(features) > 1 else None
             }
+            features_save_name = config.get("model_dict")['trained_model'] + '-' + level + '-' + config.get("dataset").replace('\\', '_') + '-' + start_time
+            print(features_save_name)
+            print(config.get('evaluation_path'))
             with open(os.path.join(config.get('evaluation_path'), features_save_name), 'wb') as f_out:
                 pickle.dump(features_dict, f_out, protocol=pickle.HIGHEST_PROTOCOL)
                 
@@ -147,7 +151,6 @@ def run_dataset_predict_csv(config):
 
     df['Seed'] = config.get('seed')
     # save predictions
-    start_time = datetime.fromtimestamp(time.time()).strftime("%Y%m%d_%H%M%S")
     saving_name = config.get("model_dict")['trained_model'] + '-' + config.get('head') +'-' + config.get("dataset").replace('\\', '_') + '-' + config.get('ds_type') + '-' + start_time + '-'+'.csv'
 
     saving_path = save_predictions_csv(df=df, saving_dir=os.path.join(config.get("root_predict")), saving_name=saving_name)
@@ -419,8 +422,9 @@ def predict(model, data, batch_size, head, level, device, save_features, seed):
                 model_inputs = (batch_inputs, None)
                 coarse_batch_outputs, fine_batch_outputs = model(model_inputs)
                 
-                print("CPWM:")
-                print(model.coarse_condition.weight.data)
+                if 'C_CNN' in model.__module__:
+                    print("CPWM:")
+                    print(model.coarse_condition.weight.data)
                 
                 coarse_batch_outputs = model.get_class_probabilities(coarse_batch_outputs)
                 
@@ -465,8 +469,8 @@ def predict(model, data, batch_size, head, level, device, save_features, seed):
                         
                     all_features.append(feature_dict['h1_features'])
               
-            if index == 0:
-                break 
+            # if index == 0:
+            #     break 
     # h_1.remove()
     # h_2.remove()
     
