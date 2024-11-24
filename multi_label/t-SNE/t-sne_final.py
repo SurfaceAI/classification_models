@@ -15,17 +15,17 @@ from src import constants as const
 
 # %%
 #config = predict_config.B_CNN
-level = const.FLATTEN
+level = const.HIERARCHICAL
 ds_type = "test"
 seed=42
-# evaluation_path = "/home/esther/surfaceai/classification_models/evaluations"
-evaluation_path = r"\Users\esthe\Documents\GitHub\classification_models\evaluations\Esther_MA"
-# root_data = "/home/esther/surfaceai/classification_models/data/training"
-root_data = r"\Users\esthe\Documents\GitHub\classification_models\data\training"
-# root_predict = os.path.join(root_data, "prediction", "Esther_MA")
-root_predict = r"\Users\esthe\Documents\GitHub\classification_models\data\training\prediction\Esther_MA"
+evaluation_path = "/home/esther/surfaceai/classification_models/evaluations"
+#evaluation_path = r"\Users\esthe\Documents\GitHub\classification_models\evaluations\Esther_MA"
+root_data = "/home/esther/surfaceai/classification_models/data/training"
+#root_data = r"\Users\esthe\Documents\GitHub\classification_models\data\training"
+root_predict = os.path.join(root_data, "prediction", "Esther_MA")
+#root_predict = r"\Users\esthe\Documents\GitHub\classification_models\data\training\prediction\Esther_MA"
 prediction_file = "hierarchical-B_CNN-classification-use_model_structure-20241106_222713-z8l98z7u42_epoch9.pt-classification-V1_0-test-20241123_134828-.csv"
-features_load_name = "feature_maps/flatten-vgg16-classification-flatten-20241105_210302_epoch0.pt-V1_0"
+features_load_name = "feature_maps/hierarchical-B_CNN-classification-use_model_structure-20241106_222713-z8l98z7u42_epoch9.pt-hierarchical-V1_0-20241123_155711"
 
 # %%
 #Load feature vecotrs
@@ -269,7 +269,6 @@ else:
 # else:
 #     create_plot(tsne_coarse_test, train_labels_coarse_tsne, 'test_coarse')
 #     create_plot(tsne_fine_test, train_labels_fine_tsne, 'test_fine')
-
 
 
 
