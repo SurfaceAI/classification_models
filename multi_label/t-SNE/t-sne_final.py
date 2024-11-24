@@ -240,6 +240,25 @@ else:
 
 # create_and_save_plot(tsne_fine_train, train_labels_fine_tsne, 'train_fine')
 
+for surface in list(set(train_labels_coarse_tsne)):
+    
+    if ds_type == "train":
+        train_input_surface = stored_fine_features[train_test_df[train_test_df['surface_type'] == surface]['position'].to_list()]
+        train_labels_surface = train_test_df[train_test_df['surface_type'] == surface]['surface_quality'].to_list() 
+        tsne_surface_train = TSNE(n_components=2, learning_rate='auto', init='random', perplexity=2, random_state=seed).fit_transform(train_input_surface)
+        create_and_save_plot(tsne_surface_train, train_labels_surface, f'train_{surface}')
+    
+    elif ds_type == "valid":
+        valid_input_surface = stored_fine_features[valid_df[valid_df['surface_type'] == surface]['position'].to_list()]
+        valid_labels_surface = valid_df[valid_df['surface_type'] == surface]['surface_quality'].to_list()
+        tsne_surface_valid = TSNE(n_components=2, learning_rate='auto', init='random', perplexity=2, random_state=seed).fit_transform(valid_input_surface)
+        create_and_save_plot(tsne_surface_valid, valid_labels_surface, f'valid_{surface}')
+        
+    else:
+        test_input_surface = stored_fine_features[train_test_df[train_test_df['surface_type'] == surface]['position'].to_list()]
+        test_labels_surface = train_test_df[train_test_df['surface_type'] == surface]['surface_quality'].to_list()
+        tsne_surface_test = TSNE(n_components=2, learning_rate='auto', init='random', perplexity=2, random_state=seed).fit_transform(test_input_surface)
+        create_and_save_plot(tsne_surface_test, test_labels_surface, f'test_{surface}')
 
 
 # def create_plot(tsne_data, tsne_label, flag):
