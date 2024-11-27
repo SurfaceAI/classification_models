@@ -384,12 +384,19 @@ class CustomDataset(Dataset):
     
 def map_predictions_to_quality(predictions, surface_type):
     quality_mapping = {
-        "asphalt": [0, 1, 2, 3, 4, 5, 6, 7],  # Modify as needed
-        "concrete": [4, 5, 6, 7, 8, 9],
-        "paving_stones": [8, 9, 10, 11, 12, 13, 14, 15],
-        "sett": [12, 13, 14, 15, 16],
-        "unpaved": [15, 16, 17, 18,]
+        "asphalt": [0, 1, 2, 3,],  # Modify as needed
+        "concrete": [4, 5, 6, 7,],
+        "paving_stones": [8, 9, 10, 11],
+        "sett": [12, 13, 14],
+        "unpaved": [15, 16, 17]
     }
+    result = []
+    for pred in predictions:
+        try:
+            result.append(quality_mapping[surface_type][pred])
+        except IndexError:
+            # Skip the sample that caused the error
+            continue
     return torch.tensor([quality_mapping[surface_type][pred] for pred in predictions], dtype=torch.long)
 
 def map_predictions_to_quality_regression(predictions, coarse_predictions):
@@ -599,7 +606,13 @@ def compute_fine_metrics_hierarchical(fine_output, fine_labels, coarse_filter, c
                     preds = output[mask].round().long()
                 elif head == 'corn':
                     preds = corn_label_from_logits(output[mask]).long()
-                    
+                
+                # try:
+                #     predictions[mask] = map_predictions_to_quality(preds, category)
+                # except Exception as e:
+                #     # Log or handle unexpected errors gracefully
+                #     print(f"Error in mapping predictions to quality: {e}")
+                #     return    
                 predictions[mask] = map_predictions_to_quality(preds, category)
                 
                 # Collect predictions and labels for QWK
