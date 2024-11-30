@@ -143,8 +143,8 @@ def run_dataset_predict_csv(config):
             features_dict = {
                 'image_ids': image_ids,
                 'pred_outputs': pred_outputs,
-                'coarse_features': all_features[0] if len(features) > 0 else None,
-                'fine_features': all_features[1] if len(features) > 1 else None
+                'coarse_features': all_features[0],
+                'fine_features': all_features[1]
             }
             features_save_name = config.get("model_dict")['trained_model'] + '-' + config.get('level') + '-' + config.get("dataset").replace('\\', '_') + '-' + config.get('ds_type') + '-' + start_time
             with open(os.path.join(config.get("root_predict"), 'feature_maps', features_save_name), 'wb') as f_out:
@@ -503,7 +503,6 @@ def predict(model, data, batch_size, head, level, device, save_features, seed):
                 if level == const.HIERARCHICAL:
                     for feature in feature_dict:
                         feature_dict[feature] = feature_dict[feature].view(feature_dict[feature].size(0), -1)
-                        
                     all_coarse_features.append(feature_dict['h1_features'])
                     all_fine_features.append(feature_dict['h2_features'])
                 
@@ -524,7 +523,9 @@ def predict(model, data, batch_size, head, level, device, save_features, seed):
         
         if save_features: 
             all_coarse_features = torch.cat(all_coarse_features, dim=0)
+            #print(all_coarse_features)
             all_fine_features = torch.cat(all_fine_features, dim=0)
+            #print(all_fine_features)
             h_1.remove()
             h_2.remove()
             all_features = [all_coarse_features, all_fine_features]
