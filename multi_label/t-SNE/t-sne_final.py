@@ -15,7 +15,7 @@ from src import constants as const
 
 # %%
 #config = predict_config.B_CNN
-level = const.HIERARCHICAL
+level = const.CC
 ds_type = "test"
 seed=42
 evaluation_path = "/home/esther/surfaceai/classification_models/evaluations"
@@ -24,12 +24,45 @@ root_data = "/home/esther/surfaceai/classification_models/data/training"
 #root_data = r"\Users\esthe\Documents\GitHub\classification_models\data\training"
 root_predict = os.path.join(root_data, "prediction", "Esther_MA")
 #root_predict = r"\Users\esthe\Documents\GitHub\classification_models\data\training\prediction\Esther_MA"
-prediction_file = "hierarchical-B_CNN-classification-use_model_structure-20241106_222713-z8l98z7u42_epoch9.pt-classification-V1_0-test-20241123_134828-.csv"
-features_load_name = "feature_maps/hierarchical-B_CNN-classification-use_model_structure-20241106_222713-z8l98z7u42_epoch9.pt-hierarchical-V1_0-20241123_155711"
+prediction_file = "surface-vgg16-classification-CC-20241106_223318-i78pobr842_epoch11.pt-V1_0-test-20241111_094351-.csv"
+features_load_name = "surface-vgg16-classification-CC-20241111_131956-1fer2zyn42_epoch11.pt-CC-corn-sett-V1_0-test-20241127_222235"
+#features_load_name = "surface-vgg16-classification-CC-20241111_131956-1fer2zyn42_epoch11.pt-CC-unpaved-V1_0-test-20241127_100949"
+
+#HO-CNN
+# prediction_file = "hierarchical-Condition_CNN-corn-use_ground_truth-20241109_193510-1efl9o3u42_epoch4.pt-corn-V1_0-test-20241130_132538-.csv"
+# features_load_name = "hierarchical-Condition_CNN-corn-use_ground_truth-20241109_193510-1efl9o3u42_epoch4.pt-hierarchical-V1_0-test-20241130_132538"
+
+#HNET
+# prediction_file = "hierarchical-HiearchyNet-classification-use_model_structure-20241106_222805-k45vh7jt42_epoch8.pt-classification-V1_0-train-20241124_132407-.csv"
+# features_load_name = "hierarchical-HiearchyNet-classification-use_model_structure-20241106_222805-k45vh7jt42_epoch8.pt-hierarchical-V1_0-train-20241124_132407"
+# prediction_file = "hierarchical-HiearchyNet-classification-use_model_structure-20241106_222805-k45vh7jt42_epoch8.pt-classification-V1_0-test-20241124_131652-.csv"
+# features_load_name = "hierarchical-HiearchyNet-classification-use_model_structure-20241106_222805-k45vh7jt42_epoch8.pt-hierarchical-V1_0-test-20241124_131652"
+
+# #GHCNN
+# prediction_file = "hierarchical-GH_CNN-classification-use_model_structure-20241106_222749-y1aa7o3d42_epoch11.pt-classification-V1_0-train-20241124_124328-.csv"
+# features_load_name = "hierarchical-GH_CNN-classification-use_model_structure-20241106_222749-y1aa7o3d42_epoch11.pt-hierarchical-V1_0-train-20241124_124328"
+# prediction_file = "hierarchical-GH_CNN-classification-use_model_structure-20241106_222749-y1aa7o3d42_epoch11.pt-classification-V1_0-test-20241124_131507-.csv"
+# features_load_name = "hierarchical-GH_CNN-classification-use_model_structure-20241106_222749-y1aa7o3d42_epoch11.pt-hierarchical-V1_0-test-20241124_131507"
+
+#CCNN
+#prediction_file = "hierarchical-Condition_CNN-classification-use_model_structure-20241109_183446-0zzz684z42_epoch7.pt-classification-V1_0-train-20241124_115401-.csv"
+#features_load_name = "hierarchical-Condition_CNN-classification-use_model_structure-20241109_183446-0zzz684z42_epoch7.pt-hierarchical-V1_0-train-20241124_115401"
+# prediction_file = "hierarchical-Condition_CNN-classification-use_model_structure-20241109_183446-0zzz684z42_epoch7.pt-classification-V1_0-test-20241124_115531-.csv"
+# features_load_name = "hierarchical-Condition_CNN-classification-use_model_structure-20241109_183446-0zzz684z42_epoch7.pt-hierarchical-V1_0-test-20241124_115531"
+
+#BCNN
+#prediction_file = "hierarchical-B_CNN-classification-use_model_structure-20241106_222713-z8l98z7u42_epoch9.pt-classification-V1_0-test-20241124_103924-.csv"
+#features_load_name = "hierarchical-B_CNN-classification-use_model_structure-20241106_222713-z8l98z7u42_epoch9.pt-hierarchical-V1_0-test-20241124_103924"
+#prediction_file = "hierarchical-B_CNN-classification-use_model_structure-20241106_222713-z8l98z7u42_epoch9.pt-classification-V1_0-train-20241124_104459-.csv"
+#features_load_name = "hierarchical-B_CNN-classification-use_model_structure-20241106_222713-z8l98z7u42_epoch9.pt-hierarchical-V1_0-train-20241124_104459"
+
+#CC Classification
+# prediction_file = "surface-vgg16-classification-CC-20241106_223318-i78pobr842_epoch11.pt-V1_0-test-20241111_094351-.csv"
+# features_load_name = "surface-vgg16-classification-CC-20241111_131956-1fer2zyn42_epoch11.pt-CC-asphalt-V1_0-test-20241124_154859"
 
 # %%
 #Load feature vecotrs
-with open(os.path.join(root_predict, features_load_name), "rb") as f_in:
+with open(os.path.join(root_predict, 'feature_maps', features_load_name), "rb") as f_in:
     #stored_data = torch.load(f_in)
     # print(type(stored_data))
     # print(stored_data)
@@ -41,6 +74,10 @@ with open(os.path.join(root_predict, features_load_name), "rb") as f_in:
     if level == const.HIERARCHICAL:
         stored_coarse_features = stored_data['coarse_features']
         stored_fine_features = stored_data['fine_features']
+    elif level == const.CC:
+        stored_features = stored_data['features']['quality']
+        print(stored_features)
+        print(type(stored_data))
     else:
         stored_features = stored_data['features']
     stored_predictions = stored_data['pred_outputs']
@@ -80,7 +117,7 @@ all_labels = all_labels[~all_labels['surface_quality'].isna()]
 all_labels = all_labels[~all_labels['surface_type'].isna()]
 all_labels['flatten_labels'] = all_labels.apply(lambda row: f"{row['surface_type']}__{row['surface_quality']}", axis=1)
 
-
+#print(all_labels)
 
 #print(all_labels)
 # %%
@@ -133,6 +170,13 @@ if level == const.HIERARCHICAL:
     train_input_fine_tsne = stored_fine_features[train_test_df['position'].to_list()]
     train_labels_fine_tsne = train_test_df['flatten_labels'].to_list()
     
+elif level == const.CC:
+    validation_input_tsne = stored_features[valid_df['position'].to_list()]
+    validation_labels_tsne = valid_df['surface_quality'].to_list()
+
+    train_input_tsne = stored_features[train_test_df['position'].to_list()]
+    train_labels_tsne = train_test_df['surface_quality'].to_list()
+    print(train_labels_tsne)
 else:
     validation_input_tsne = stored_features[valid_df['position'].to_list()]
     validation_labels_tsne = valid_df['flatten_labels'].to_list()
@@ -153,17 +197,17 @@ if ds_type == "valid":
 
 elif ds_type == "train":
     if level == const.HIERARCHICAL:
-        tsne_coarse_train = TSNE(n_components=2, learning_rate='auto', init='random', perplexity=5, random_state=seed).fit_transform(train_input_coarse_tsne)
-        tsne_fine_train = TSNE(n_components=2, learning_rate='auto', init='random', perplexity=5, random_state=seed).fit_transform(train_input_fine_tsne)
+        tsne_coarse_train = TSNE(n_components=2, learning_rate='auto', init='random', perplexity=15, random_state=seed).fit_transform(train_input_coarse_tsne)
+        tsne_fine_train = TSNE(n_components=2, learning_rate='auto', init='random', perplexity=15, random_state=seed).fit_transform(train_input_fine_tsne)
     else:
-        tsne_train = TSNE(n_components=2, learning_rate='auto', init='random', perplexity=5, random_state=seed).fit_transform(train_input_tsne)
+        tsne_train = TSNE(n_components=2, learning_rate='auto', init='random', perplexity=15, random_state=seed).fit_transform(train_input_tsne)
     
 else:
     if level == const.HIERARCHICAL:
         tsne_coarse_test = TSNE(n_components=2, learning_rate='auto', init='random', perplexity=5, random_state=seed).fit_transform(train_input_coarse_tsne)
         tsne_fine_test = TSNE(n_components=2, learning_rate='auto', init='random', perplexity=5, random_state=seed).fit_transform(train_input_fine_tsne)
     else:
-        tsne_test = TSNE(n_components=2, learning_rate='auto', init='random', perplexity=5, random_state=seed).fit_transform(train_input_tsne)
+        tsne_test = TSNE(n_components=2, learning_rate='auto', init='random', perplexity=3, random_state=seed).fit_transform(train_input_tsne)
 
 # %%
 from sklearn.preprocessing import LabelEncoder
@@ -199,7 +243,7 @@ def create_and_save_plot(tsne_data, tsne_label, save_name, labels_subset=None):
     plt.xlabel('t-SNE Dimension 1')
     plt.ylabel('t-SNE Dimension 2')
     plt.legend()
-    plt.savefig(os.path.join(evaluation_path, f'{save_name}_tsne_plot_{prediction_file}.jpeg'))
+    plt.savefig(os.path.join(evaluation_path, 'Esther_MA', f'{features_load_name}_{save_name}_tsne_plot.jpeg'))
     print(f'{save_name} plot saved')
     plt.show()
 
@@ -214,13 +258,32 @@ if level == const.HIERARCHICAL:
                                                                                         'unpaved__intermediate','unpaved__bad','unpaved__very_bad',
                                                                                         ])
     elif ds_type == "train":
-        create_and_save_plot(tsne_coarse_train, train_labels_coarse_tsne, 'train_coarse')
-        create_and_save_plot(tsne_fine_train, train_labels_fine_tsne, 'train_fine')
-
+        create_and_save_plot(tsne_coarse_train, train_labels_coarse_tsne, 'train_coarse', labels_subset=['asphalt', 'concrete', 'paving_stones', 'sett', 'unpaved'])
+        create_and_save_plot(tsne_fine_train, train_labels_fine_tsne, 'train_fine', labels_subset=['asphalt__excellent','asphalt__good','asphalt__intermediate','asphalt__bad',
+                                                                                        'concrete__excellent','concrete__good','concrete__intermediate','concrete__bad',
+                                                                                        'paving_stones__excellent','paving_stones__good','paving_stones__intermediate','paving_stones__bad',
+                                                                                        'sett__good','sett__intermediate','sett__bad',
+                                                                                        'unpaved__intermediate','unpaved__bad','unpaved__very_bad',
+                                                                                        ])
 
     elif ds_type == "test":
         create_and_save_plot(tsne_coarse_test, train_labels_coarse_tsne, 'test_coarse', labels_subset=['asphalt', 'concrete', 'paving_stones', 'sett', 'unpaved'])
-        create_and_save_plot(tsne_fine_test, train_labels_fine_tsne, 'test_fine')
+        create_and_save_plot(tsne_fine_test, train_labels_fine_tsne, 'test_fine', labels_subset=['asphalt__excellent','asphalt__good','asphalt__intermediate','asphalt__bad',
+                                                                                        'concrete__excellent','concrete__good','concrete__intermediate','concrete__bad',
+                                                                                        'paving_stones__excellent','paving_stones__good','paving_stones__intermediate','paving_stones__bad',
+                                                                                        'sett__good','sett__intermediate','sett__bad',
+                                                                                        'unpaved__intermediate','unpaved__bad','unpaved__very_bad',
+                                                                                        ])
+    
+elif level == const.CC:
+    if ds_type == "valid":
+        create_and_save_plot(tsne_valid, validation_labels_tsne, 'valid')
+    elif ds_type == "train":
+        create_and_save_plot(tsne_train, train_labels_tsne, 'train')
+    else:
+        create_and_save_plot(tsne_test, train_labels_tsne, 'test')
+    
+    
         
 else:
     if ds_type == "valid":
@@ -240,25 +303,26 @@ else:
 
 # create_and_save_plot(tsne_fine_train, train_labels_fine_tsne, 'train_fine')
 
-for surface in list(set(train_labels_coarse_tsne)):
-    
-    if ds_type == "train":
-        train_input_surface = stored_fine_features[train_test_df[train_test_df['surface_type'] == surface]['position'].to_list()]
-        train_labels_surface = train_test_df[train_test_df['surface_type'] == surface]['surface_quality'].to_list() 
-        tsne_surface_train = TSNE(n_components=2, learning_rate='auto', init='random', perplexity=2, random_state=seed).fit_transform(train_input_surface)
-        create_and_save_plot(tsne_surface_train, train_labels_surface, f'train_{surface}')
-    
-    elif ds_type == "valid":
-        valid_input_surface = stored_fine_features[valid_df[valid_df['surface_type'] == surface]['position'].to_list()]
-        valid_labels_surface = valid_df[valid_df['surface_type'] == surface]['surface_quality'].to_list()
-        tsne_surface_valid = TSNE(n_components=2, learning_rate='auto', init='random', perplexity=2, random_state=seed).fit_transform(valid_input_surface)
-        create_and_save_plot(tsne_surface_valid, valid_labels_surface, f'valid_{surface}')
+if level == const.HIERARCHICAL:
+    for surface in list(set(train_labels_coarse_tsne)):
         
-    else:
-        test_input_surface = stored_fine_features[train_test_df[train_test_df['surface_type'] == surface]['position'].to_list()]
-        test_labels_surface = train_test_df[train_test_df['surface_type'] == surface]['surface_quality'].to_list()
-        tsne_surface_test = TSNE(n_components=2, learning_rate='auto', init='random', perplexity=2, random_state=seed).fit_transform(test_input_surface)
-        create_and_save_plot(tsne_surface_test, test_labels_surface, f'test_{surface}')
+        if ds_type == "train":
+            train_input_surface = stored_fine_features[train_test_df[train_test_df['surface_type'] == surface]['position'].to_list()]
+            train_labels_surface = train_test_df[train_test_df['surface_type'] == surface]['surface_quality'].to_list() 
+            tsne_surface_train = TSNE(n_components=2, learning_rate='auto', init='random', perplexity=5, random_state=seed).fit_transform(train_input_surface)
+            create_and_save_plot(tsne_surface_train, train_labels_surface, f'train_{surface}')
+        
+        elif ds_type == "valid":
+            valid_input_surface = stored_fine_features[valid_df[valid_df['surface_type'] == surface]['position'].to_list()]
+            valid_labels_surface = valid_df[valid_df['surface_type'] == surface]['surface_quality'].to_list()
+            tsne_surface_valid = TSNE(n_components=2, learning_rate='auto', init='random', perplexity=2, random_state=seed).fit_transform(valid_input_surface)
+            create_and_save_plot(tsne_surface_valid, valid_labels_surface, f'valid_{surface}')
+            
+        else:
+            test_input_surface = stored_fine_features[train_test_df[train_test_df['surface_type'] == surface]['position'].to_list()]
+            test_labels_surface = train_test_df[train_test_df['surface_type'] == surface]['surface_quality'].to_list()
+            tsne_surface_test = TSNE(n_components=2, learning_rate='auto', init='random', perplexity=2, random_state=seed).fit_transform(test_input_surface)
+            create_and_save_plot(tsne_surface_test, test_labels_surface, f'test_{surface}')
 
 
 # def create_plot(tsne_data, tsne_label, flag):
