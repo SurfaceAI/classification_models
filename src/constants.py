@@ -90,13 +90,13 @@ FLATTENED_INT = {
     UNPAVED_VERY_BAD: 17,
 }
 
-FLATTENED_INT = {
-    ASPHALT: 0,
-    CONCRETE: 1,
-    PAVING_STONES: 2,
-    SETT: 3,
-    UNPAVED: 4,
-}
+# FLATTENED_INT = {
+#     ASPHALT: 0,
+#     CONCRETE: 1,
+#     PAVING_STONES: 2,
+#     SETT: 3,
+#     UNPAVED: 4,
+# }
 
 condition_order = {
     "excellent": 0,

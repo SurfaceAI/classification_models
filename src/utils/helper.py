@@ -173,17 +173,34 @@ class LossWeightsModifier():
         super(LossWeightsModifier, self).__init__()
         self.alpha = alpha
         self.beta = beta
-
+        
     def on_epoch_end(self, epoch):
-        if epoch >= 3:
-            self.alpha = torch.tensor(0.6)
-            self.beta = torch.tensor(0.4)
-        if epoch >= 6:
-            self.alpha = torch.tensor(0.2)
-            self.beta = torch.tensor(0.8)
-        if epoch >= 9:
+        if epoch >= 5:
+            self.alpha = torch.tensor(0.5)
+            self.beta = torch.tensor(0.5)
+        # if epoch >= 6:
+        #     self.alpha = torch.tensor(0.0)
+        #     self.beta = torch.tensor(1.0)
+        if epoch >= 7:
             self.alpha = torch.tensor(0.0)
             self.beta = torch.tensor(1.0)
+        # if epoch >= 9:
+        #     self.alpha = torch.tensor(0.0)
+        #     self.beta = torch.tensor(1.0)
+
+    # def on_epoch_end(self, epoch):
+    #     if epoch >= 3:
+    #         self.alpha = torch.tensor(0.5)
+    #         self.beta = torch.tensor(0.5)
+    #     # if epoch >= 6:
+    #     #     self.alpha = torch.tensor(0.0)
+    #     #     self.beta = torch.tensor(1.0)
+    #     if epoch >= 6:
+    #         self.alpha = torch.tensor(0.2)
+    #         self.beta = torch.tensor(0.8)
+    #     if epoch >= 9:
+    #         self.alpha = torch.tensor(0.0)
+    #         self.beta = torch.tensor(1.0)
             
         return self.alpha, self.beta
     
@@ -382,30 +399,32 @@ class CustomDataset(Dataset):
             image = self.transform(image)
         return image, target
     
-def map_predictions_to_quality(predictions, surface_type):
+def map_predictions_to_quality(predictions, surface_type, invalid_value=1):
     quality_mapping = {
-        "asphalt": [0, 1, 2, 3,],  # Modify as needed
-        "concrete": [4, 5, 6, 7,],
-        "paving_stones": [8, 9, 10, 11],
-        "sett": [12, 13, 14],
-        "unpaved": [15, 16, 17]
+        "asphalt": [0, 1, 2, 3, 4, 5, 6, 7, 8],  # Modify as needed
+        "concrete": [4, 5, 6, 7, 8, 9, 10, 11, 12],
+        "paving_stones": [8, 9, 10, 11, 12, 13, 14, 15, 16],
+        "sett": [12, 13, 14, 15, 16, 17, 18, 19,],
+        "unpaved": [15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26]
     }
-    result = []
+    results = []
     for pred in predictions:
         try:
-            result.append(quality_mapping[surface_type][pred])
+            results.append(quality_mapping[surface_type][pred])
         except IndexError:
-            # Skip the sample that caused the error
-            continue
-    return torch.tensor([quality_mapping[surface_type][pred] for pred in predictions], dtype=torch.long)
+            # Assign the invalid_value for predictions outside the mapping
+            print(f"Invalid prediction index {pred} for surface type '{surface_type}', assigning {invalid_value}.")
+            results.append(invalid_value)
+    return torch.tensor(results, dtype=torch.long)
+    #return torch.tensor([quality_mapping[surface_type][pred] for pred in predictions], dtype=torch.long)
 
 def map_predictions_to_quality_regression(predictions, coarse_predictions):
     quality_mapping = {
-        0: [0, 1, 2, 3],  # Asphalt
-        1: [4, 5, 6, 7],  # Concrete
-        2: [8, 9, 10, 11],  # Paving Stones
-        3: [12, 13, 14],  # Sett
-        4: [15, 16, 17, 18]  # Unpaved
+        "asphalt": [0, 1, 2, 3, 4, 5, 6, 7, 8],  # Modify as needed
+        "concrete": [4, 5, 6, 7, 8, 9, 10, 11, 12],
+        "paving_stones": [8, 9, 10, 11, 12, 13, 14, 15, 16],
+        "sett": [12, 13, 14, 15, 16, 17, 18, 19],
+        "unpaved": [15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26]
     }
     
     # Ensure inputs are tensors for efficient indexing
@@ -642,12 +661,12 @@ def compute_fine_metrics_hierarchical(fine_output, fine_labels, coarse_filter, c
             predictions = torch.argmax(fine_output, dim=1)
             # total_mse = F.mse_loss(predictions.float(), fine_labels.float(), reduction='sum').item()
             # total_mae = F.l1_loss(predictions.float(), fine_labels.float(), reduction='sum').item()
-        elif head == 'regression':
+        elif head == const.REGRESSION:
             predictions_quality = fine_output.round().long()
             # total_mse = F.mse_loss(fine_output, fine_labels_mapped.float(), reduction='sum').item()
             # total_mae = F.l1_loss(fine_output, fine_labels_mapped.float(), reduction='sum').item()
             predictions = map_predictions_to_quality_regression(predictions_quality, coarse_predictions)
-        elif head == 'corn':
+        elif head == const.CORN:
             predictions_quality = corn_label_from_logits(fine_output).long()
             predictions = map_predictions_to_quality(predictions, coarse_predictions)
             

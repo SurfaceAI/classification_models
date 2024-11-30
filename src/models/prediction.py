@@ -98,7 +98,7 @@ def run_dataset_predict_csv(config):
         # columns = ['Image', 'Prediction', 'Level', f'Level_{level_no}']
         # df = pd.DataFrame(columns=columns)
     if config.get('save_features'):
-        df, pred_outputs, image_ids, features = recursive_predict_csv(model_dict=config.get("model_dict"), 
+        df, pred_outputs, image_ids, all_features = recursive_predict_csv(model_dict=config.get("model_dict"), 
                             model_root=config.get("root_model"), 
                             data=predict_data, 
                             batch_size=config.get("batch_size"), 
@@ -126,35 +126,52 @@ def run_dataset_predict_csv(config):
     if config.get('save_features'):
         if config.get('level') == const.CC:
             for feature_key, features in all_features.items():
+                features_dict = {
+                'image_ids': image_ids,
+                'pred_outputs': pred_outputs,
+                'features': features
+                }
                 # Create a unique name for each feature set
-                features_save_name = config.get("model_dict")['trained_model'] + '-' + feature_key + '-' + config.get("dataset").replace('\\', '_') + '-' + start_time
+                features_save_name = config.get("model_dict")['trained_model'] + '-' + config.get('level') +'-' + config.get('head') +'-'+ feature_key + '-' + config.get("dataset").replace('\\', '_') + '-' + config.get('ds_type') +  '-' + start_time
                 # Save the features
-                save_features(features, os.path.join(config.get("root_predict"), 'feature_maps'), features_save_name)
+                #save_features(features, os.path.join(config.get("root_predict"), 'feature_maps'), features_save_name)
+                with open(os.path.join(config.get("root_predict"), 'feature_maps', features_save_name), 'wb') as f_out:
+                    pickle.dump(features_dict, f_out, protocol=pickle.HIGHEST_PROTOCOL)
+                print(f'CC features saved: {feature_key}')
                 
         elif config.get('level') == const.HIERARCHICAL:
             features_dict = {
                 'image_ids': image_ids,
                 'pred_outputs': pred_outputs,
-                'coarse_features': features[0] if len(features) > 0 else None,
-                'fine_features': features[1] if len(features) > 1 else None
+                'coarse_features': all_features[0] if len(features) > 0 else None,
+                'fine_features': all_features[1] if len(features) > 1 else None
             }
-            features_save_name = config.get("model_dict")['trained_model'] + '-' + level + '-' + config.get("dataset").replace('\\', '_') + '-' + start_time
-            print(features_save_name)
-            print(config.get('evaluation_path'))
-            with open(os.path.join(config.get('evaluation_path'), features_save_name), 'wb') as f_out:
+            features_save_name = config.get("model_dict")['trained_model'] + '-' + config.get('level') + '-' + config.get("dataset").replace('\\', '_') + '-' + config.get('ds_type') + '-' + start_time
+            with open(os.path.join(config.get("root_predict"), 'feature_maps', features_save_name), 'wb') as f_out:
                 pickle.dump(features_dict, f_out, protocol=pickle.HIGHEST_PROTOCOL)
+            print(f'Hierarchical features saved')
                 
                 
         else:
-            features_save_name = config.get("model_dict")['trained_model'] + '-' + config.get("dataset").replace('\\', '_')
-            save_features(features, os.path.join(config.get("root_predict"), 'feature_maps'), features_save_name)
+            features_dict = {
+                'image_ids': image_ids,
+                'pred_outputs': pred_outputs,
+                'features': all_features if len(all_features) > 0 else None,
+            }
+            features_save_name = config.get("model_dict")['trained_model'] + '-' + config.get('level') + '-' + config.get("dataset").replace('\\', '_') + '-' + config.get('ds_type') + '-' + start_time
+            with open(os.path.join(config.get("root_predict"), 'feature_maps', features_save_name), 'wb') as f_out:
+                pickle.dump(features_dict, f_out, protocol=pickle.HIGHEST_PROTOCOL)
+            print(f'flattened features saved')
+            
+            #features_save_name = config.get("model_dict")['trained_model'] + '-' + config.get("dataset").replace('\\', '_')
+            #save_features(features, os.path.join(config.get("root_predict"), 'feature_maps'), features_save_name)
 
     df['Seed'] = config.get('seed')
     # save predictions
     saving_name = config.get("model_dict")['trained_model'] + '-' + config.get('head') +'-' + config.get("dataset").replace('\\', '_') + '-' + config.get('ds_type') + '-' + start_time + '-'+'.csv'
 
     saving_path = save_predictions_csv(df=df, saving_dir=os.path.join(config.get("root_predict")), saving_name=saving_name)
-    print(df)
+    #print(df)
 
     print(f'Images {config.get("dataset")} predicted and saved: {saving_path}')
 
@@ -259,6 +276,8 @@ def recursive_predict_csv(model_dict, model_root, data, batch_size, device, leve
          
         #CC   
         else:
+            if save_features:
+                all_features = {}
             #df = pd.DataFrame(columns=columns)
             level_name = model_dict.get('level', '')
             columns = ['Image', 'Prediction', 'Level', 'is_in_validation', f'Level_{level_no}'] # is_in_valid_dataset / join
@@ -267,7 +286,7 @@ def recursive_predict_csv(model_dict, model_root, data, batch_size, device, leve
                 columns = columns + [f'Level_{level_no-1}']
                 pre_cls_entry = [pre_cls]
               
-            print(pred_outputs)
+            #print(pred_outputs)
             print(f"Level hier: {level}")
             print(f"level_name:{level_name}")
           
@@ -326,6 +345,7 @@ def recursive_predict_csv(model_dict, model_root, data, batch_size, device, leve
                                             df=df, 
                                             level_no=level_no+1, 
                                             pre_cls=cls)
+                    all_features[cls] = features
                 else:
                     df, pred_outputs, image_ids = recursive_predict_csv(model_dict=sub_model_dict, 
                                             model_root=model_root, 
@@ -351,8 +371,9 @@ def recursive_predict_csv(model_dict, model_root, data, batch_size, device, leve
                 #     sub_data = Subset(data, sub_indices)
                 #     recursive_predict_csv(model_dict=sub_model_dict, model_root=model_root, data=sub_data, batch_size=batch_size, device=device, level=const.SMOOTHNESS, 
                 #                           hierarchy_method=hierarchy_method, save_features=save_features, df=df, level_no=level_no+1, pre_cls=cls)
-        if save_features:          
-            return df, pred_outputs, image_ids, features
+        if save_features:     
+            all_features[level_name] = features     
+            return df, pred_outputs, image_ids, all_features
         else:
             return df, pred_outputs, image_ids
         
@@ -443,12 +464,35 @@ def predict(model, data, batch_size, head, level, device, save_features, seed):
             else:
                 batch_outputs = model(batch_inputs)
                 
-                if head == const.CLASSIFICATION:
+                if level == "surface":
                     batch_outputs = model.get_class_probabilities(batch_outputs) 
-                elif head == const.REGRESSION:
-                    batch_outputs = batch_outputs.flatten()
+
                 else:
-                    pass
+                    if head == const.CLM:
+                      # Access the last layer of the Sequential
+                        clm_layer = model.classifier[-1][-1]  # Extract the CLM layer
+                        thresholds_b = clm_layer.thresholds_b.detach().cpu().numpy()
+                        thresholds_a = clm_layer.thresholds_a.detach().cpu().numpy()
+                        converted_thresholds = clm_layer.convert_thresholds(
+                            clm_layer.thresholds_b, clm_layer.thresholds_a, clm_layer.min_distance
+                        ).detach().cpu().numpy()
+                        
+                        print("Raw thresholds (b):", thresholds_b)
+                        print("Raw thresholds (a):", thresholds_a)
+                        print("Converted thresholds:", converted_thresholds)
+                        
+                    if head == const.CLASSIFICATION:
+                        batch_outputs = model.get_class_probabilities(batch_outputs) 
+                    elif head == const.REGRESSION:
+                        batch_outputs = batch_outputs.flatten()
+                    else:
+                        pass
+                # if head == const.CLASSIFICATION:
+                #     batch_outputs = model.get_class_probabilities(batch_outputs) 
+                # elif head == const.REGRESSION:
+                #     batch_outputs = batch_outputs.flatten()
+                # else:
+                #     pass
                     
                 outputs.append(batch_outputs)
             

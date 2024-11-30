@@ -88,13 +88,13 @@ def find_flatten_classes(directory, selected_classes):
         ]
         flattened_classes.extend(quality_classes)
 
-    # flattened_class_to_idx = {
-    #     cls_name: i for i, cls_name in enumerate(flattened_classes)
-    # }
-    
     flattened_class_to_idx = {
-        cls_name: const.FLATTENED_INT[cls_name] for cls_name in flattened_classes
-        }
+        cls_name: i for i, cls_name in enumerate(flattened_classes)
+    }
+    
+    # flattened_class_to_idx = {
+    #     cls_name: const.FLATTENED_INT[cls_name] for cls_name in flattened_classes
+    #     }
 
     return flattened_classes, flattened_class_to_idx
 
