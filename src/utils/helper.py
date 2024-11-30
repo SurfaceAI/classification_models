@@ -1025,7 +1025,22 @@ def get_fine_weights(model, level, head):
         
     return None  # Return None if level doesn't match expected configurations
 
-
+def get_fine_weights_GT(model, level, head):
+    
+    if head == const.CORN:
+        out_weights_fine_asphalt = model.classifier_asphalt[-1].weight
+        asphalt_weight_reduced = reduce_weights(out_weights_fine_asphalt, num_classes=3)
+        out_weights_fine_concrete = model.classifier_concrete[-1].weight
+        concrete_weight_reduced = reduce_weights(out_weights_fine_concrete, num_classes=3)
+        out_weights_fine_paving_stones = model.classifier_paving_stones[-1].weight
+        paving_stones_weight_reduced = reduce_weights(out_weights_fine_paving_stones, num_classes=3)
+        out_weights_fine_sett = model.classifier_sett[-1].weight
+        sett_weight_reduced = reduce_weights(out_weights_fine_sett, num_classes=2)
+        out_weights_fine_unpaved = model.classifier_unpaved[-1].weight
+        unpaved_weight_reduced = reduce_weights(out_weights_fine_unpaved, num_classes=2)
+        
+        return asphalt_weight_reduced, concrete_weight_reduced, paving_stones_weight_reduced, sett_weight_reduced, unpaved_weight_reduced
+    
 def compute_fine_prediction_hierarchical_GT(fine_output, coarse_filter, hierarchy_method, head, fine_classes):
     """
     Computes fine-grained predictions for each image based on coarse filter and head type.

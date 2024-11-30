@@ -657,8 +657,16 @@ def save_cam_hierarchical(model, data, normalize_transform, classes, valid_datas
     else:
         feature_layer = model.features[-3]
     #out_weights_coarse = model.coarse_classifier[-1].weight #TODO adapt for multiple heads 
-    out_weights_fine_reduced = helper.get_fine_weights(model, level, head)
+    if hierarchy_method == const.MODELSTRUCTURE:
+        out_weights_fine_reduced = helper.get_fine_weights(model, level, head)
+    elif hierarchy_method == const.GROUNDTRUTH:
+                (asphalt_weight_reduced, 
+                concrete_weight_reduced, 
+                paving_stones_weight_reduced, 
+                sett_weight_reduced, 
+                unpaved_weight_reduced) = helper.get_fine_weights_GT(model, level, head)
     
+            
     model.to(device)
     model.eval()
    
@@ -704,12 +712,24 @@ def save_cam_hierarchical(model, data, normalize_transform, classes, valid_datas
                     cam_map_fine = torch.einsum('ck,kij->cij', out_weights_fine_reduced, activations)
                     cam_maps["combined"] = cam_map_fine
                 else:
+                    if hierarchy_method == const.MODELSTRUCTURE:
                     # Store each CAM in the dictionary
-                    cam_maps["asphalt"] = helper.generate_cam(activations, out_weights_fine_asphalt)
-                    cam_maps["concrete"] = helper.generate_cam(activations, out_weights_fine_concrete)
-                    cam_maps["paving_stones"] = helper.generate_cam(activations, out_weights_fine_paving_stones)
-                    cam_maps["sett"] = helper.generate_cam(activations, out_weights_fine_sett)
-                    cam_maps["unpaved"] = helper.generate_cam(activations, out_weights_fine_unpaved)
+                        cam_maps["asphalt"] = helper.generate_cam(activations, asphalt_weight_reduced)
+                        cam_maps["concrete"] = helper.generate_cam(activations, concrete_weight_reduced)
+                        cam_maps["paving_stones"] = helper.generate_cam(activations, paving_stones_weight_reduced)
+                        cam_maps["sett"] = helper.generate_cam(activations, sett_weight_reduced)
+                        cam_maps["unpaved"] = helper.generate_cam(activations, unpaved_weight_reduced)
+                    elif hierarchy_method == const.GROUNDTRUTH:
+                        if coarse_pred_class == const.ASPHALT:
+                            cam_maps['GT'] = helper.generate_cam(activations, asphalt_weight_reduced)
+                        elif coarse_pred_class == const.CONCRETE:
+                            cam_maps['GT'] = helper.generate_cam(activations, concrete_weight_reduced)
+                        elif coarse_pred_class == const.PAVING_STONES:
+                            cam_maps['GT'] = helper.generate_cam(activations, paving_stones_weight_reduced)
+                        elif coarse_pred_class == const.SETT:
+                            cam_maps['GT'] = helper.generate_cam(activations, sett_weight_reduced)
+                        elif coarse_pred_class == const.UNPAVED:
+                            cam_maps['GT'] = helper.generate_cam(activations, unpaved_weight_reduced)
 
                 #coarse_text = 'validation_data: {}\nprediction: {}\nvalue: {:.3f}'.format('True' if image_id in valid_dataset_ids else 'False', coarse_pred_class, coarse_pred_value)
                 #fine_text = 'validation_data: {}\nprediction: {}\nvalue: {:.3f}'.format('True' if image_id in valid_dataset_ids else 'False', fine_pred_class, fine_pred_value)
