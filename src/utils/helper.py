@@ -1004,24 +1004,44 @@ def get_fine_weights(model, level, head):
         }.get(head, 18)  # Default to 18 if head is not CORN or REGRESSION
         return reduce_weights(out_weights, num_classes=num_classes)
     
-    elif level == const.SMOOTHNESS:
-        out_weights = model.classifier[-1].weight
+    elif "smoothness" in level:
+        
         surface_classes = {
-            (const.ASPHALT, const.CONCRETE, const.PAVING_STONES): {
-                const.CORN: 3,
-                const.REGRESSION: 1
-            },
-            (const.SETT, const.UNPAVED): {
-                const.CORN: 2,
-                const.REGRESSION: 1
-            }
+        (const.ASPHALT, const.CONCRETE, const.PAVING_STONES): {
+            const.CORN: 3,
+            const.REGRESSION: 1
+        },
+        (const.SETT, const.UNPAVED): {
+            const.CORN: 2,
+            const.REGRESSION: 1
+        }
         }
         
-        # Determine the number of classes for the surface type and head type
+        out_weights = model.classifier[-1].weight
+        
+        surface_type = level.split('/')[-1]  # Assumes format 'smoothness/surface_type'
+
+    # Determine the number of classes for the surface type and head
         for surface_types, head_config in surface_classes.items():
-            if model.surface_type in surface_types:
-                num_classes = head_config.get(head, 4 if model.surface_type in (const.ASPHALT, const.CONCRETE, const.PAVING_STONES) else 3)
+            if surface_type in surface_types:
+                num_classes = head_config.get(head, 4 if surface_type in (const.ASPHALT, const.CONCRETE, const.PAVING_STONES) else 3)
                 return reduce_weights(out_weights, num_classes=num_classes)
+        # surface_classes = {
+        #     (const.ASPHALT, const.CONCRETE, const.PAVING_STONES): {
+        #         const.CORN: 3,
+        #         const.REGRESSION: 1
+        #     },
+        #     (const.SETT, const.UNPAVED): {
+        #         const.CORN: 2,
+        #         const.REGRESSION: 1
+        #     }
+        # }
+        
+        # # Determine the number of classes for the surface type and head type
+        # for surface_types, head_config in surface_classes.items():
+        #     if model.surface_type in surface_types:
+        #         num_classes = head_config.get(head, 4 if model.surface_type in (const.ASPHALT, const.CONCRETE, const.PAVING_STONES) else 3)
+        #         return reduce_weights(out_weights, num_classes=num_classes)
         
     return None  # Return None if level doesn't match expected configurations
 

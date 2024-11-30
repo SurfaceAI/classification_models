@@ -52,7 +52,7 @@ def cam_prediction(config):
     
     if level == const.HIERARCHICAL:
         save_cam_hierarchical(model, predict_data, normalize_transform, classes, valid_dataset, head, level, hierarchy_method, device, cam_subfolder)
-    elif level == const.FLATTEN or level == const.CC:
+    elif level == const.FLATTEN or hierarchy_method == const.CC:
         save_cam_flattened(model, predict_data, normalize_transform, classes, valid_dataset, head, hierarchy_method, level, device, cam_subfolder)
 
 
@@ -788,14 +788,15 @@ def save_cam_hierarchical(model, data, normalize_transform, classes, valid_datas
 
 def save_cam_flattened(model, data, normalize_transform, classes, valid_dataset, head, hierarchy_method, level, device, cam_folder):
     # Feature layer for generating CAM
-    feature_layer = model.features[-3]  # Adjust if your feature extraction layer differs
+    feature_layer = model.features[-3]  
     #out_weights_fine = model.classifier[-1].weight  # Assuming a single output layer for classification
     out_weights_fine = helper.get_fine_weights(model, level, head)
     model.to(device)
     model.eval()
     
-    classes = sorted(classes, key=lambda x: const.FLATTENED_INT[x])  # Sort fine classes if needed
-
+    if level == const.HIERARCHICAL:
+        classes = sorted(classes, key=lambda x: const.FLATTENED_INT[x])  # Sort fine classes if needed
+        
     # Extract valid dataset IDs for validation images
     valid_dataset_ids = [os.path.splitext(os.path.split(id[0])[-1])[0] for id in valid_dataset.samples]
     
@@ -837,10 +838,10 @@ def save_cam_flattened(model, data, normalize_transform, classes, valid_dataset,
                     
                     # Save with different filenames for predicted vs non-predicted classes
                     if i == fine_idx:
-                        class_image_path = os.path.join(cam_folder, f"{image_id}_{class_name}_predicted_cam.jpg")
+                        class_image_path = os.path.join(cam_folder, f"{image_id}_{class_name}_{level}_predicted_cam.jpg")
                         ax.set_title(f"Predicted: {class_name}")
                     else:
-                        class_image_path = os.path.join(cam_folder, f"{image_id}_{class_name}_cam.jpg")
+                        class_image_path = os.path.join(cam_folder, f"{image_id}_{class_name}_{level}_cam.jpg")
                     
                     plt.savefig(class_image_path, bbox_inches='tight', pad_inches=0)
                     plt.close()
