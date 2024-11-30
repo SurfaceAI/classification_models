@@ -126,9 +126,13 @@ def run_dataset_predict_csv(config):
     if config.get('save_features'):
         if config.get('level') == const.CC:
             for feature_key, features in all_features.items():
+                
+                current_image_ids = image_ids[feature_key] if isinstance(image_ids, dict) else image_ids
+                current_pred_outputs = pred_outputs[feature_key] if isinstance(pred_outputs, dict) else pred_outputs
+
                 features_dict = {
-                'image_ids': image_ids,
-                'pred_outputs': pred_outputs,
+                'image_ids': current_image_ids,
+                'pred_outputs': current_pred_outputs,
                 'features': features
                 }
                 # Create a unique name for each feature set
@@ -278,6 +282,8 @@ def recursive_predict_csv(model_dict, model_root, data, batch_size, device, leve
         else:
             if save_features:
                 all_features = {}
+                all_ids = {}
+                all_preds = {}
             #df = pd.DataFrame(columns=columns)
             level_name = model_dict.get('level', '')
             columns = ['Image', 'Prediction', 'Level', 'is_in_validation', f'Level_{level_no}'] # is_in_valid_dataset / join
@@ -345,6 +351,8 @@ def recursive_predict_csv(model_dict, model_root, data, batch_size, device, leve
                                             df=df, 
                                             level_no=level_no+1, 
                                             pre_cls=cls)
+                    all_ids[cls] = image_ids
+                    all_preds[cls] = pred_outputs
                     all_features[cls] = features
                 else:
                     df, pred_outputs, image_ids = recursive_predict_csv(model_dict=sub_model_dict, 
@@ -373,7 +381,9 @@ def recursive_predict_csv(model_dict, model_root, data, batch_size, device, leve
                 #                           hierarchy_method=hierarchy_method, save_features=save_features, df=df, level_no=level_no+1, pre_cls=cls)
         if save_features:     
             all_features[level_name] = features     
-            return df, pred_outputs, image_ids, all_features
+            all_ids[level_name] = image_ids
+            all_preds[level_name] = pred_outputs
+            return df, all_preds, all_ids, all_features
         else:
             return df, pred_outputs, image_ids
         
