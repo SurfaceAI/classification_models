@@ -17,7 +17,7 @@ model_params_v1 = {
             "concrete": "smoothness-concrete-efficientNetV2SLinear-20240924_020702-32bp575u_epoch16.pt",
             "paving_stones": "smoothness-paving_stones-efficientNetV2SLinear-20240924_035145-0u6eheod_epoch18.pt",
             "sett": "smoothness-sett-efficientNetV2SLinear-20240924_103221-xrpbxnjc_epoch26.pt",
-            "unpaved": "smoothness-sett-efficientNetV2SLinear-20240924_103221-xrpbxnjc_epoch26.pt"
+            "unpaved": "smoothness-unpaved-efficientNetV2SLinear-20240924_131624-qfvm272n_epoch21.pt"
         },
         "road_type": "flatten-efficientNetV2SLinear-20240917_125206-9lg7mdeu_epoch10.pt"
     },
