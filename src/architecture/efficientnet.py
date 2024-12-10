@@ -5,7 +5,7 @@ from torchvision import models
 from collections import OrderedDict
 
 class CustomEfficientNetV2SLogsoftmax(nn.Module):
-    def __init__(self, num_classes, avg_pool):
+    def __init__(self, num_classes, avg_pool=1):
         super(CustomEfficientNetV2SLogsoftmax, self).__init__()
 
         model = models.efficientnet_v2_s(weights='IMAGENET1K_V1')
@@ -44,7 +44,7 @@ class CustomEfficientNetV2SLogsoftmax(nn.Module):
 
 
 class CustomEfficientNetV2SLinear(nn.Module):
-    def __init__(self, num_classes, avg_pool):
+    def __init__(self, num_classes, avg_pool=1):
         super(CustomEfficientNetV2SLinear, self).__init__()
 
         model = models.efficientnet_v2_s(weights='IMAGENET1K_V1')
