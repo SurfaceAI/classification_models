@@ -6,10 +6,15 @@ model_naming = {
     "road_type": "road_type",
 }
 
-model_params_v1 = {
-    "model_root": global_config.global_config.get("root_model"),
+hf_params = {
     "hf_model_repo": "SurfaceAI/models",
     "hf_token_file": "huggingface_token.txt",
+    "local_root": global_config.ROOT_DIR,
+}
+
+model_params_v1 = {
+    **hf_params,
+    "model_root": global_config.global_config.get("root_model"),
     "models": {
         "surface_type": "surface-efficientNetV2SLinear-20240923_171219-2t59l5b9_epoch10.pt",
         "surface_quality": {
@@ -22,5 +27,5 @@ model_params_v1 = {
         "road_type": "flatten-efficientNetV2SLinear-20240917_125206-9lg7mdeu_epoch10.pt"
     },
     "model_naming": model_naming,
-    "model_version": "tbd",
+    "model_version": "v1",
 }

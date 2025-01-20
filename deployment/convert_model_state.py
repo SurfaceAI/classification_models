@@ -5,6 +5,7 @@ sys.path.append(".")
 
 import torch
 import argparse
+import json
 
 from deployment.config import model_config
 from src.utils import helper
@@ -34,6 +35,16 @@ def save_model(model_root, model_old, model_new, validation=False):
         os.makedirs(directory, exist_ok=True)
     torch.save(data, model_path)
 
+    # metadata
+    metadata = {
+        "name": os.path.splitext(model_new)[0],
+        "date": model_old.split('-')[-2],
+        "model_architecture": model_name,
+        "class_to_idx": class_to_idx,
+        "train_dataset": model_state["config"]["dataset"],
+        "transform": model_state["config"]["transform"]
+    }
+    
     # for validation only
     if validation:
         model_state = torch.load(model_path, map_location="cpu")
@@ -48,13 +59,17 @@ def save_model(model_root, model_old, model_new, validation=False):
         model.load_state_dict(model_state_dict)
         print(f"Successful loading of the converted model {model_new}.")
 
+    return metadata
+
 
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description="Model conversion")
 
-    parser.add_argument("--config", type=str, required=True, help="Model config from model_config.py")
-    parser.add_argument("--validation", type=str, required=False, help="if 'y', then model loading is done for validation of conversion.")
+    parser.add_argument("-c", "--config", type=str, required=True, help="Model config from model_config.py")
+    parser.add_argument(
+        "--validation", action=argparse.BooleanOptionalAction, default=False
+    )
     args = parser.parse_args()
 
     if hasattr(model_config, args.config):
@@ -68,34 +83,53 @@ if __name__ == "__main__":
             model_files_new = model_params.get("model_naming")
             model_version = model_params.get("model_version")
 
-            # TODO: write documentation based on model parameters
+            validation = args.validation
 
-            validation = True if args.validation.lower() == "y" else False
+            metadata_path = os.path.join(model_root, model_version, "_".join(["metadata", model_version]) + ".json")
+            metadata = {
+                "version": model_version,
+                "models": []
+                }
 
             # surface model
-            save_model(
+            md = save_model(
                 model_root,
                 model_files_old["surface_type"],
                 os.path.join(model_version, "_".join([model_files_new["surface_type"], model_version]) + ".pt"),
+                # metadata_path,
                 validation,
             )
+            md["task"] = "surface_type"
+            metadata["models"].append(md)
 
             # quality models
             for tp, model in model_files_old["surface_quality"].items():
-                save_model(
+                md = save_model(
                     model_root,
                     model,
                     os.path.join(model_version, "_".join([model_files_new["surface_quality"], tp, model_version]) + ".pt"),
+                    # metadata_path,
                     validation,
                 )
+                md["task"] = f"surface_quality/{tp}"
+                metadata["models"].append(md)
 
             # road type model
-            save_model(
+            md = save_model(
                 model_root,
                 model_files_old["road_type"],
                 os.path.join(model_version, "_".join([model_files_new["road_type"], model_version]) + ".pt"),
+                # metadata_path,
                 validation,
             )
+            md["task"] = "road_type"
+            metadata["models"].append(md)
+
+            directory = os.path.dirname(metadata_path)
+            if directory:
+                os.makedirs(directory, exist_ok=True)
+            with open(metadata_path, "w", encoding="utf-8") as file:
+                json.dump(metadata, file, indent=4, ensure_ascii=False)
 
             print("Done.")
 
