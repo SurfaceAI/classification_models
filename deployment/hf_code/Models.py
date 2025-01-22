@@ -54,7 +54,7 @@ class ModelInterface:
         """
         Check if model files exist and download from hugging face if not.
         """
-        if self.models is None:
+        if not self.models:
             raise TypeError("No models are defined.")
 
         log_model_not_defined = "No model for '{level_string}' is defined. Prediction is skipped."
@@ -63,7 +63,7 @@ class ModelInterface:
         level = "surface_type"
         model_file = self.models.get(level)
         if model_file is None:
-            logging.warning(log_model_not_defined.format(level_string=model_to_info_string[level]))
+            logging.info(log_model_not_defined.format(level_string=model_to_info_string[level]))
         else:
             self.download_model(model_file)
             _, surface_class_to_idx, _ = self.load_model(model=model_file)
@@ -72,12 +72,12 @@ class ModelInterface:
         level = "surface_quality"
         sub_models = self.models.get(level)
         if model_file is None:
-            logging.warning(log_model_not_defined.format(level_string=model_to_info_string[level]))
+            logging.info(log_model_not_defined.format(level_string=model_to_info_string[level]))
         else:
             for surface_type in surface_class_to_idx:
                 model_file = sub_models.get(surface_type)
                 if model_file is None:
-                    logging.warning(log_model_not_defined.format(level_string=surface_type))
+                    logging.info(log_model_not_defined.format(level_string=surface_type))
                 else:
                     self.download_model(model_file)
                     self.load_model(model=model_file)
@@ -86,7 +86,7 @@ class ModelInterface:
         level = "road_type"
         model_file = self.models.get(level)
         if model_file is None:
-            logging.warning(log_model_not_defined.format(level_string=model_to_info_string[level]))
+            logging.info(log_model_not_defined.format(level_string=model_to_info_string[level]))
         else:
             self.download_model(model_file)
             self.load_model(model=model_file)
@@ -102,13 +102,14 @@ class ModelInterface:
         Returns:
             dict: transformation.
         """
-        if (level in self.models) and (transform is None):
-            logging.warning(f"No transformation for {model_to_info_string[level]} prediction defined.")
-            transform = {}
+        if level in self.models:
+            if transform is None:
+                logging.warning(f"No transformation for {model_to_info_string[level]} prediction defined.")
+                transform = {}
         
-        if "normalize" not in transform:
-            logging.info(f"No normalization parameters for {model_to_info_string[level]} prediction provided. Using default values.")
-            transform["normalize"] = self._default_normalization
+            if "normalize" not in transform:
+                logging.info(f"No normalization parameters for {model_to_info_string[level]} prediction provided. Using default values.")
+                transform["normalize"] = self._default_normalization
         
         return transform
   
@@ -330,6 +331,14 @@ class ModelInterface:
         # default image ids
         if img_ids is None:
             img_ids = range(len(img_data_raw))
+
+        # default values
+        road_classes = [None] * len(img_data_raw)
+        road_values = [None] * len(img_data_raw)
+        surface_classes = [None] * len(img_data_raw)
+        surface_values = [None] * len(img_data_raw)
+        quality_classes = [None] * len(img_data_raw)
+        quality_values = [None] * len(img_data_raw)
 
         # road type
         level = "road_type"
