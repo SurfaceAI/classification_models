@@ -1,13 +1,15 @@
 import sys
-sys.path.append('.')
+
+sys.path.append(".")
 
 import numpy as np
 import matplotlib.pyplot as plt
 from torch import optim
 from src import constants as const
-from src.architecture import Rateke_CNN, efficientnet, vgg16
+from src.architecture import Rateke_CNN, efficientnet, vgg16, resnet
 import json
 import argparse
+
 
 class ActivationHook:
     def __init__(self, module):
@@ -29,6 +31,7 @@ class ActivationHook:
         if self.hook is not None:
             self.hook.remove()
 
+
 def string_to_object(string):
 
     string_dict = {
@@ -37,10 +40,12 @@ def string_to_object(string):
         const.VGG16REGRESSION: vgg16.CustomVGG16,
         const.EFFICIENTNET: efficientnet.CustomEfficientNetV2SLogsoftmax,
         const.EFFNET_LINEAR: efficientnet.CustomEfficientNetV2SLinear,
+        const.RESNET50: resnet.CustomResnet50,
         const.OPTI_ADAM: optim.Adam,
     }
 
     return string_dict.get(string)
+
 
 def format_sweep_config(config):
     p = {
@@ -64,7 +69,7 @@ def format_sweep_config(config):
                 "wandb_mode",
                 "project",
                 "sweep_counts",
-                "wandb_on"
+                "wandb_on",
             ]
         },
         "transform": {
@@ -85,12 +90,14 @@ def format_sweep_config(config):
         "parameters": sweep_params,
     }
 
+
 def format_config(config):
     return {
-                key: value
-                for key, value in config.items()
-                if key not in ["wandb_mode", "wandb_on", "project", "name"]
-            }
+        key: value
+        for key, value in config.items()
+        if key not in ["wandb_mode", "wandb_on", "project", "name"]
+    }
+
 
 def get_attribute(obj, attribute_name):
     # check for dict
@@ -102,6 +109,7 @@ def get_attribute(obj, attribute_name):
     else:
         raise TypeError("Object is not a dictionary or a class instance.")
 
+
 def dict_type(arg):
     try:
         return json.loads(arg)
@@ -110,6 +118,7 @@ def dict_type(arg):
 
 
 # auxiliary visualization function
+
 
 def imshow(image, ax=None, title=None, normalize=True):
     """Imshow for Tensor."""
@@ -124,24 +133,25 @@ def imshow(image, ax=None, title=None, normalize=True):
         image = np.clip(image, 0, 1)
 
     ax.imshow(image)
-    ax.spines['top'].set_visible(False)
-    ax.spines['right'].set_visible(False)
-    ax.spines['left'].set_visible(False)
-    ax.spines['bottom'].set_visible(False)
-    ax.tick_params(axis='both', length=0)
-    ax.set_xticklabels('')
-    ax.set_yticklabels('')
+    ax.spines["top"].set_visible(False)
+    ax.spines["right"].set_visible(False)
+    ax.spines["left"].set_visible(False)
+    ax.spines["bottom"].set_visible(False)
+    ax.tick_params(axis="both", length=0)
+    ax.set_xticklabels("")
+    ax.set_yticklabels("")
 
     return ax
 
+
 def multi_imshow(images, labels, save_file=None):
 
-    fig, axes = plt.subplots(figsize=(20,4), ncols=8)
+    fig, axes = plt.subplots(figsize=(20, 4), ncols=8)
 
     for ii in range(8):
         ax = axes[ii]
         label = labels[ii]
-        ax.set_title(f'Label: {label}')
+        ax.set_title(f"Label: {label}")
         imshow(images[ii], ax=ax, normalize=True)
     if save_file is not None:
         fig.savefig(save_file)

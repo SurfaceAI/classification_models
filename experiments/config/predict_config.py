@@ -5,7 +5,7 @@ CC = {
     **global_config.global_config,
     "name": "all_train_effnet_surface_quality_prediction",
     "model_dict": {
-       # "trained_model": "surface-efficientNetV2SLinear-20240314_164055-mi0872lh_epoch6.pt",
+        # "trained_model": "surface-efficientNetV2SLinear-20240314_164055-mi0872lh_epoch6.pt",
         "trained_model": "surface-efficientNetV2SLinear-20240318_114422-a68tf9lt_epoch4.pt",
         "level": const.TYPE,
         "submodels": {
@@ -147,7 +147,7 @@ all_train_CC = {
     **global_config.global_config,
     "name": "all_train_effnet_surface_quality_prediction",
     "model_dict": {
-       # "trained_model": "surface-efficientNetV2SLinear-20240314_164055-mi0872lh_epoch6.pt",
+        # "trained_model": "surface-efficientNetV2SLinear-20240314_164055-mi0872lh_epoch6.pt",
         "trained_model": "surface-efficientNetV2SLinear-20240318_114422-a68tf9lt_epoch4.pt",
         "level": const.TYPE,
         "submodels": {
@@ -187,7 +187,7 @@ V11_type_V9_quality_CC = {
     "name": "effnet_surface_quality_prediction",
     "model_dict": {
         "trained_model": "surface-efficientNetV2SLinear-20240408_135216-sd61xphn_epoch5.pt",
-        "level": const.TYPE, 
+        "level": const.TYPE,
         "submodels": {
             const.ASPHALT: {
                 "trained_model": "smoothness-asphalt-efficientNetV2SLinear-20240314_202655-x67n9qjz_epoch18.pt",
@@ -228,7 +228,7 @@ effnet_surface = {
     "name": "effnet_surface_quality_prediction",
     "model_dict": {
         "trained_model": "surface-efficientNetV2SLinear-20240408_135216-sd61xphn_epoch5.pt",
-        "level": const.TYPE, 
+        "level": const.TYPE,
     },
     "dataset": "V103/unsorted_images",
     "transform": {
@@ -247,7 +247,7 @@ vgg16_surface = {
     "model_dict": {
         "trained_model": "surface-vgg16-20240215_122253-wgch26j7_epoch18.pt",
         "level": const.TYPE,
-        },
+    },
     "dataset": "V5_c5",
     "transform": {
         "resize": const.H256_W256,
@@ -262,7 +262,9 @@ cam_surface = {
     "name": "cam_surface_prediction",
     # "model_dict": {"trained_model": "surface-efficientNetV2SLinear-20240312_090721-iia9tei2_epoch14.pt"},
     # "model_dict": {"trained_model": "surface-efficientNetV2SLinear-20240314_164055-mi0872lh_epoch6.pt"},
-    "model_dict": {"trained_model": "surface-efficientNetV2SLinear-20240610_185408-j3ob3p5o_epoch6.pt"},
+    "model_dict": {
+        "trained_model": "surface-efficientNetV2SLinear-20240610_185408-j3ob3p5o_epoch6.pt"
+    },
     # "dataset": "V9/annotated",
     # "dataset": "V9/metadata/model_predictions/misclassified_images/surface",
     "root_data": str(global_config.ROOT_DIR / "data"),
@@ -280,7 +282,9 @@ cam_surface_weseraue = {
     **global_config.global_config,
     "name": "cam_surface_prediction",
     # "model_dict": {"trained_model": "surface-efficientNetV2SLinear-20240704_211831-ntvzab3t_epoch7.pt"}, # no blur run 5
-    "model_dict": {"trained_model": "surface-efficientNetV2SLinear-20240704_220436-7v8p5y2o_epoch8.pt"}, # noblur run 6
+    "model_dict": {
+        "trained_model": "surface-efficientNetV2SLinear-20240704_220436-7v8p5y2o_epoch8.pt"
+    },  # noblur run 6
     "root_data": str(global_config.ROOT_DIR / "data"),
     "dataset": "weseraue_cam_analysis",
     "transform": {
@@ -301,8 +305,8 @@ effnet_scenery = {
         # "trained_model": "flatten-efficientNetV2SLinear-20240711_092043-n8x73ojw_epoch17.pt",
         # "trained_model": "flatten-efficientNetV2SLinear-20240717_175624-hbucwrbc_epoch10.pt",
         # "trained_model": "flatten-efficientNetV2SLinear-20240718_091851-6t2bdijv_epoch9.pt", # avg pool 6
-        "trained_model": "flatten-efficientNetV2SLinear-20240718_125004-2szn5maz_epoch10.pt", # crop None
-        "level": "scenery", 
+        "trained_model": "flatten-efficientNetV2SLinear-20240718_125004-2szn5maz_epoch10.pt",  # crop None
+        "level": "scenery",
     },
     "dataset": "road_scenery",
     # "root_data": str(global_config.ROOT_DIR / "data"),
@@ -318,4 +322,20 @@ effnet_scenery = {
     },
     "batch_size": 16,
     "gpu_kernel": 1,
+}
+
+resnet_test = {
+    **global_config.global_config,
+    "name": "test_resnet_prediction",
+    "model_dict": {
+        "trained_model": "surface-resnet50-20250101_104323_epoch4.pt",
+        "level": "surface",
+    },
+    "dataset": "test_images",
+    "transform": {
+        "resize": (256, 256),
+        "crop": const.CROP_LOWER_MIDDLE_HALF,
+        "normalize": (const.TEST_IMAGES_MEAN, const.TEST_IMAGES_SD),
+    },
+    "batch_size": 16,
 }
