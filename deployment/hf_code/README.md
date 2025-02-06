@@ -1,3 +1,9 @@
+---
+license: mit
+base_model:
+- timm/tf_efficientnetv2_s.in1k
+pipeline_tag: image-classification
+---
 # SurfaceAI: models for road type, surface type and quality classification of street-level imagery
 
 This repository provides the python code as well as the model files with weights and parameters of the SurfaceAI models.
