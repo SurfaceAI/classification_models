@@ -323,7 +323,7 @@ def create_train_validation_datasets(
         train_valid_split_list = None
 
     # flatten if level is flatten
-    if level == const.FLATTEN:
+    if level == const.FLATTEN or level == const.HIERARCHICAL:
         complete_dataset = FlattenFolders(data_path, selected_classes=selected_classes)
     # surface or smoothness for surface type if level is not flatten
     else:

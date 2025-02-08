@@ -35,6 +35,7 @@ SMOOTHNESS_INT = {
 SURFACE = "surface"
 SMOOTHNESS = "smoothness"
 FLATTEN = "flatten"
+HIERARCHICAL = "hierarchical"
 
 TYPE = "type"
 QUALITY = "quality"
@@ -59,6 +60,9 @@ PROJECT_FLATTEN_FIXED = "road-surface-classification-flatten"
 PROJECT_FLATTEN_SWEEP = "sweep-road-surface-classification-flatten"
 PROJECT_SCENERY_FIXED = "road-scenery-classification"
 
+PROJECT_HIERARCHICAL_FIXED = "hierarchical-classification"
+PROJECT_HIERARCHICAL_SWEEP = "sweep-hierarchical-classification"
+
 # model names
 EFFICIENTNET = "efficientNetV2SLogsoftmax"
 EFFNET_LINEAR = "efficientNetV2SLinear"
@@ -67,6 +71,10 @@ RATEKE = "rateke"
 RESNET50 = "resnet50"
 # temporay onla
 VGG16REGRESSION = "vgg16Regression"
+
+# Head
+HEAD_CLASSIFICATION = "classification"
+HEAD_REGRESSION = "regression"
 
 # sweep names
 
@@ -132,3 +140,6 @@ V1_0_ANNOTATED_SD = [0.22991590201854706, 0.23555299639701843, 0.263480395078659
 
 TEST_IMAGES_MEAN = [0.4263019859790802, 0.44143688678741455, 0.4465010464191437]
 TEST_IMAGES_SD = [0.237564817070961, 0.24687665700912476, 0.2741554379463196]
+
+V0_PREDICTED_MEAN = [0.4065566658973694, 0.42000702023506165, 0.4283006489276886]
+V0_PREDICTED_SD = [0.22607897222042084, 0.23892197012901306, 0.2673869729042053]

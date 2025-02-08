@@ -5,7 +5,7 @@ from collections import OrderedDict
 
 
 class CustomResnet50(nn.Module):
-    def __init__(self, num_classes, avg_pool):
+    def __init__(self, num_classes, avg_pool=1):
         super(CustomResnet50, self).__init__()
 
         model = models.resnet50(weights="IMAGENET1K_V1")

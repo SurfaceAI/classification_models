@@ -517,3 +517,60 @@ train_valid_split_params = {
     "metadata": "V1_0/metadata",
     "train_valid_split_list": "train_valid_split.csv",
 }
+
+# C-CNN
+ccnn_default_params = {
+    "batch_size": 16,  # 16,  # 48
+    "epochs": 5,
+    "learning_rate": 0.0001,
+    "optimizer": const.OPTI_ADAM,
+    # "eval_metric": const.EVAL_METRIC_ALL,
+    # 'is_regression': False,
+    # "max_class_size": None,
+    # "lr_scheduler": True,
+    # "freeze_convs": False,
+    # "gamma": 0.5,
+    "num_last_blocks": 1,
+}
+
+C_CNN_fixed_params = {
+    **global_config.global_config,
+    **ccnn_default_params,
+    # "coarse_eval_metric": const.EVAL_METRIC_ALL,
+    # "fine_eval_metric": const.EVAL_METRIC_ALL,
+    "project": const.PROJECT_HIERARCHICAL_FIXED,
+    "name": "C_CNN_first_trial",
+    "level": const.HIERARCHICAL,  # like flatten selected classes
+    "model": const.EFFNET_LINEAR,
+    "head_fine": const.HEAD_REGRESSION,  #'regression', 'classification',
+    "dataset": "V0/predicted",
+    # "hierarchy_method": const.GROUNDTRUTH, #'use_ground_truth', 'None',
+    # "lw_modifier": False,
+    # "lr_scheduler": True,
+    "wandb_mode": const.WANDB_MODE_OFF,
+    "wandb_on": False,
+    "save_state": False,
+}
+
+# C_CNN_sweep_params = {
+#     **global_config.global_config,
+#     **ccnn_default_params,
+#     'model': const.CCNN,
+#     "method": "bayes",
+#     "metric": {"name": "eval/accuracy/fine", "goal": "maximize"},
+#     "search_params": {**default_search_params,
+#                      },
+#     "project": const.PROJECT_MULTI_LABEL_SWEEP_CCNN,
+#     "name": "C_CNN_CLASSIFICATION",
+#     "level": const.HIERARCHICAL, # like flatten selected classes / train all in one
+#     "head": const.CLM,
+#     "hierarchy_method": const.MODELSTRUCTURE,
+#     "lw_modifier": True,
+#     "sweep_counts": 10,
+# }
+
+### new:
+# head
+# hierarchy_method
+# lr_scheduler / gamma
+# lw_modifier
