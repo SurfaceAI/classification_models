@@ -297,10 +297,12 @@ effnet_scenery = {
     "name": "effnet_scenery_prediction",
     "model_dict": {
         # "trained_model": "flatten-efficientNetV2SLinear-20240613_095915-81nd24pa_epoch12.pt",
-        "trained_model": "flatten-efficientNetV2SLinear-20240613_103053-033v1uet_epoch17.pt",
+        # "trained_model": "flatten-efficientNetV2SLinear-20240613_103053-033v1uet_epoch17.pt",
+        "trained_model": "flatten-efficientNetV2SLinear-20250222_202029-lxc4hqc1_epoch6.pt", # v5 dataset
         "level": "scenery", 
     },
-    "dataset": "road_scenery",
+    # "dataset": "road_scenery",
+    "dataset": "road_scenery_v/v5",
     "transform": {
         "resize": (384, 384),
         "crop": const.CROP_LOWER_HALF,

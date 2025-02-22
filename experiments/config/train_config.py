@@ -423,6 +423,46 @@ road_scenery_params = {
     "save_state": True,
  }
 
+road_scenery_params_v5 = {
+    **global_config.global_config,
+    **default_params,
+    'gpu_kernel': 1,
+    "epochs": 20,
+    "batch_size": 16,  # 48
+    "learning_rate": 0.0003,
+    'model': const.EFFNET_LINEAR,
+    "dataset": "road_scenery_v/v5",
+    "project": const.PROJECT_SCENERY_FIXED,
+    "name": "effnet_scenery",
+    "level": const.FLATTEN,
+    "transform":
+        {"resize": (384, 384),
+        "crop": const.CROP_LOWER_HALF,    
+        "normalize": (const.V1_0_ANNOTATED_MEAN, const.V1_0_ANNOTATED_SD),},   
+    "selected_classes": {
+        '1_1_road': [
+            # '1_1_rails_on_road',
+            '1_1_road_general',
+        ],
+        '1_2_bicycle': [
+            '1_2_cycleway',
+            '1_2_lane',
+        ],
+        '1_3_pedestrian': [
+            # '1_3_pedestrian_area',
+            # '1_3_railway_platform',
+            '1_3_footway',
+        ],
+        '1_4_path': [
+            '1_4_path_unspecified',
+        ],
+        '2_1_no_focus_no_street': [
+            '2_1_all'
+        ],
+    },
+    "save_state": True,
+ }
+
 road_scenery_focus_params = {
     **global_config.global_config,
     **default_params,
