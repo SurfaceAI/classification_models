@@ -54,10 +54,10 @@ class C_CNN(nn.Module):
 
         # fine
         if self.head_fine == const.HEAD_CLASSIFICATION:
-            self.fine_classifier = [base_model(num).classifier for num in self.num_f]
+            self.fine_classifier = nn.ModuleList([base_model(num).classifier for num in self.num_f])
             self.fine_criterion = nn.CrossEntropyLoss
         elif self.head_fine == const.HEAD_REGRESSION:
-            self.fine_classifier = [base_model(1).classifier for _ in self.num_f]
+            self.fine_classifier = nn.ModuleList([base_model(1).classifier for _ in self.num_f])
             self.fine_criterion = nn.MSELoss
         else:
             raise ValueError(f"Fine head {self.head_fine} not applicable!")

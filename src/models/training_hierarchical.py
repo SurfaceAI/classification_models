@@ -149,6 +149,7 @@ def _run_training(project=None, name=None, config=None, wandb_on=True):
         idx_global_to_local_mapping=idx_global_to_local_mapping,
         checkpoint_top_n=config.get("checkpoint_top_n", const.CHECKPOINT_DEFAULT_TOP_N),
         early_stop_thresh=config.get("early_stop_thresh", const.EARLY_STOPPING_DEFAULT),
+        loss_weight=config.get("loss_weight", 0.5),
         save_state=config.get("save_state", True),
         config=config,
     )
@@ -341,6 +342,7 @@ def train(
     idx_global_to_local_mapping,
     checkpoint_top_n=const.CHECKPOINT_DEFAULT_TOP_N,
     early_stop_thresh=const.EARLY_STOPPING_DEFAULT,
+    loss_weight=0.5,
     save_state=True,
     config=None,
 ):
@@ -396,6 +398,7 @@ def train(
             trainloader,
             optimizer,
             device,
+            loss_weight,
             # eval_metric,
             class_to_idx_local,
             idx_global_to_local_mapping,
@@ -412,6 +415,7 @@ def train(
             model,
             validloader,
             device,
+            loss_weight,
             # eval_metric,
             class_to_idx_local,
             idx_global_to_local_mapping,
@@ -472,6 +476,7 @@ def train_epoch(
     dataloader,
     optimizer,
     device,
+    loss_weight,
     # eval_metric,
     class_to_idx_local,
     idx_global_to_local_mapping,
@@ -484,13 +489,14 @@ def train_epoch(
     running_loss_fine = 0.0
     eval_acc_coarse = 0
     eval_acc_fine = 0
-    alpha = 0.5
-    beta = 0.5
+    alpha = loss_weight # 0.5
+    beta = 1.0 - loss_weight # 0.5
 
     for inputs, labels in tqdm(dataloader, desc="train batches"):
         # helper.multi_imshow(inputs, labels, "test_blur")
 
-        inputs, labels = inputs.to(device), labels.to(device)
+        # inputs, labels = inputs.to(device), labels.to(device)
+        inputs = inputs.to(device)
         # gt_coarse = idx_global_to_local_mapping.values()["coarse"][torch.searchsorted(idx_global_to_local_mapping.keys(), labels)]
         # gt_fine = idx_global_to_local_mapping.values()["fine"][torch.searchsorted(idx_global_to_local_mapping.keys(), labels)]
         keys = torch.tensor(list(idx_global_to_local_mapping.keys()))
@@ -501,8 +507,8 @@ def train_epoch(
             [v["fine"] for v in idx_global_to_local_mapping.values()]
         )
 
-        gt_coarse = coarse_values[torch.searchsorted(keys, labels)]
-        gt_fine = fine_values[torch.searchsorted(keys, labels)]
+        gt_coarse = coarse_values[torch.searchsorted(keys, labels)].to(device)
+        gt_fine = fine_values[torch.searchsorted(keys, labels)].to(device)
 
         optimizer.zero_grad()
         torch.autograd.set_detect_anomaly(True)
@@ -566,6 +572,7 @@ def validate_epoch(
     model,
     dataloader,
     device,
+    loss_weight,
     # eval_metric,
     class_to_idx_local,
     idx_global_to_local_mapping,
@@ -578,12 +585,12 @@ def validate_epoch(
     running_loss_fine = 0.0
     eval_acc_coarse = 0
     eval_acc_fine = 0
-    alpha = 0.5
-    beta = 0.5
+    alpha = loss_weight # 0.5
+    beta = 1.0 - loss_weight # 0.5
 
     with torch.no_grad():
         for inputs, labels in dataloader:
-            inputs, labels = inputs.to(device), labels.to(device)
+            inputs = inputs.to(device)
 
             keys = torch.tensor(list(idx_global_to_local_mapping.keys()))
             coarse_values = torch.tensor(
@@ -593,8 +600,8 @@ def validate_epoch(
                 [v["fine"] for v in idx_global_to_local_mapping.values()]
             )
 
-            gt_coarse = coarse_values[torch.searchsorted(keys, labels)]
-            gt_fine = fine_values[torch.searchsorted(keys, labels)]
+            gt_coarse = coarse_values[torch.searchsorted(keys, labels)].to(device)
+            gt_fine = fine_values[torch.searchsorted(keys, labels)].to(device)
 
             outputs_coarse, outputs_fine = model.forward(inputs, gt_coarse=gt_coarse)
             predictions_coarse, predictions_fine = model.get_prediction_indices(

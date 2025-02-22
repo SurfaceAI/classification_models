@@ -2,7 +2,7 @@ from src import constants as const
 from experiments.config import global_config
 
 default_params = {
-    "batch_size": 16,  # 48
+    "batch_size": 48,
     "epochs": 10,
     "learning_rate": 0.0001,
     "optimizer": const.OPTI_ADAM,
@@ -11,10 +11,10 @@ default_params = {
 }
 
 default_search_params = {
-    "batch_size": {"values": [16, 48, 128]},
-    "epochs": {"value": 20},
-    "learning_rate": {"distribution": "log_uniform_values", "min": 1e-05, "max": 0.001},
-    "optimizer": {"value": const.OPTI_ADAM},
+    # "batch_size": {"values": [16, 48, 128]},
+    # "epochs": {"value": 20},
+    "learning_rate": {"distribution": "log_uniform_values", "min": 2e-05, "max": 0.0005},
+    # "optimizer": {"value": const.OPTI_ADAM},
 }
 
 
@@ -510,6 +510,73 @@ resnet_test_params = {
     "save_state": True,
 }
 
+resnet_surface_sweep_params = {
+    **global_config.global_config,
+    **default_params,
+    "gpu_kernel": 1,
+    "epochs": 20,
+    "eval_metric": const.EVAL_METRIC_ACCURACY,
+    "model": const.RESNET50,
+    "dataset": "V1_0/annotated",
+    "method": "bayes",
+    "metric": {"name": f"eval/{const.EVAL_METRIC_ACCURACY}", "goal": "maximize"},
+    "search_params": {
+        # "batch_size": {"values": [16]},
+        # "learning_rate": {
+        #     "distribution": "log_uniform_values",
+        #     "min": 1e-05,
+        #     "max": 0.001,
+        # },
+        "learning_rate": {"values": [0.0004]},
+    },
+    "project": const.PROJECT_SURFACE_SWEEP,
+    "name": "resnet",
+    "level": const.SURFACE,
+    "sweep_counts": 1, #10,
+    "transform": {
+        "resize": (384, 384), #(256, 256),
+        "crop": const.CROP_LOWER_MIDDLE_HALF,
+        "normalize": const.NORM_DATA,
+    },
+    "wandb_mode": const.WANDB_MODE_ON,
+    "wandb_on": True,
+    "save_state": True,
+}
+
+resnet_quality_sweep_params = {
+    **global_config.global_config,
+    **default_params,
+    "gpu_kernel": 0,
+    "epochs": 20,
+    "eval_metric": const.EVAL_METRIC_MSE,
+    "model": const.RESNET50,
+    "dataset": "V1_0/annotated",
+    "method": "bayes",
+    "is_regression": True,
+    "metric": {"name": f"eval/{const.EVAL_METRIC_MSE}", "goal": "minimize"},
+    "search_params": {
+        # "batch_size": {"values": [16]},
+        # "learning_rate": {
+        #     "distribution": "log_uniform_values",
+        #     "min": 1e-05,
+        #     "max": 0.001,
+        # },
+        "learning_rate": {"values": [0.0004]},
+    },
+   "project": const.PROJECT_SMOOTHNESS_SWEEP,
+    "name": "resnet_reg",
+    "level": const.SMOOTHNESS,
+    "sweep_counts": 1, #10,
+    "transform": {
+        "resize": (384, 384), #(256, 256),
+        "crop": const.CROP_LOWER_MIDDLE_HALF,
+        "normalize": const.NORM_DATA,
+    },
+    "wandb_mode": const.WANDB_MODE_ON,
+    "wandb_on": True,
+    "save_state": True,
+}
+
 train_valid_split_params = {
     **global_config.global_config,
     # "root_data": str(global_config.ROOT_DIR / "data" / "training"),
@@ -520,9 +587,9 @@ train_valid_split_params = {
 
 # C-CNN
 ccnn_default_params = {
-    "batch_size": 16,  # 16,  # 48
-    "epochs": 5,
-    "learning_rate": 0.0001,
+    "batch_size": 48,  # 16,  # 48
+    "epochs": 20,
+    "learning_rate": 0.0005,
     "optimizer": const.OPTI_ADAM,
     # "eval_metric": const.EVAL_METRIC_ALL,
     # 'is_regression': False,
@@ -543,31 +610,37 @@ C_CNN_fixed_params = {
     "level": const.HIERARCHICAL,  # like flatten selected classes
     "model": const.EFFNET_LINEAR,
     "head_fine": const.HEAD_REGRESSION,  #'regression', 'classification',
-    "dataset": "V0/predicted",
+    "dataset": "V1_0/annotated",
     # "hierarchy_method": const.GROUNDTRUTH, #'use_ground_truth', 'None',
     # "lw_modifier": False,
     # "lr_scheduler": True,
-    "wandb_mode": const.WANDB_MODE_OFF,
-    "wandb_on": False,
-    "save_state": False,
+    "wandb_mode": const.WANDB_MODE_ON,
+    "wandb_on": True,
+    "save_state": True,
 }
 
-# C_CNN_sweep_params = {
-#     **global_config.global_config,
-#     **ccnn_default_params,
-#     'model': const.CCNN,
-#     "method": "bayes",
-#     "metric": {"name": "eval/accuracy/fine", "goal": "maximize"},
-#     "search_params": {**default_search_params,
-#                      },
-#     "project": const.PROJECT_MULTI_LABEL_SWEEP_CCNN,
-#     "name": "C_CNN_CLASSIFICATION",
-#     "level": const.HIERARCHICAL, # like flatten selected classes / train all in one
-#     "head": const.CLM,
-#     "hierarchy_method": const.MODELSTRUCTURE,
-#     "lw_modifier": True,
-#     "sweep_counts": 10,
-# }
+C_CNN_sweep_params = {
+    **global_config.global_config,
+    **ccnn_default_params,
+    "method": "bayes",
+    "metric": {"name": "eval/comb/acc", "goal": "maximize"},
+    "search_params": {
+        # **default_search_params,
+        "loss_weight": {"values": [0.5, 0.4, 0.3, 0.2, 0.1]},
+                     },
+    "project": const.PROJECT_HIERARCHICAL_SWEEP,
+    "name": "C_CNN_first_trial",
+    "level": const.HIERARCHICAL, # like flatten selected classes / train all in one
+    "model": const.EFFNET_LINEAR,
+    "head_fine": const.HEAD_REGRESSION,
+    "dataset": "V1_0/annotated",
+    # "hierarchy_method": const.MODELSTRUCTURE,
+    # "lw_modifier": True,
+    "wandb_mode": const.WANDB_MODE_ON,
+    "wandb_on": True,
+    # "save_state": True,
+    "sweep_counts": 5, #10,
+}
 
 ### new:
 # head
