@@ -61,17 +61,18 @@ def run_dataset_predict_csv(config):
 
         classes = {value["local_index"]: {"type": key} for key, value in class_to_idx_local.items()}
         for key, value in classes.items():
-            classes[key]["quality"] = {v["local_index"]: k for k, v in class_to_idx_local[value["type"]]["quality"]}
+            classes[key]["quality"] = {v["local_index"]: k for k, v in class_to_idx_local[value["type"]]["quality"].items()}
 
         # Surface
         level = 0
         level_name = const.TYPE
         columns = ['Image', 'Prediction', 'Level', 'is_in_validation', f'Level_{level}']
-        pred_classes = [classes[idx.item()]["type"] for idx in pred_outputs_coarse_idx]
+        coarse_classes = [classes[key]["type"] for key in sorted(classes.keys())]
+        pre_classes = [classes[idx.item()]["type"] for idx in pred_outputs_coarse_idx]
         df_tmp = pd.DataFrame(columns=columns, index=range(pred_outputs_coarse_val.shape[0] * pred_outputs_coarse_val.shape[1]))
         i = 0
         for image_id, pred, is_vd in tqdm(zip(image_ids, pred_outputs_coarse_val, is_valid_data), desc="write df"):
-            for cls, prob in zip(classes, pred.tolist()):
+            for cls, prob in zip(coarse_classes, pred.tolist()):
                 df_tmp.iloc[i] = [image_id, prob, level_name, is_vd, cls]
                 i += 1
         print(df_tmp.shape)
@@ -82,25 +83,25 @@ def run_dataset_predict_csv(config):
         level = 1
         level_name = const.QUALITY
         columns = ['Image', 'Prediction', 'Level', 'is_in_validation', f'Level_{level}', f'Level_{level-1}'] # is_in_valid_dataset / join
-        pre_cls_entry = pred_classes
-
+        
         if head_fine == const.HEAD_REGRESSION:
-            pred_classes = ["outside" if idx.item() not in classes[coarse_idx]["quality"].keys() else classes[coarse_idx]["quality"][idx.item()] for idx, coarse_idx in zip(pred_outputs_fine_idx, pred_outputs_coarse_idx)]
+            pred_classes = ["outside" if idx.item() not in classes[coarse_idx.item()]["quality"].keys() else classes[coarse_idx.item()]["quality"][idx.item()] for idx, coarse_idx in zip(pred_outputs_fine_idx, pred_outputs_coarse_idx)]
             df_tmp = pd.DataFrame(columns=columns, index=range(pred_outputs_fine_val.shape[0]))
             i = 0
-            for image_id, pred, is_vd, cls in tqdm(zip(image_ids, pred_outputs_fine_val, is_valid_data, pred_classes), desc="write df"):
-                df_tmp.iloc[i] = [image_id, pred.item(), level_name, is_vd, cls] + pre_cls_entry
+            for image_id, pred, is_vd, cls, pre_cls in tqdm(zip(image_ids, pred_outputs_fine_val, is_valid_data, pred_classes, pre_classes), desc="write df"):
+                df_tmp.iloc[i] = [image_id, pred.item(), level_name, is_vd, cls, pre_cls]
                 i += 1
             print(df_tmp.shape)
             df = pd.concat([df, df_tmp], ignore_index=True)
             print(df.shape)
         elif head_fine == const.HEAD_CLASSIFICATION:
-            pred_classes = [classes[coarse_idx]["quality"][idx.item()] for idx, coarse_idx in zip(pred_outputs_fine_idx, pred_outputs_coarse_idx)]
+            # pred_classes = [classes[coarse_idx]["quality"][idx.item()] for idx, coarse_idx in zip(pred_outputs_fine_idx, pred_outputs_coarse_idx)]
             df_tmp = pd.DataFrame(columns=columns, index=range(pred_outputs_fine_val.shape[0] * pred_outputs_fine_val.shape[1]))
             i = 0
-            for image_id, pred, is_vd in tqdm(zip(image_ids, pred_outputs_fine_val, is_valid_data), desc="write df"):
-                for cls, prob in zip(classes, pred.tolist()):
-                    df_tmp.iloc[i] = [image_id, prob, level_name, is_vd, cls] + pre_cls_entry
+            for image_id, pred, is_vd, pre_cls, coarse_idx in tqdm(zip(image_ids, pred_outputs_fine_val, is_valid_data, pre_classes, pred_outputs_coarse_idx), desc="write df"):
+                fine_classes = [classes[coarse_idx.item()]["quality"][key] for key in sorted(classes[coarse_idx.item()]["quality"].keys())]
+                for cls, prob in zip(fine_classes, pred.tolist()):
+                    df_tmp.iloc[i] = [image_id, prob, level_name, is_vd, cls, pre_cls]
                     i += 1
             print(df_tmp.shape)
             df = pd.concat([df, df_tmp], ignore_index=True)
@@ -115,75 +116,6 @@ def run_dataset_predict_csv(config):
     saving_path = save_predictions_csv(df=df, saving_dir=config.get("root_predict"), saving_name=saving_name)
 
     print(f'Images {config.get("dataset")} predicted and saved: {saving_path}')
-
-def recursive_predict_csv(model_dict, model_root, data, batch_size, device, df, level, pre_cls=None):
-
-    # base:
-    if model_dict is None:
-        # predictions = None
-        pass
-    else:
-        model_path = os.path.join(model_root, model_dict['trained_model'])
-        # level_name = model_dict.get('level', '')
-        model, class_to_idx_local, head_fine, valid_dataset = load_model(model_path=model_path, device=device)
-        
-        pred_outputs_coarse_val, pred_outputs_fine_val, pred_outputs_coarse_idx, pred_outputs_fine_idx, image_ids = predict(model, data, batch_size, device)
-
-        # compare valid dataset 
-        # [image_id in valid_dataset ]
-        valid_dataset_ids = [os.path.splitext(os.path.split(id[0])[-1])[0] for id in helper.get_attribute(valid_dataset, "samples")]
-        is_valid_data = [1 if image_id in valid_dataset_ids else 0 for image_id in image_ids]
-
-        classes = {value["local_index"]: {"type": key} for key, value in class_to_idx_local.items()}
-        for key, value in classes.items():
-            classes[key]["quality"] = {v["local_index"]: k for k, v in class_to_idx_local[value["type"]]["quality"]}
-
-        # Surface
-        level = 0
-        level_name = const.TYPE
-        columns = ['Image', 'Prediction', 'Level', 'is_in_validation', f'Level_{level}']
-        pred_classes = [classes[idx.item()]["type"] for idx in pred_outputs_coarse_idx]
-        df_tmp = pd.DataFrame(columns=columns, index=range(pred_outputs_coarse_val.shape[0] * pred_outputs_coarse_val.shape[1]))
-        i = 0
-        for image_id, pred, is_vd in tqdm(zip(image_ids, pred_outputs_coarse_val, is_valid_data), desc="write df"):
-            for cls, prob in zip(classes, pred.tolist()):
-                df_tmp.iloc[i] = [image_id, prob, level_name, is_vd, cls]
-                i += 1
-        print(df_tmp.shape)
-        df = pd.concat([df, df_tmp], ignore_index=True)
-        print(df.shape)
-
-        # Quality
-        level = 1
-        level_name = const.QUALITY
-        columns = ['Image', 'Prediction', 'Level', 'is_in_validation', f'Level_{level}', f'Level_{level-1}'] # is_in_valid_dataset / join
-        pre_cls_entry = pred_classes
-
-        if head_fine == const.HEAD_REGRESSION:
-            pred_classes = ["outside" if idx.item() not in classes[coarse_idx]["quality"].keys() else classes[coarse_idx]["quality"][idx.item()] for idx, coarse_idx in zip(pred_outputs_fine_idx, pred_outputs_coarse_idx)]
-            df_tmp = pd.DataFrame(columns=columns, index=range(pred_outputs_fine_val.shape[0]))
-            i = 0
-            for image_id, pred, is_vd, cls in tqdm(zip(image_ids, pred_outputs_fine_val, is_valid_data, pred_classes), desc="write df"):
-                df_tmp.iloc[i] = [image_id, pred.item(), level_name, is_vd, cls] + pre_cls_entry
-                i += 1
-            print(df_tmp.shape)
-            df = pd.concat([df, df_tmp], ignore_index=True)
-            print(df.shape)
-        elif head_fine == const.HEAD_CLASSIFICATION:
-            pred_classes = [classes[coarse_idx]["quality"][idx.item()] for idx, coarse_idx in zip(pred_outputs_fine_idx, pred_outputs_coarse_idx)]
-            df_tmp = pd.DataFrame(columns=columns, index=range(pred_outputs_fine_val.shape[0] * pred_outputs_fine_val.shape[1]))
-            i = 0
-            for image_id, pred, is_vd in tqdm(zip(image_ids, pred_outputs_fine_val, is_valid_data), desc="write df"):
-                for cls, prob in zip(classes, pred.tolist()):
-                    df_tmp.iloc[i] = [image_id, prob, level_name, is_vd, cls] + pre_cls_entry
-                    i += 1
-            print(df_tmp.shape)
-            df = pd.concat([df, df_tmp], ignore_index=True)
-            print(df.shape)
-        else:
-            raise ValueError(f"Fine head {head_fine} not applicable!")
-    return df
-
 
 # prediction without gt
 def predict(model, data, batch_size, device):
@@ -213,6 +145,8 @@ def predict(model, data, batch_size, device):
             outputs_coarse_idx.append(batch_outputs_coarse_idx)
             outputs_fine_idx.append(batch_outputs_fine_idx)
             ids.extend(batch_ids)
+
+            break # TODO: debug only
 
     pred_outputs_coarse_val = torch.cat(outputs_coarse_val, dim=0)
     pred_outputs_fine_val = torch.cat(outputs_fine_val, dim=0)
