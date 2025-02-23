@@ -146,8 +146,6 @@ def predict(model, data, batch_size, device):
             outputs_fine_idx.append(batch_outputs_fine_idx)
             ids.extend(batch_ids)
 
-            break # TODO: debug only
-
     pred_outputs_coarse_val = torch.cat(outputs_coarse_val, dim=0)
     pred_outputs_fine_val = torch.cat(outputs_fine_val, dim=0)
     pred_outputs_coarse_idx = torch.cat(outputs_coarse_idx, dim=0)
