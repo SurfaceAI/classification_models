@@ -101,6 +101,28 @@ CC_V1_0 = {
     "batch_size": 16,
 }
 
+
+
+C_CNN_V1_0 = {
+    **global_config.global_config,
+    "name": "effnet_hierarchical_prediction",
+    "model_dict": {
+        # "trained_model": "hierarchical-efficientNetV2SLinear-20250220_042242-y3eg8n0v_epoch17.pt",
+        "trained_model": "hierarchical-efficientNetV2SLinear-20250209_102135-4t1djy5j_epoch14.pt",
+        "level": const.HIERARCHICAL,
+    },
+    "root_data": str(global_config.ROOT_DIR / "data"),
+    "dataset": "V1_0/s_1024",
+
+    "transform": {
+        "resize": (384, 384),
+        "crop": const.CROP_LOWER_MIDDLE_HALF,
+        "normalize": (const.V1_0_ANNOTATED_MEAN, const.V1_0_ANNOTATED_SD),
+    },
+    "gpu_kernel": 1,
+    "batch_size": 16,
+}
+
 blur_V1_0 = {
     **global_config.global_config,
     "name": "effnet_blur_surface_pred",

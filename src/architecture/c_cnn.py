@@ -103,9 +103,7 @@ class C_CNN(nn.Module):
         x_fine = nn.AdaptiveAvgPool2d(1)(x_fine)
         x_fine = torch.flatten(x_fine, 1)
         if gt_coarse is None:
-            gt_coarse = torch.argmax(
-                self.get_prediction_indices(x_coarse=x_coarse_output)[0], dim=1
-            )
+            gt_coarse = self.get_prediction_indices(x_coarse=x_coarse_output)[0]
 
         # gt_coarse = gt_coarse.unsqueeze(1)
         # x_fine = torch.cat([self.fine_classifier[i](x_fine.clone()) for i in range(self.num_c)], dim=1)
