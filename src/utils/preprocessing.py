@@ -317,7 +317,7 @@ def create_train_validation_datasets(
     data_path = os.path.join(data_root, dataset)
 
     # train validation split file
-    if metadata is not None and train_test_split is not None:
+    if metadata is not None and train_valid_split_list is not None:
         train_valid_split_list = os.path.join(data_root, metadata, train_valid_split_list)
     else:
         train_valid_split_list = None
